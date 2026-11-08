@@ -7,40 +7,57 @@
 
 ---
 
-## 1. Zero-Leakage Data Partitioning Protocol
+## 1. Multi-Tier Data Isolation & Leakage Audit Protocol
 
-Machine learning applied to astronomy frequently suffers from severe data leakage due to overlapping survey footprints, localized telescope point spread function (PSF) variations, atmospheric seeing correlations, and light curve interpolation into unobserved future epochs.
+Machine learning applied to astronomy frequently suffers from severe data leakage due to overlapping survey footprints, localized telescope point spread function (PSF) variations, atmospheric seeing correlations, light curve interpolation into unobserved future epochs, and uncatalogued object aliases.
 
-ASTRAEUS enforces a strict three-dimensional isolation protocol:
+ASTRAEUS distinguishes between **HEALPix assignment overlap** (a mathematical property of partition sets) and **source-level leakage** (astrophysical identity contamination). A manifest showing disjoint pixels does *not* constitute a universal zero-leakage guarantee.
+
+ASTRAEUS enforces a 6-tier isolation and audit protocol:
 
 ```
-                          SKY PARTITIONING
-              (HEALPix N_side = 32 -> 12,288 Pixels)
-           ┌──────────────────────────────────────────┐
-           │   Train: 70%   │   Val: 15%   │ Test: 15%│
-           └──────────────────────────────────────────┘
-                                 │
-                                 ▼
-                         TEMPORAL CUTOFF
-                     (T_split = MJD 60000.0)
-     Historical Light Curves (<= T_split) ──► Training & Validation
-     Future Transients       (>  T_split) ──► Out-of-Distribution Test
-                                 │
-                                 ▼
-                     CROSS-SURVEY ZERO SHOT
-      Trained on: ZTF (Optical g, r)
-      Evaluated on: Pan-STARRS (g, r, i, z, y) / DECam (u, g, r, i, z, Y)
+┌────────────────────────────────────────────────────────────────────────┐
+│                   6-TIER LEAKAGE AUDIT PROTOCOL                         │
+├───────────────────────────────────┬────────────────────────────────────┤
+│ 1. HEALPix Partition Overlap      │ Disjoint spatial pixel index sets  │
+│ 2. Spatial Boundary Buffer        │ Flag sources within 3-sigma error  │
+│ 3. Canonical Object Identity      │ Cross-catalogue ID deduplication   │
+│ 4. Cross-Catalogue Aliases        │ Check SIMBAD / NED / TNS aliases   │
+│ 5. Host-Galaxy Association        │ Ensure host & transient co-split   │
+│ 6. Temporal & Cadence Cutoff      │ Strict T_split chronological gate  │
+└───────────────────────────────────┴────────────────────────────────────┘
 ```
 
-1. **Spatial Sky Partitioning (HEALPix $N_{\mathrm{side}}=32$):**
-   - Sky is discretized into 12,288 equal-area pixels ($\approx 1.83^\circ$ per pixel).
-   - Entire pixels are allocated exclusively to **Train (70%)**, **Validation (15%)**, or **Test (15%)**.
-   - No celestial object in the test set shares a HEALPix pixel with any training object.
-2. **Temporal Split ($T_{\mathrm{split}}$):**
-   - All light curves are partitioned chronologically.
-   - Models are trained on data preceding $T_{\mathrm{split}}$ and evaluated on newly emerging transients occurring after $T_{\mathrm{split}}$.
-3. **Cross-Survey Zero-Shot Generalization:**
-   - Evaluated without retraining on independent survey pipelines (Pan-STARRS and DECam).
+1. **Spatial HEALPix Discretization ($N_{\mathrm{side}}=32$):**
+   - Discretizes the celestial sphere into 12,288 equal-area pixels ($\approx 1.83^\circ$ diameter).
+   - Entire pixels are allocated to **Train (70%)**, **Validation (15%)**, or **Test (15%)**, guaranteeing **zero HEALPix assignment overlap**.
+2. **Spatial Boundary Uncertainty Buffer:**
+   - Evaluates sources residing within $3\sigma_{\mathrm{astrometric}}$ of a HEALPix pixel boundary. Sources whose astrometric uncertainty ellipse crosses a split boundary are quarantined.
+3. **Canonical Object Identity & Repeated Detections:**
+   - Ensures distinct alert packets representing the same astrophysical transient or variable star cannot appear across multiple splits.
+4. **Cross-Catalogue Alias Audit:**
+   - Resolves multi-survey designations (e.g., ZTF20acvhrgm = AT2020xnd) to prevent cross-catalogue train/test leakage.
+5. **Host-Galaxy Association Audit:**
+   - Verifies that a transient candidate and its associated host galaxy do not reside in conflicting splits.
+6. **Chronological Temporal Split ($T_{\mathrm{split}}$):**
+   - Partitions time-series chronologically ($T_{\mathrm{split}} = \mathrm{MJD}\; 60000.0$). Models are trained on historical data up to $T_{\mathrm{split}}$ and evaluated on newly emerging transients occurring after $T_{\mathrm{split}}$.
+
+---
+
+## 2. Probabilistic Gaia DR3 Cross-Matching Protocol
+
+Positional proximity within a fixed angular radius is insufficient for robust astronomical cross-matching. ASTRAEUS implements a Bayesian probabilistic matching framework accounting for:
+- Propagated coordinates using Gaia proper motions:
+  $$\alpha(t) = \alpha_0 + \frac{\mu_\alpha^*}{\cos \delta_0}(t - t_0), \quad \delta(t) = \delta_0 + \mu_\delta (t - t_0)$$
+- Positional covariance ellipse convolution ($\mathbf{\Sigma} = \mathbf{\Sigma}_{\mathrm{alert}} + \mathbf{\Sigma}_{\mathrm{Gaia}}$).
+- Local background stellar density $\rho_{\mathrm{local}}$ (sources per $\mathrm{arcsec}^2$).
+- Chance coincidence probability:
+  $$P_{\mathrm{chance}} = 1 - \exp\left(-\pi \Delta \theta^2 \rho_{\mathrm{local}}\right)$$
+- Posterior match probability $P(\mathcal{M} \mid \Delta \theta, \rho)$.
+- Tri-state association classification:
+  - **`SECURE_MATCH`:** $P(\mathcal{M}) \ge 0.95$ with no secondary candidate with $P > 0.05$.
+  - **`AMBIGUOUS_MATCH`:** Multiple candidate counterparts with overlapping probabilities.
+  - **`NO_RELIABLE_MATCH`:** No counterpart within search radius or $P(\mathcal{M}) < 0.50$ (scientifically meaningful; indicates survey depth, high extinction, or extragalactic origin).
 
 ---
 

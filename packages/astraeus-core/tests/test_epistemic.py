@@ -1,5 +1,5 @@
 import pytest
-from astraeus_core.epistemic import EpistemicTier, EpistemicMetadata
+from astraeus_core.epistemic import EpistemicTier, EpistemicMetadata, ClaimType
 from astraeus_core.exceptions import EpistemicViolationError
 
 
@@ -9,6 +9,13 @@ def test_epistemic_tier_enumeration():
     assert EpistemicTier.PREDICTED.value == "physically_predicted"
     assert EpistemicTier.SIMULATED.value == "numerically_simulated"
     assert EpistemicTier.HYPOTHESIZED.value == "hypothesized"
+
+
+def test_claim_types():
+    assert ClaimType.MEASURED_SOURCE.value == "measured_source"
+    assert ClaimType.PHYSICAL_MECHANISM.value == "physical_mechanism"
+    assert ClaimType.POPULATION_RELATION.value == "population_relationship"
+    assert ClaimType.THEORETICAL_MODEL.value == "theoretical_model"
 
 
 def test_illegal_promotion_to_observed():

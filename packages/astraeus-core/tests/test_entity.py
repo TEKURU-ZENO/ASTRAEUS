@@ -107,6 +107,7 @@ def test_composite_anomaly_score():
         mahalanobis_distance=3.5,
         epistemic_uncertainty=1.2,
         physical_residual=4.0,
+        physical_model_applied="bazin_transient",
         alpha=0.4,
         beta=0.3,
         gamma=0.3,
@@ -114,6 +115,43 @@ def test_composite_anomaly_score():
     # 0.4*3.5 + 0.3*1.2 + 0.3*4.0 = 1.4 + 0.36 + 1.2 = 2.96
     assert score.composite_score == pytest.approx(2.96)
     assert score.is_candidate_for_followup(threshold=2.5)
+
+
+def test_normalized_anomaly_score_and_uncertainty_decomposition():
+    from astraeus_core.conformal import UncertaintyDecomposition
+
+    decomp = UncertaintyDecomposition(
+        aleatoric=0.03,
+        epistemic=0.08,
+        calibration_margin=0.02,
+        distribution_shift=0.05,
+    )
+    interval = ConformalPredictionInterval(
+        target_property="peak_magnitude",
+        point_estimate=17.2,
+        lower_bound=16.8,
+        upper_bound=17.6,
+        coverage_level=0.95,
+        uncertainty_decomposition=decomp,
+    )
+    assert interval.uncertainty_decomposition.aleatoric == 0.03
+    assert interval.uncertainty_decomposition.distribution_shift == 0.05
+
+    score_norm = CompositeAnomalyScore(
+        entity_id="candidate:transient:002",
+        mahalanobis_distance=4.2,
+        epistemic_uncertainty=2.1,
+        physical_residual=1.5,
+        mahalanobis_normalized=0.85,
+        uncertainty_normalized=0.90,
+        residual_normalized=0.40,
+        physical_model_applied="arnett_sn_ia",
+        alpha=0.5,
+        beta=0.3,
+        gamma=0.2,
+    )
+    # 0.5*0.85 + 0.3*0.90 + 0.2*0.40 = 0.425 + 0.27 + 0.08 = 0.775
+    assert score_norm.composite_score == pytest.approx(0.775)
 
 
 def test_promote_to_inferred_preserves_lineage(sample_coords, sample_observation):

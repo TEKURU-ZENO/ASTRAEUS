@@ -36,11 +36,16 @@ Months 1-2    Months 3-4     Months 5-6     Months 7-8     Months 9-10    Months
 
 ---
 
-## 3. Phase 1 Sprint Milestones (Days 1–90)
+## 3. Revised Phase 1 Sprint Milestones (Days 1–90)
 
-- **Sprint 1 (Days 1–15):** Setup monorepo, author 6 master specifications, implement `astraeus-core` epistemic data structures and IVOA bindings. Pass unit test suite.
-- **Sprint 2 (Days 16–30):** Implement data ingestion pipelines (`astraeus-data`) for ZTF and Gaia DR3. Partition data into spatial HEALPix and temporal cutoffs.
-- **Sprint 3 (Days 31–45):** Train baseline temporal models (Lomb-Scargle + Random Forest, ASTROMER 1D Transformer). Log runs to MLflow.
-- **Sprint 4 (Days 46–60):** Implement composite anomaly scoring ($d_M + u + r_{\mathrm{phys}}$) and conformal calibration. Validate on confirmed rare transients.
-- **Sprint 5 (Days 61–75):** Run cross-survey zero-shot transfer tests on Pan-STARRS and DECam. Audit conformal prediction coverage.
+- **Sprint 1 (Days 1–15) [COMPLETE]:** Setup monorepo, author 6 master specifications, implement `astraeus-core` epistemic data structures and initial IVOA bindings. Zero HEALPix assignment overlap manifest generated. 20 automated unit tests passing.
+- **Sprint 2 (Days 16–30) [REVISED WORKSTREAM ARCHITECTURE]:**
+  1. *Workstream 1 (Data Contracts):* Frozen ZTF alert and light-curve schemas preserving raw packets, timescale standards (MJD/BJD), filters, flux vs magnitude, upper limits vs detections, and quality flags.
+  2. *Workstream 2 (Ingestion & Replay Engine):* Historical backfill and streaming alert processor with idempotent replay (duplicate prevention), schema-version tracking, dead-letter quarantine, and failure recovery.
+  3. *Workstream 3 (Probabilistic Gaia Cross-Matcher):* Bayesian association component with proper motion epoch propagation, local stellar density estimation ($\rho_{\mathrm{local}}$), chance coincidence calculation, and tri-state classification (`SECURE_MATCH`, `AMBIGUOUS_MATCH`, `NO_RELIABLE_MATCH`).
+  4. *Workstream 4 (Dataset Construction & Multi-Tier Leakage Audit):* First real-data Parquet release with canonical object identity, multi-tier leakage audits (HEALPix boundary buffer, object aliases, repeated detections, host galaxy co-splitting), and immutable dataset manifests.
+  5. *Workstream 5 (Baseline Modeling Scaffolding):* Feature-engineered baselines (periodicity extraction via Lomb-Scargle, transient features), task-separated classifiers (Random Forest), and hardware VRAM/throughput benchmarks on RTX 5050 (8 GB) before freezing transformer configs.
+- **Sprint 3 (Days 31–45):** Train and benchmark baseline temporal models on real ZTF/BTS data; evaluate representation learning against feature-engineered baselines; log to MLflow.
+- **Sprint 4 (Days 46–60):** Implement calibrated composite anomaly scoring ($d_M + u + r_{\mathrm{phys}}$) with explicit component normalization and class-conditional physical models.
+- **Sprint 5 (Days 61–75):** Run cross-survey zero-shot transfer tests on Pan-STARRS and DECam. Audit conformal prediction coverage under distribution shift.
 - **Sprint 6 (Days 76–90):** Deploy 4-agent runtime (Orchestrator, Data Agent, Literature Agent, Skeptic Agent). Execute the Day 90 Reproducible Discovery Report demonstration.

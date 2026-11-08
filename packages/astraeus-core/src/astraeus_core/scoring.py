@@ -9,8 +9,9 @@ from pydantic import BaseModel, Field
 
 class CompositeAnomalyScore(BaseModel):
     """
-    Composite anomaly evaluation:
-    s(x) = alpha * d_M + beta * u + gamma * r_phys
+    Calibrated composite anomaly evaluation combining normalized terms:
+    s(x) = alpha * d_M_norm + beta * u_norm + gamma * r_phys_norm
+    Ensures commensurate numerical scales across disparate statistical and physical domains.
     """
     entity_id: str = Field(..., description="Astronomical candidate ID.")
     mahalanobis_distance: float = Field(
@@ -24,9 +25,27 @@ class CompositeAnomalyScore(BaseModel):
         description="u: Conformal quantile width scaled by local latent density."
     )
     physical_residual: float = Field(
-        ...,
+        default=0.0,
         ge=0.0,
-        description="r_phys: Weighted residual discrepancy against standard physical forward models."
+        description="r_phys: Weighted residual discrepancy against applicable physical forward models."
+    )
+    # Normalized components mapped onto calibrated [0, 1] scales
+    mahalanobis_normalized: Optional[float] = Field(
+        default=None, ge=0.0, le=1.0, description="Percentile-normalized d_M against calibration sample."
+    )
+    uncertainty_normalized: Optional[float] = Field(
+        default=None, ge=0.0, le=1.0, description="Percentile-normalized u against calibration sample."
+    )
+    residual_normalized: Optional[float] = Field(
+        default=None, ge=0.0, le=1.0, description="Percentile-normalized r_phys against calibration sample."
+    )
+    physical_model_applied: str = Field(
+        default="none_applicable",
+        description="Specific forward physical model tested (e.g. 'bazin_transient', 'arnett_sn_ia', 'none_applicable')."
+    )
+    physical_model_valid: bool = Field(
+        default=True,
+        description="Whether a valid physical model was available for this candidate class."
     )
     alpha: float = Field(default=0.4, ge=0.0, description="Weight on latent manifold distance.")
     beta: float = Field(default=0.3, ge=0.0, description="Weight on conformal epistemic uncertainty.")
@@ -42,12 +61,21 @@ class CompositeAnomalyScore(BaseModel):
     details: Dict[str, Any] = Field(default_factory=dict)
 
     def model_post_init(self, __context: Any) -> None:
-        """Computes the weighted composite score automatically."""
-        computed = (
-            self.alpha * self.mahalanobis_distance
-            + self.beta * self.epistemic_uncertainty
-            + self.gamma * self.physical_residual
-        )
+        """Computes the weighted composite score automatically using normalized or raw values."""
+        # Use normalized terms if available, otherwise fallback with clear logging
+        d_val = self.mahalanobis_normalized if self.mahalanobis_normalized is not None else self.mahalanobis_distance
+        u_val = self.uncertainty_normalized if self.uncertainty_normalized is not None else self.epistemic_uncertainty
+        r_val = self.residual_normalized if self.residual_normalized is not None else self.physical_residual
+
+        # Re-weight dynamically if no physical model is applicable
+        if not self.physical_model_valid or self.physical_model_applied == "none_applicable":
+            total_weight = self.alpha + self.beta
+            a_weight = self.alpha / total_weight if total_weight > 0 else 0.5
+            b_weight = self.beta / total_weight if total_weight > 0 else 0.5
+            computed = a_weight * d_val + b_weight * u_val
+        else:
+            computed = self.alpha * d_val + self.beta * u_val + self.gamma * r_val
+
         self.composite_score = float(computed)
 
     def is_candidate_for_followup(self, threshold: float = 2.5) -> bool:

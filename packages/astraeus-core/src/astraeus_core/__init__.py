@@ -4,7 +4,7 @@ Provides epistemic stratification schemas, celestial coordinates, IVOA provenanc
 conformal uncertainty representations, and composite anomaly scoring.
 """
 
-from astraeus_core.epistemic import EpistemicTier, EpistemicMetadata
+from astraeus_core.epistemic import EpistemicTier, EpistemicMetadata, ClaimType
 from astraeus_core.coordinates import CelestialCoordinates
 from astraeus_core.provenance import (
     ProvAgent,
@@ -17,7 +17,7 @@ from astraeus_core.observations import (
     ObservationRecord,
     PhotometricTimeSeries,
 )
-from astraeus_core.conformal import ConformalPredictionInterval
+from astraeus_core.conformal import ConformalPredictionInterval, UncertaintyDecomposition
 from astraeus_core.scoring import CompositeAnomalyScore
 from astraeus_core.entity import AstronomicalEntity
 from astraeus_core.exceptions import (
@@ -33,6 +33,7 @@ __version__ = "0.1.0"
 __all__ = [
     "EpistemicTier",
     "EpistemicMetadata",
+    "ClaimType",
     "CelestialCoordinates",
     "ProvAgent",
     "ProvActivity",
@@ -42,6 +43,7 @@ __all__ = [
     "ObservationRecord",
     "PhotometricTimeSeries",
     "ConformalPredictionInterval",
+    "UncertaintyDecomposition",
     "CompositeAnomalyScore",
     "AstronomicalEntity",
     "AstraeusError",

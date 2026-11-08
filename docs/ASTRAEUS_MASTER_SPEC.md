@@ -27,11 +27,11 @@ $$\mathcal{E} \in \{\mathcal{E}_{\mathrm{obs}},\, \mathcal{E}_{\mathrm{inf}},\, 
 1. **Directly Observed ($\mathcal{E}_{\mathrm{obs}}$):**
    - Calibrated physical detector measurements traceable to certified instruments.
    - Astrometric coordinates (ICRS), calibrated flux densities across defined passbands, photon arrival timestamps (MJD/BJD), and raw gravitational-wave strain time series.
-   - Traceability standard: IVOA Provenance Data Model v1.0 and W3C PROV-DM entity-activity links.
+   - Traceability standard: Initial implementation based on IVOA Provenance Data Model v1.0 and W3C PROV-DM entity-activity links; full conformance validation pending formal IVOA interoperability suites.
 2. **Statistically Inferred ($\mathcal{E}_{\mathrm{inf}}$):**
    - Empirical latent parameters or class probabilities derived via machine learning or Bayesian inference, conditioned on explicit prior distributions and likelihood models.
    - Examples: photometric redshifts ($z_{\mathrm{phot}}$), stellar surface gravities ($\log g$), cluster membership probabilities.
-   - Requirement: Conformal prediction coverage intervals ($1-\alpha$) and out-of-distribution (OOD) distance metrics.
+   - Requirement: Explicit decomposition into aleatoric uncertainty, epistemic model uncertainty, calibration interval uncertainty, and distribution-shift uncertainty.
 3. **Physically Predicted ($\mathcal{E}_{\mathrm{pred}}$):**
    - Analytical deductions derived from closed-form physical theories, conservation laws, or analytical equations of state.
    - Examples: relativistic orbital decay rates, hydrostatic stellar profiles, linear perturbation growth factors.
@@ -42,6 +42,7 @@ $$\mathcal{E} \in \{\mathcal{E}_{\mathrm{obs}},\, \mathcal{E}_{\mathrm{inf}},\, 
 5. **Hypothesized ($\mathcal{E}_{\mathrm{hyp}}$):**
    - Unverified physical mechanisms, candidate anomalies, discovered symbolic equations, or proposed cross-messenger event associations awaiting empirical falsification.
    - Requirement: Explicit falsification conditions, multi-agent adversarial challenge clearance, and hypothesis revision trees.
+   - **Critical Epistemic Invariant:** A verified hypothesis does *not* automatically become an observation ($\mathcal{E}_{\mathrm{obs}}$). Validation merely transitions a hypothesis from unverified to corroborated ($\mathcal{E}_{\mathrm{hyp}}^{\mathrm{corroborated}}$). Observational status is reserved strictly for certified primary detector readouts.
 
 ---
 
