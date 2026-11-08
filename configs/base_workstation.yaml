@@ -1,0 +1,38 @@
+# ASTRAEUS Hardware Profile: Tier 1 Local Workstation
+# Target: NVIDIA GeForce RTX 5050 (8 GB VRAM), 16-32 vCPUs, 64 GB System RAM
+
+hardware:
+  tier: 1
+  device: "cuda"
+  gpu_name: "NVIDIA GeForce RTX 5050"
+  total_vram_gb: 8.0
+  mixed_precision: "bf16" # fallback to fp16 if bf16 not supported
+  enable_sdpa: true       # PyTorch 2.x Scaled Dot-Product Attention
+
+memory_budgets:
+  model_weights_max_mb: 1800
+  activation_cache_max_mb: 1200
+  vector_scratchpad_max_mb: 1000
+  cuda_driver_overhead_mb: 1000
+  safety_headroom_mb: 3000
+
+training:
+  micro_batch_size: 16
+  gradient_accumulation_steps: 4
+  effective_batch_size: 64
+  dataloader_workers: 4
+  pin_memory: true
+  max_sequence_length: 256
+
+storage:
+  cache_dir: "data/cache"
+  parquet_partition_dir: "data/partitions"
+  duckdb_path: "data/metadata.duckdb"
+  qdrant_storage: "data/qdrant"
+
+partitioning:
+  healpix_nside: 32
+  train_ratio: 0.70
+  val_ratio: 0.15
+  test_ratio: 0.15
+  temporal_split_mjd: 60000.0
