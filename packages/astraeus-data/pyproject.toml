@@ -1,0 +1,23 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "astraeus-data"
+version = "0.1.0"
+description = "Data ingestion, spatial HEALPix partitioning, and Parquet management for ASTRAEUS"
+authors = [
+    {name = "ASTRAEUS Research Consortium"}
+]
+license = {text = "Apache-2.0"}
+requires-python = ">=3.10"
+dependencies = [
+    "astraeus-core>=0.1.0",
+    "pyarrow>=15.0.0",
+    "astropy>=6.1.0",
+    "astropy-healpix>=2.0.0",
+    "numpy>=1.26.0",
+]
+
+[tool.setuptools.packages.find]
+where = ["src"]
