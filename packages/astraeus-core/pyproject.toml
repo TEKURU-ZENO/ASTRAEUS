@@ -1,0 +1,23 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "astraeus-core"
+version = "0.1.0"
+description = "Core epistemic schemas, IVOA provenance, and data contracts for ASTRAEUS"
+authors = [
+    {name = "ASTRAEUS Research Consortium"}
+]
+license = {text = "Apache-2.0"}
+requires-python = ">=3.10"
+dependencies = [
+    "astropy>=6.1.0",
+    "astropy-healpix>=2.0.0",
+    "pyarrow>=15.0.0",
+    "pydantic>=2.6.0",
+    "numpy>=1.26.0",
+]
+
+[tool.setuptools.packages.find]
+where = ["src"]
