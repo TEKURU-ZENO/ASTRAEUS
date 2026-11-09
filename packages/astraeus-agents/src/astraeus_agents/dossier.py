@@ -8,7 +8,7 @@ epistemic boundaries, IVOA provenance, and human-in-the-loop scientific oversigh
 from typing import Dict, Any, List, Optional
 from datetime import datetime, timezone
 import json
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ConfigDict, model_validator
 
 from astraeus_agents.contracts import (
     TerminalInvestigationStatus,
@@ -24,7 +24,10 @@ from astraeus_core.provenance import ProvEntity
 class InvestigationDossier(BaseModel):
     """
     Immutable scientific candidate investigation dossier.
+    Enforces deterministic gate alignment and bypass resistance at the system boundary.
     """
+    model_config = ConfigDict(frozen=True)
+
     dossier_id: str
     target_entity_id: str
     ra_deg: float
@@ -44,6 +47,29 @@ class InvestigationDossier(BaseModel):
         "autonomous investigation. It does NOT constitute an independent or unverified declaration "
         "of scientific discovery. Final physical claims require human spectroscopic confirmation."
     )
+
+    @model_validator(mode="after")
+    def verify_gate_bypass_resistance(self) -> "InvestigationDossier":
+        """
+        Guarantees that no caller or agent can bypass the Deterministic Evidence Gate.
+        """
+        if self.terminal_status != self.gate_evaluation.terminal_status:
+            raise ValueError(
+                f"Gate bypass detected: dossier terminal_status ({self.terminal_status.value}) "
+                f"does not match gate_evaluation terminal_status ({self.gate_evaluation.terminal_status.value})."
+            )
+
+        if self.terminal_status == TerminalInvestigationStatus.CANDIDATE_REQUIRES_FOLLOWUP:
+            if not self.gate_evaluation.data_integrity_passed:
+                raise ValueError("Gate bypass detected: Follow-up recommended despite failed data integrity gate.")
+            if not self.gate_evaluation.artifact_filter_passed:
+                raise ValueError("Gate bypass detected: Follow-up recommended despite failed artifact filter gate.")
+            if not self.gate_evaluation.physical_plausibility_passed:
+                raise ValueError("Gate bypass detected: Follow-up recommended despite failed physical plausibility gate.")
+            if len(self.gate_evaluation.unresolved_fatal_objections) > 0:
+                raise ValueError("Gate bypass detected: Follow-up recommended despite unresolved fatal skeptic objections.")
+
+        return self
 
     def to_markdown(self) -> str:
         """Renders the dossier as an auditable scientific Markdown report."""

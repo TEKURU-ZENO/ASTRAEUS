@@ -3,7 +3,7 @@
 
 **Document Identifier:** `ASTRAEUS-ROADMAP-001`  
 **Classification:** Strategic Planning & Milestone Verification  
-**Version:** 1.0.0  
+**Version:** 2.1.0 (Formal Scientific Sign-Off Post-Independent Audit v2)  
 
 ---
 
@@ -62,8 +62,8 @@ Months 1-2    Months 3-4     Months 5-6     Months 7-8     Months 9-10    Months
   1. *Multi-Agent Architecture (`astraeus-agents`):* 4-agent collaborative runtime (`DataCrossMatchAgent`, `LiteratureContextAgent`, `SkepticValidationAgent`, `PhysicalModelEngine`) coordinated via typed contracts and IVOA Prov-DM provenance tracking.
   2. *Adversarial Skeptic Gatekeeper:* Systematic execution of 4-category challenges (PSF shape failure, image subtraction dipole defects, crowded field blending, and unphysical parameters such as $M_{\mathrm{Ni}} > 2.5\,M_\odot$).
   3. *Deterministic Scientific Evidence Gates:* Replaced LLM discretion with mathematical code gates enforcing terminal statuses (`CANDIDATE_REQUIRES_FOLLOWUP`, `KNOWN_OBJECT`, `KNOWN_CLASS_UNUSUAL`, `REJECTED_AS_ARTIFACT`, `INSUFFICIENT_EVIDENCE`).
-  4. *Flagship Day 90 Reproducible Discovery Dossier & Governance Benchmark:* Evaluated on 4 canonical deep-dive transients (AT2018cow FBOT analogue, normal SN Ia SN2026abc, subtraction dipole defect, and sparse trigger) and a 50-candidate validation cohort; demonstrated **0.0% epistemic violation rate**, **0.0% artifact false alarm rate**, and **93.8% ToO precision**; 73 unit tests passing with **94% statement test coverage** across all 5 monorepo packages.
-  5. *Day 90 Scientific Audit & Reconciliation (Post-Senior Review Sign-Off):* Formally reconciled flagship coordinates ($\alpha = 244.000917^\circ, \delta = +22.268031^\circ$), resolved the $35.77'$ transcription error, classified candidate as `AT2018cow-Archival-Replay`, published exhaustive $4\times 4$ and $2\times 2$ confusion matrices with Wilson 95% CIs, executed a controlled 5-way governance ablation study (Ablations A-E), and formalized model-conditioned parameter uncertainties. Phase 1 formally approved and complete.
+  4. *Flagship Day 90 Reproducible Discovery Dossier & Governance Benchmark:* Evaluated on 4 canonical deep-dive transients (AT2018cow FBOT analogue, normal SN Ia SN2026abc, subtraction dipole defect, and sparse trigger) and a 50-candidate validation cohort; demonstrated **0.0% epistemic violation rate**, **0.0% artifact false alarm rate**, and **93.8% ToO precision**; 77 unit tests passing with **94% statement test coverage** across all 5 monorepo packages.
+  5. *Day 90 Scientific Audit & Reconciliation v2.1.0 (Post-Senior Independent Audit):* Formally reconciled flagship discovery epoch to $t_0 = 58286.04 \pm 0.21\,\mathrm{MJD}$ (June 16.5, 2018 UTC) matching published ATLAS discovery alerts; corrected host galaxy CGCG 137-068 separation to angular offset $\Delta \theta = 5.9''$ and projected distance $d_{\mathrm{proj}} \approx 1.73\,\mathrm{kpc}$ (Flat $\Lambda\mathrm{CDM}$ at $z = 0.014145$); corrected Wilson 95% interval for 0/10 to exact $[0.00\%, 27.75\%]$; executed controlled 6-way governance ablation suite including Configuration D2 (4-Agent + Gates without Skeptic) isolating the marginal value of the Skeptic agent (McNemar $\chi^2 = 12.07, p = 0.00053$, 5-seed variation $53.6 \pm 2.8\%$); standardized deviation terminology to $D_{\mathrm{morph\_RMS}} = 3.98$ (unscaled $D_M = 5.63$), reported $\mathrm{dof} = 6 - 5 = 1$, parameter correlation matrix $R$, and profile likelihood intervals; formalized metric as Target-of-Opportunity (ToO) Follow-Up Allocation Precision for Rare/Rapid Transients; verified gate bypass resistance (`test_gate_bypass_resistance.py`); and finalized Phase 2 research tracks (Tracks A–E) and RTX 5050 compute strategy. Phase 1 unconditionally approved and complete.
 
 ---
 
