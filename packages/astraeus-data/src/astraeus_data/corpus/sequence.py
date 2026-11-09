@@ -219,7 +219,7 @@ class TemporalSequence(BaseModel):
 
         visible_records = [
             r for r in self.observations
-            if r.has_operational_pub_time and is_observation_visible_at_cutoff(r.t_pub_utc, t_cutoff_utc)
+            if r.has_operational_pub_time and is_observation_visible_at_cutoff(r.t_pub_utc, t_cutoff_utc, r.t_ingest_utc)
         ]
         return TemporalSequence(
             object_id=self.object_id,

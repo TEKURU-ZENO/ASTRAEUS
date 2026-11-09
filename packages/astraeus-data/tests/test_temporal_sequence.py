@@ -135,24 +135,40 @@ class TestAstronomicalTimeConversion:
         assert math.isclose(mjd_tt, expected_tt_mjd, rel_tol=1e-9)
 
     def test_roemer_delay_bounds(self):
-        """Verifies geometric Roemer delay lies within [-500s, +500s]."""
+        """Verifies geometric Roemer delay lies within [-500s, +500s] across observatories and sky coordinates."""
         mjd = 60000.0
-        roemer_palomar = compute_roemer_delay_sec(mjd, ra_deg=180.0, dec_deg=45.0, observatory="ZTF")
-        assert -500.0 <= roemer_palomar <= 500.0
+        # Test all major optical survey observatories
+        observatories = ["ZTF", "PALOMAR", "ATLAS_HKO", "PS1", "ATLAS_MLO", "ATLAS_SAO", "ATLAS_CHL", "DECAM"]
+        # Test diverse sky directions: ecliptic plane, north celestial pole, celestial equator
+        sky_coords = [(0.0, 0.0), (180.0, 0.0), (90.0, 66.5), (0.0, 90.0), (270.0, -45.0)]
 
-    def test_causal_visibility_pipeline_latency(self):
+        for obs in observatories:
+            for ra, dec in sky_coords:
+                roemer_delay = compute_roemer_delay_sec(mjd, ra_deg=ra, dec_deg=dec, observatory=obs)
+                assert -500.0 <= roemer_delay <= 500.0, f"Roemer delay {roemer_delay} out of bounds for {obs} at ({ra}, {dec})"
+
+    def test_leap_seconds_historical_transitions(self):
+        """Verifies historical leap second insertions per IERS Bulletin C."""
+        assert get_leap_seconds_utc_to_tai(57754.0) == 37.0  # 2017-01-01
+        assert get_leap_seconds_utc_to_tai(57204.0) == 36.0  # 2015-07-01
+        assert get_leap_seconds_utc_to_tai(56109.0) == 35.0  # 2012-07-01
+        assert get_leap_seconds_utc_to_tai(54832.0) == 34.0  # 2009-01-01
+        assert get_leap_seconds_utc_to_tai(50083.0) == 30.0  # 1996-01-01
+
+    def test_causal_visibility_pipeline_and_ingestion_latency(self):
         """
         Verifies operational visibility invariant:
-        Exposure taken at t_obs = 10:00, published at t_pub = 10:30.
-        At T_cutoff = 10:15, observation is strictly invisible.
-        At T_cutoff = 10:45, observation becomes visible.
+        Exposure taken at t_obs = 10:00, published at t_pub = 10:30, ingested at t_ingest = 10:35.
+        At T_cutoff = 10:32, publication happened but ingestion has not occurred: observation is invisible.
+        At T_cutoff = 10:40, both publication and ingestion have occurred: observation is visible.
         """
         t_pub = "2023-05-10T10:30:00Z"
-        cutoff_early = "2023-05-10T10:15:00Z"
-        cutoff_late = "2023-05-10T10:45:00Z"
+        t_ingest = "2023-05-10T10:35:00Z"
+        cutoff_pre_ingest = "2023-05-10T10:32:00Z"
+        cutoff_post_ingest = "2023-05-10T10:40:00Z"
 
-        assert not is_observation_visible_at_cutoff(t_pub, cutoff_early)
-        assert is_observation_visible_at_cutoff(t_pub, cutoff_late)
+        assert not is_observation_visible_at_cutoff(t_pub, cutoff_pre_ingest, t_ingest_utc=t_ingest)
+        assert is_observation_visible_at_cutoff(t_pub, cutoff_post_ingest, t_ingest_utc=t_ingest)
 
 
 class TestCausalSequenceAndLandmarkProtection:

@@ -179,14 +179,26 @@ def parse_operational_utc_epoch(utc_iso_string: str) -> datetime:
     return dt
 
 
+# Timing Precision Budget & Error Accounting:
+# 1. TAI - UTC leap seconds: 0.0s error (exact integer seconds per IERS Bulletin C).
+# 2. TT - TAI offset: 0.0s error (IAU exact standard definition: +32.184 seconds).
+# 3. TDB - TT periodic variations: < 0.0001s error (Fairhead & Bretagnon 1990 series to 0.1 ms).
+# 4. Roemer delay: < 0.001s error (DE430/ephemeris and observatory WGS84 positions within 1 meter).
+# 5. Shapiro delay: < 0.0001s (maximum 0.1 ms near Sun limb; intentionally neglected for transient optical alert cadences).
+# Overall Timing Precision Budget: < 1.0 ms across all observatories and sky coordinates.
+TIMING_PRECISION_BUDGET_SEC = 0.001
+
+
 def is_observation_visible_at_cutoff(
     t_pub_utc: Optional[Union[datetime, str, float]],
-    t_cutoff_utc: Union[datetime, str, float]
+    t_cutoff_utc: Union[datetime, str, float],
+    t_ingest_utc: Optional[Union[datetime, str, float]] = None
 ) -> bool:
     """
     Operational visibility invariant:
     An observation x_i is visible to the model at decision cutoff T_cutoff
-    if and only if its alert publication timestamp t_pub <= T_cutoff.
+    if and only if its operational availability timestamp t_available <= T_cutoff,
+    where t_available = max(t_pub, t_ingest) if ingestion latency is recorded.
     Both timestamps are strictly compared on the operational UTC scale.
     """
     if t_pub_utc is None:
@@ -204,5 +216,10 @@ def is_observation_visible_at_cutoff(
         raise ValueError(f"Unsupported timestamp format: {type(val)}")
 
     pub_ts = _to_timestamp(t_pub_utc)
+    avail_ts = pub_ts
+    if t_ingest_utc is not None:
+        ingest_ts = _to_timestamp(t_ingest_utc)
+        avail_ts = max(pub_ts, ingest_ts)
+
     cutoff_ts = _to_timestamp(t_cutoff_utc)
-    return pub_ts <= cutoff_ts
+    return avail_ts <= cutoff_ts

@@ -47,6 +47,13 @@ from astraeus_models.physics import (
     PhysicalModelEngine,
     PhysicsFitResult,
 )
+from astraeus_models.baselines import (
+    AkimaBaselineModel,
+    MultiOutputGPBaseline,
+    NonPretrainedTransformerBaseline,
+    AstromerAdapterBaseline,
+    CommonFeatureClassifier,
+)
 
 __version__ = "0.1.0"
 
@@ -80,4 +87,9 @@ __all__ = [
     "ShockCoolingFitResult",
     "PhysicalModelEngine",
     "PhysicsFitResult",
+    "AkimaBaselineModel",
+    "MultiOutputGPBaseline",
+    "NonPretrainedTransformerBaseline",
+    "AstromerAdapterBaseline",
+    "CommonFeatureClassifier",
 ]
