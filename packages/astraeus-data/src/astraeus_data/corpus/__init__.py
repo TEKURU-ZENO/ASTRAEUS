@@ -51,6 +51,11 @@ from astraeus_data.corpus.sequence import (
     SI_FLUX_DENSITY_PER_NANOMAGGY,
     MICROJANSKYS_PER_NANOMAGGY,
 )
+from astraeus_data.corpus.archival_manifest import (
+    ArchivalObservationRecord,
+    Track3ArchivalManifest,
+    DatasetATestManifest,
+)
 
 __all__ = [
     "ReferenceObjectRecord",
@@ -94,4 +99,7 @@ __all__ = [
     "CORPUS_V10_TO_NMGY_SCALE",
     "SI_FLUX_DENSITY_PER_NANOMAGGY",
     "MICROJANSKYS_PER_NANOMAGGY",
+    "ArchivalObservationRecord",
+    "Track3ArchivalManifest",
+    "DatasetATestManifest",
 ]

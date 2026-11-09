@@ -29,6 +29,19 @@ from astraeus_bench.cross_survey import (
     CrossSurveyBenchmarkReport,
     CrossSurveyBenchmarkRunner,
 )
+from astraeus_bench.statistical_testing import (
+    StatisticalContrast,
+    Top10PermutationDiagnostic,
+    compute_paired_wilcoxon,
+    compute_exact_mcnemar,
+    apply_benjamini_hochberg,
+    compute_top10_permutation_test,
+)
+from astraeus_bench.stage2_temporal_benchmark import (
+    ModelTaskEvaluationSummary,
+    Stage2BenchmarkReport,
+    Stage2TemporalBenchmarkOrchestrator,
+)
 
 __version__ = "0.1.0"
 
@@ -51,4 +64,13 @@ __all__ = [
     "NegativeTransferRecord",
     "CrossSurveyBenchmarkReport",
     "CrossSurveyBenchmarkRunner",
+    "StatisticalContrast",
+    "Top10PermutationDiagnostic",
+    "compute_paired_wilcoxon",
+    "compute_exact_mcnemar",
+    "apply_benjamini_hochberg",
+    "compute_top10_permutation_test",
+    "ModelTaskEvaluationSummary",
+    "Stage2BenchmarkReport",
+    "Stage2TemporalBenchmarkOrchestrator",
 ]
