@@ -74,7 +74,41 @@ Positional proximity within a fixed angular radius is insufficient for robust as
 
 ---
 
-## 3. Baseline Implementations & Comparison Standards
+## 3. Model-Aware Physical Applicability Matrix
+
+Physics forward-fitting is class-conditional. Models are applied strictly within their physical validity regimes:
+
+| Candidate Hypothesis | Primary Physical Model | Secondary Investigation | Invalidation / Non-Applicability Gate |
+| :--- | :--- | :--- | :--- |
+| **Ordinary Smooth Transient** | Bazin morphology parameterization | Alternative analytical profiles | Non-smooth kinetics, extreme chromatic jumps |
+| **Radioactively Powered SN** | Arnett $^{56}\mathrm{Ni}$ diffusion engine | Bolometric & parameter consistency | Ejecta mass $< 0.1 M_\odot$ or $> 50 M_\odot$; rise $< 3$ d |
+| **Early Blue Transient** | Shock-cooling envelope model | Multi-component transition | Observations $> 5$ days post-explosion |
+| **FBOT / Peculiar Transient** | Multi-model comparison suite | Shock interaction / engine alternatives | Uncritical single-component fits |
+| **Superluminous SN (SLSN)** | Magnetar spindown / CSM interaction | Circumstellar interaction profiles | Pure radioactive diffusion with unphysical $M_{\mathrm{Ni}}$ |
+| **Periodic Variable (RR Lyr)**| Lomb-Scargle Fourier harmonics | Multi-period beat diagnostics | Aperiodic or single-outburst profiles |
+| **Detector Artifact** | *No physical fit by default* | PSF chi-square, bad-pixel mask | Instrumental crosstalk, cosmic ray spikes |
+
+---
+
+## 4. Four-Population Rare-Event Benchmark Architecture
+
+To avoid selection-effect bias, anomaly triage is evaluated across four segregated astronomical populations plus a controlled injection track:
+
+1. **Population 1 — Common Confirmed Transients:** Normal SNe Ia, core-collapse SNe II, and common variables used to measure false-positive rate and background population density.
+2. **Population 2 — Confirmed Peculiar Transients:** Spectroscopically confirmed rare events (FBOTs such as AT2018cow, superluminous supernovae, peculiar calcium-rich transients) to measure true recovery.
+3. **Population 3 — Detector & Subtraction Artifacts:** Cosmic ray hits, diffraction spikes, bad subtraction residuals, and satellite trails to benchmark rejection of non-astrophysical outliers.
+4. **Population 4 — Unclassified / Ambiguous Candidates:** Realistic observational stream candidates testing ranking without ground-truth assumption.
+5. **Track 5 — Controlled Signal Injection & Recovery:** Synthetic peculiar transients injected into realistic survey cadences and heteroscedastic noise floors to measure empirical recovery efficiency as a function of SNR and epoch coverage.
+
+---
+
+## 5. Dual-Setting Split Conformal Prediction Protocol
+
+ASTRAEUS evaluates split conformal prediction across two distinct regimes:
+
+1. **Setting 1 — Exchangeability-Oriented Evaluation:** Held-out test set drawn from the same spatiotemporal survey partition as the calibration set. Formally verifies the finite-sample marginal coverage guarantee:
+   $$P\left(Y_{\mathrm{new}} \in \widehat{C}_{1-\alpha}(X_{\mathrm{new}})\right) \ge 1 - \alpha$$
+2. **Setting 2 — Distribution-Shift Evaluation:** Evaluates empirical coverage on subsequent observation seasons (temporal shift) or cross-survey observations (instrumental shift), explicitly tracking interval degradation and coverage shortfall.
 
 Every novel scientific claim must be evaluated against three distinct baseline tiers:
 1. **Classical Astrophysical Methods:**

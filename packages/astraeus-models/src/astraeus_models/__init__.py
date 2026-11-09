@@ -25,6 +25,28 @@ from astraeus_models.astromer import (
     AstromerEncoder,
     ContinuousTimePositionalEncoding,
 )
+from astraeus_models.conformal_calibrator import (
+    SplitConformalCalibrator,
+    ConformalEvaluationSettingResult,
+    ConformalCalibrationReport,
+)
+from astraeus_models.physics import (
+    FitStatus,
+    ModelApplicabilityMatrix,
+    bazin_function,
+    fit_bazin,
+    BazinFitResult,
+    arnett_bolometric_luminosity,
+    arnett_photometric_flux,
+    fit_arnett,
+    ArnettFitResult,
+    shock_cooling_luminosity,
+    shock_cooling_photometric_flux,
+    fit_shock_cooling,
+    ShockCoolingFitResult,
+    PhysicalModelEngine,
+    PhysicsFitResult,
+)
 
 __version__ = "0.1.0"
 
@@ -40,4 +62,22 @@ __all__ = [
     "VramBenchmarkResult",
     "AstromerEncoder",
     "ContinuousTimePositionalEncoding",
+    "SplitConformalCalibrator",
+    "ConformalEvaluationSettingResult",
+    "ConformalCalibrationReport",
+    "FitStatus",
+    "ModelApplicabilityMatrix",
+    "bazin_function",
+    "fit_bazin",
+    "BazinFitResult",
+    "arnett_bolometric_luminosity",
+    "arnett_photometric_flux",
+    "fit_arnett",
+    "ArnettFitResult",
+    "shock_cooling_luminosity",
+    "shock_cooling_photometric_flux",
+    "fit_shock_cooling",
+    "ShockCoolingFitResult",
+    "PhysicalModelEngine",
+    "PhysicsFitResult",
 ]

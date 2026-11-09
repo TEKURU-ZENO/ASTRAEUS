@@ -18,7 +18,12 @@ from astraeus_core.observations import (
     PhotometricTimeSeries,
 )
 from astraeus_core.conformal import ConformalPredictionInterval, UncertaintyDecomposition
-from astraeus_core.scoring import CompositeAnomalyScore
+from astraeus_core.scoring import (
+    CompositeAnomalyScore,
+    EmpiricalReferenceCDF,
+    AnomalyEvidenceProfile,
+    AnomalyRankScore,
+)
 from astraeus_core.entity import AstronomicalEntity
 from astraeus_core.exceptions import (
     AstraeusError,
@@ -45,6 +50,9 @@ __all__ = [
     "ConformalPredictionInterval",
     "UncertaintyDecomposition",
     "CompositeAnomalyScore",
+    "EmpiricalReferenceCDF",
+    "AnomalyEvidenceProfile",
+    "AnomalyRankScore",
     "AstronomicalEntity",
     "AstraeusError",
     "EpistemicViolationError",

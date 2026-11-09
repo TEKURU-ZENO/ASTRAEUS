@@ -1,0 +1,890 @@
+{
+  "benchmark": "ASTRAEUS Phase 1 Sprint 4: Rare-Event Anomaly Discovery Benchmark",
+  "dataset_summary": {
+    "pop1_common": 20,
+    "pop2_peculiar": 25,
+    "pop3_artifact": 35,
+    "pop4_ambiguous": 25,
+    "injected_anomalous": 40,
+    "pop1_reference_size": 60
+  },
+  "conformal_calibration": {
+    "target_property": "peak_magnitude",
+    "nominal_coverage": 0.9,
+    "calibration_size": 20,
+    "conformal_quantile_threshold": 0.026167840574167656,
+    "setting_1_exchangeable": {
+      "setting_name": "Setting 1: Exchangeable Held-out Population",
+      "nominal_coverage": 0.9,
+      "empirical_coverage": 0.85,
+      "coverage_shortfall": 0.050000000000000044,
+      "mean_interval_width": 0.05233568114833531,
+      "median_interval_width": 0.05233568114833531,
+      "mean_aleatoric_uncertainty": 0.040000000000000015,
+      "mean_epistemic_uncertainty": 0.05000000000000001,
+      "mean_distribution_shift_score": 0.9801127294098544,
+      "n_eval_samples": 20,
+      "exchangeability_satisfied": true
+    },
+    "setting_2_distribution_shift": {
+      "setting_name": "Setting 2: Distribution-Shifted / Cadence Degraded Population",
+      "nominal_coverage": 0.9,
+      "empirical_coverage": 0.08,
+      "coverage_shortfall": 0.8200000000000001,
+      "mean_interval_width": 0.05233568114833531,
+      "median_interval_width": 0.05233568114833531,
+      "mean_aleatoric_uncertainty": 0.10000000000000002,
+      "mean_epistemic_uncertainty": 0.05000000000000001,
+      "mean_distribution_shift_score": 7.103910860536994,
+      "n_eval_samples": 25,
+      "exchangeability_satisfied": false
+    }
+  },
+  "methods": {
+    "Isolation_Forest": {
+      "method_name": "Isolation_Forest",
+      "budget_evaluations": {
+        "5": {
+          "budget_k": 5,
+          "targets_found": 5,
+          "artifacts_leaked": 0,
+          "recall": 0.07692307692307693,
+          "precision": 1.0,
+          "fp_per_1000": 0.0
+        },
+        "10": {
+          "budget_k": 10,
+          "targets_found": 10,
+          "artifacts_leaked": 0,
+          "recall": 0.15384615384615385,
+          "precision": 1.0,
+          "fp_per_1000": 0.0
+        },
+        "20": {
+          "budget_k": 20,
+          "targets_found": 20,
+          "artifacts_leaked": 0,
+          "recall": 0.3076923076923077,
+          "precision": 1.0,
+          "fp_per_1000": 0.0
+        },
+        "50": {
+          "budget_k": 50,
+          "targets_found": 49,
+          "artifacts_leaked": 1,
+          "recall": 0.7538461538461538,
+          "precision": 0.98,
+          "fp_per_1000": 20.0
+        },
+        "100": {
+          "budget_k": 100,
+          "targets_found": 65,
+          "artifacts_leaked": 20,
+          "recall": 1.0,
+          "precision": 0.65,
+          "fp_per_1000": 350.0
+        }
+      },
+      "peculiar_yield": {
+        "5": 5,
+        "10": 10,
+        "20": 20,
+        "50": 49,
+        "100": 65
+      },
+      "artifact_contamination": {
+        "5": 0,
+        "10": 0,
+        "20": 0,
+        "50": 1,
+        "100": 20
+      },
+      "recall_at_k": {
+        "5": 0.07692307692307693,
+        "10": 0.15384615384615385,
+        "20": 0.3076923076923077,
+        "50": 0.7538461538461538,
+        "100": 1.0
+      },
+      "precision_at_k": {
+        "5": 1.0,
+        "10": 1.0,
+        "20": 1.0,
+        "50": 0.98,
+        "100": 0.65
+      },
+      "false_positives_per_1000": {
+        "5": 0.0,
+        "10": 0.0,
+        "20": 0.0,
+        "50": 20.0,
+        "100": 350.0
+      },
+      "roc_auc": 0.9921153846153846,
+      "pr_auc": 0.9896296580424988
+    },
+    "Local_Outlier_Factor": {
+      "method_name": "Local_Outlier_Factor",
+      "budget_evaluations": {
+        "5": {
+          "budget_k": 5,
+          "targets_found": 5,
+          "artifacts_leaked": 0,
+          "recall": 0.07692307692307693,
+          "precision": 1.0,
+          "fp_per_1000": 0.0
+        },
+        "10": {
+          "budget_k": 10,
+          "targets_found": 10,
+          "artifacts_leaked": 0,
+          "recall": 0.15384615384615385,
+          "precision": 1.0,
+          "fp_per_1000": 0.0
+        },
+        "20": {
+          "budget_k": 20,
+          "targets_found": 19,
+          "artifacts_leaked": 1,
+          "recall": 0.2923076923076923,
+          "precision": 0.95,
+          "fp_per_1000": 50.0
+        },
+        "50": {
+          "budget_k": 50,
+          "targets_found": 39,
+          "artifacts_leaked": 7,
+          "recall": 0.6,
+          "precision": 0.78,
+          "fp_per_1000": 220.0
+        },
+        "100": {
+          "budget_k": 100,
+          "targets_found": 55,
+          "artifacts_leaked": 33,
+          "recall": 0.8461538461538461,
+          "precision": 0.55,
+          "fp_per_1000": 450.0
+        }
+      },
+      "peculiar_yield": {
+        "5": 5,
+        "10": 10,
+        "20": 19,
+        "50": 39,
+        "100": 55
+      },
+      "artifact_contamination": {
+        "5": 0,
+        "10": 0,
+        "20": 1,
+        "50": 7,
+        "100": 33
+      },
+      "recall_at_k": {
+        "5": 0.07692307692307693,
+        "10": 0.15384615384615385,
+        "20": 0.2923076923076923,
+        "50": 0.6,
+        "100": 0.8461538461538461
+      },
+      "precision_at_k": {
+        "5": 1.0,
+        "10": 1.0,
+        "20": 0.95,
+        "50": 0.78,
+        "100": 0.55
+      },
+      "false_positives_per_1000": {
+        "5": 0.0,
+        "10": 0.0,
+        "20": 50.0,
+        "50": 220.0,
+        "100": 450.0
+      },
+      "roc_auc": 0.8090384615384616,
+      "pr_auc": 0.8138069409548433
+    },
+    "Centroid_Euclidean_Distance": {
+      "method_name": "Centroid_Euclidean_Distance",
+      "budget_evaluations": {
+        "5": {
+          "budget_k": 5,
+          "targets_found": 4,
+          "artifacts_leaked": 1,
+          "recall": 0.06153846153846154,
+          "precision": 0.8,
+          "fp_per_1000": 200.0
+        },
+        "10": {
+          "budget_k": 10,
+          "targets_found": 9,
+          "artifacts_leaked": 1,
+          "recall": 0.13846153846153847,
+          "precision": 0.9,
+          "fp_per_1000": 100.0
+        },
+        "20": {
+          "budget_k": 20,
+          "targets_found": 18,
+          "artifacts_leaked": 1,
+          "recall": 0.27692307692307694,
+          "precision": 0.9,
+          "fp_per_1000": 100.0
+        },
+        "50": {
+          "budget_k": 50,
+          "targets_found": 40,
+          "artifacts_leaked": 4,
+          "recall": 0.6153846153846154,
+          "precision": 0.8,
+          "fp_per_1000": 200.0
+        },
+        "100": {
+          "budget_k": 100,
+          "targets_found": 55,
+          "artifacts_leaked": 28,
+          "recall": 0.8461538461538461,
+          "precision": 0.55,
+          "fp_per_1000": 450.0
+        }
+      },
+      "peculiar_yield": {
+        "5": 4,
+        "10": 9,
+        "20": 18,
+        "50": 40,
+        "100": 55
+      },
+      "artifact_contamination": {
+        "5": 1,
+        "10": 1,
+        "20": 1,
+        "50": 4,
+        "100": 28
+      },
+      "recall_at_k": {
+        "5": 0.06153846153846154,
+        "10": 0.13846153846153847,
+        "20": 0.27692307692307694,
+        "50": 0.6153846153846154,
+        "100": 0.8461538461538461
+      },
+      "precision_at_k": {
+        "5": 0.8,
+        "10": 0.9,
+        "20": 0.9,
+        "50": 0.8,
+        "100": 0.55
+      },
+      "false_positives_per_1000": {
+        "5": 200.0,
+        "10": 100.0,
+        "20": 100.0,
+        "50": 200.0,
+        "100": 450.0
+      },
+      "roc_auc": 0.7651923076923077,
+      "pr_auc": 0.7461298483736492
+    },
+    "Mahalanobis_Only": {
+      "method_name": "Mahalanobis_Only",
+      "budget_evaluations": {
+        "5": {
+          "budget_k": 5,
+          "targets_found": 2,
+          "artifacts_leaked": 3,
+          "recall": 0.03076923076923077,
+          "precision": 0.4,
+          "fp_per_1000": 600.0
+        },
+        "10": {
+          "budget_k": 10,
+          "targets_found": 7,
+          "artifacts_leaked": 3,
+          "recall": 0.1076923076923077,
+          "precision": 0.7,
+          "fp_per_1000": 300.0
+        },
+        "20": {
+          "budget_k": 20,
+          "targets_found": 17,
+          "artifacts_leaked": 3,
+          "recall": 0.26153846153846155,
+          "precision": 0.85,
+          "fp_per_1000": 150.0
+        },
+        "50": {
+          "budget_k": 50,
+          "targets_found": 32,
+          "artifacts_leaked": 18,
+          "recall": 0.49230769230769234,
+          "precision": 0.64,
+          "fp_per_1000": 360.0
+        },
+        "100": {
+          "budget_k": 100,
+          "targets_found": 42,
+          "artifacts_leaked": 35,
+          "recall": 0.6461538461538462,
+          "precision": 0.42,
+          "fp_per_1000": 580.0
+        }
+      },
+      "peculiar_yield": {
+        "5": 2,
+        "10": 7,
+        "20": 17,
+        "50": 32,
+        "100": 42
+      },
+      "artifact_contamination": {
+        "5": 3,
+        "10": 3,
+        "20": 3,
+        "50": 18,
+        "100": 35
+      },
+      "recall_at_k": {
+        "5": 0.03076923076923077,
+        "10": 0.1076923076923077,
+        "20": 0.26153846153846155,
+        "50": 0.49230769230769234,
+        "100": 0.6461538461538462
+      },
+      "precision_at_k": {
+        "5": 0.4,
+        "10": 0.7,
+        "20": 0.85,
+        "50": 0.64,
+        "100": 0.42
+      },
+      "false_positives_per_1000": {
+        "5": 600.0,
+        "10": 300.0,
+        "20": 150.0,
+        "50": 360.0,
+        "100": 580.0
+      },
+      "roc_auc": 0.6223076923076923,
+      "pr_auc": 0.6145815727276915
+    },
+    "Uncertainty_Only": {
+      "method_name": "Uncertainty_Only",
+      "budget_evaluations": {
+        "5": {
+          "budget_k": 5,
+          "targets_found": 0,
+          "artifacts_leaked": 0,
+          "recall": 0.0,
+          "precision": 0.0,
+          "fp_per_1000": 1000.0
+        },
+        "10": {
+          "budget_k": 10,
+          "targets_found": 0,
+          "artifacts_leaked": 0,
+          "recall": 0.0,
+          "precision": 0.0,
+          "fp_per_1000": 1000.0
+        },
+        "20": {
+          "budget_k": 20,
+          "targets_found": 0,
+          "artifacts_leaked": 0,
+          "recall": 0.0,
+          "precision": 0.0,
+          "fp_per_1000": 1000.0
+        },
+        "50": {
+          "budget_k": 50,
+          "targets_found": 25,
+          "artifacts_leaked": 0,
+          "recall": 0.38461538461538464,
+          "precision": 0.5,
+          "fp_per_1000": 500.0
+        },
+        "100": {
+          "budget_k": 100,
+          "targets_found": 40,
+          "artifacts_leaked": 35,
+          "recall": 0.6153846153846154,
+          "precision": 0.4,
+          "fp_per_1000": 600.0
+        }
+      },
+      "peculiar_yield": {
+        "5": 0,
+        "10": 0,
+        "20": 0,
+        "50": 25,
+        "100": 40
+      },
+      "artifact_contamination": {
+        "5": 0,
+        "10": 0,
+        "20": 0,
+        "50": 0,
+        "100": 35
+      },
+      "recall_at_k": {
+        "5": 0.0,
+        "10": 0.0,
+        "20": 0.0,
+        "50": 0.38461538461538464,
+        "100": 0.6153846153846154
+      },
+      "precision_at_k": {
+        "5": 0.0,
+        "10": 0.0,
+        "20": 0.0,
+        "50": 0.5,
+        "100": 0.4
+      },
+      "false_positives_per_1000": {
+        "5": 1000.0,
+        "10": 1000.0,
+        "20": 1000.0,
+        "50": 500.0,
+        "100": 600.0
+      },
+      "roc_auc": 0.34375,
+      "pr_auc": 0.4482758620689655
+    },
+    "Physical_Residual_Only": {
+      "method_name": "Physical_Residual_Only",
+      "budget_evaluations": {
+        "5": {
+          "budget_k": 5,
+          "targets_found": 0,
+          "artifacts_leaked": 0,
+          "recall": 0.0,
+          "precision": 0.0,
+          "fp_per_1000": 1000.0
+        },
+        "10": {
+          "budget_k": 10,
+          "targets_found": 0,
+          "artifacts_leaked": 2,
+          "recall": 0.0,
+          "precision": 0.0,
+          "fp_per_1000": 1000.0
+        },
+        "20": {
+          "budget_k": 20,
+          "targets_found": 0,
+          "artifacts_leaked": 12,
+          "recall": 0.0,
+          "precision": 0.0,
+          "fp_per_1000": 1000.0
+        },
+        "50": {
+          "budget_k": 50,
+          "targets_found": 2,
+          "artifacts_leaked": 35,
+          "recall": 0.03076923076923077,
+          "precision": 0.04,
+          "fp_per_1000": 960.0
+        },
+        "100": {
+          "budget_k": 100,
+          "targets_found": 21,
+          "artifacts_leaked": 35,
+          "recall": 0.3230769230769231,
+          "precision": 0.21,
+          "fp_per_1000": 790.0
+        }
+      },
+      "peculiar_yield": {
+        "5": 0,
+        "10": 0,
+        "20": 0,
+        "50": 2,
+        "100": 21
+      },
+      "artifact_contamination": {
+        "5": 0,
+        "10": 2,
+        "20": 12,
+        "50": 35,
+        "100": 35
+      },
+      "recall_at_k": {
+        "5": 0.0,
+        "10": 0.0,
+        "20": 0.0,
+        "50": 0.03076923076923077,
+        "100": 0.3230769230769231
+      },
+      "precision_at_k": {
+        "5": 0.0,
+        "10": 0.0,
+        "20": 0.0,
+        "50": 0.04,
+        "100": 0.21
+      },
+      "false_positives_per_1000": {
+        "5": 1000.0,
+        "10": 1000.0,
+        "20": 1000.0,
+        "50": 960.0,
+        "100": 790.0
+      },
+      "roc_auc": 0.05865384615384617,
+      "pr_auc": 0.2764582855208501
+    },
+    "ASTRAEUS_Calibrated_Composite": {
+      "method_name": "ASTRAEUS_Calibrated_Composite",
+      "budget_evaluations": {
+        "5": {
+          "budget_k": 5,
+          "targets_found": 2,
+          "artifacts_leaked": 0,
+          "recall": 0.03076923076923077,
+          "precision": 0.4,
+          "fp_per_1000": 600.0
+        },
+        "10": {
+          "budget_k": 10,
+          "targets_found": 5,
+          "artifacts_leaked": 0,
+          "recall": 0.07692307692307693,
+          "precision": 0.5,
+          "fp_per_1000": 500.0
+        },
+        "20": {
+          "budget_k": 20,
+          "targets_found": 9,
+          "artifacts_leaked": 0,
+          "recall": 0.13846153846153847,
+          "precision": 0.45,
+          "fp_per_1000": 550.0
+        },
+        "50": {
+          "budget_k": 50,
+          "targets_found": 35,
+          "artifacts_leaked": 0,
+          "recall": 0.5384615384615384,
+          "precision": 0.7,
+          "fp_per_1000": 300.0
+        },
+        "100": {
+          "budget_k": 100,
+          "targets_found": 65,
+          "artifacts_leaked": 0,
+          "recall": 1.0,
+          "precision": 0.65,
+          "fp_per_1000": 350.0
+        }
+      },
+      "peculiar_yield": {
+        "5": 2,
+        "10": 5,
+        "20": 9,
+        "50": 35,
+        "100": 65
+      },
+      "artifact_contamination": {
+        "5": 0,
+        "10": 0,
+        "20": 0,
+        "50": 0,
+        "100": 0
+      },
+      "recall_at_k": {
+        "5": 0.03076923076923077,
+        "10": 0.07692307692307693,
+        "20": 0.13846153846153847,
+        "50": 0.5384615384615384,
+        "100": 1.0
+      },
+      "precision_at_k": {
+        "5": 0.4,
+        "10": 0.5,
+        "20": 0.45,
+        "50": 0.7,
+        "100": 0.65
+      },
+      "false_positives_per_1000": {
+        "5": 600.0,
+        "10": 500.0,
+        "20": 550.0,
+        "50": 300.0,
+        "100": 350.0
+      },
+      "roc_auc": 0.7574038461538461,
+      "pr_auc": 0.6519091982758103
+    }
+  },
+  "ablations": {
+    "Ablation_No_Physics": {
+      "method_name": "Ablation_No_Physics",
+      "budget_evaluations": {
+        "5": {
+          "budget_k": 5,
+          "targets_found": 5,
+          "artifacts_leaked": 0,
+          "recall": 0.07692307692307693,
+          "precision": 1.0,
+          "fp_per_1000": 0.0
+        },
+        "10": {
+          "budget_k": 10,
+          "targets_found": 10,
+          "artifacts_leaked": 0,
+          "recall": 0.15384615384615385,
+          "precision": 1.0,
+          "fp_per_1000": 0.0
+        },
+        "20": {
+          "budget_k": 20,
+          "targets_found": 20,
+          "artifacts_leaked": 0,
+          "recall": 0.3076923076923077,
+          "precision": 1.0,
+          "fp_per_1000": 0.0
+        },
+        "50": {
+          "budget_k": 50,
+          "targets_found": 40,
+          "artifacts_leaked": 1,
+          "recall": 0.6153846153846154,
+          "precision": 0.8,
+          "fp_per_1000": 200.0
+        },
+        "100": {
+          "budget_k": 100,
+          "targets_found": 42,
+          "artifacts_leaked": 35,
+          "recall": 0.6461538461538462,
+          "precision": 0.42,
+          "fp_per_1000": 580.0
+        }
+      },
+      "peculiar_yield": {
+        "5": 5,
+        "10": 10,
+        "20": 20,
+        "50": 40,
+        "100": 42
+      },
+      "artifact_contamination": {
+        "5": 0,
+        "10": 0,
+        "20": 0,
+        "50": 1,
+        "100": 35
+      },
+      "recall_at_k": {
+        "5": 0.07692307692307693,
+        "10": 0.15384615384615385,
+        "20": 0.3076923076923077,
+        "50": 0.6153846153846154,
+        "100": 0.6461538461538462
+      },
+      "precision_at_k": {
+        "5": 1.0,
+        "10": 1.0,
+        "20": 1.0,
+        "50": 0.8,
+        "100": 0.42
+      },
+      "false_positives_per_1000": {
+        "5": 0.0,
+        "10": 0.0,
+        "20": 0.0,
+        "50": 200.0,
+        "100": 580.0
+      },
+      "roc_auc": 0.6251923076923076,
+      "pr_auc": 0.5201942158731098
+    },
+    "Ablation_No_Uncertainty": {
+      "method_name": "Ablation_No_Uncertainty",
+      "budget_evaluations": {
+        "5": {
+          "budget_k": 5,
+          "targets_found": 0,
+          "artifacts_leaked": 4,
+          "recall": 0.0,
+          "precision": 0.0,
+          "fp_per_1000": 1000.0
+        },
+        "10": {
+          "budget_k": 10,
+          "targets_found": 0,
+          "artifacts_leaked": 9,
+          "recall": 0.0,
+          "precision": 0.0,
+          "fp_per_1000": 1000.0
+        },
+        "20": {
+          "budget_k": 20,
+          "targets_found": 0,
+          "artifacts_leaked": 19,
+          "recall": 0.0,
+          "precision": 0.0,
+          "fp_per_1000": 1000.0
+        },
+        "50": {
+          "budget_k": 50,
+          "targets_found": 9,
+          "artifacts_leaked": 35,
+          "recall": 0.13846153846153847,
+          "precision": 0.18,
+          "fp_per_1000": 820.0
+        },
+        "100": {
+          "budget_k": 100,
+          "targets_found": 37,
+          "artifacts_leaked": 35,
+          "recall": 0.5692307692307692,
+          "precision": 0.37,
+          "fp_per_1000": 630.0
+        }
+      },
+      "peculiar_yield": {
+        "5": 0,
+        "10": 0,
+        "20": 0,
+        "50": 9,
+        "100": 37
+      },
+      "artifact_contamination": {
+        "5": 4,
+        "10": 9,
+        "20": 19,
+        "50": 35,
+        "100": 35
+      },
+      "recall_at_k": {
+        "5": 0.0,
+        "10": 0.0,
+        "20": 0.0,
+        "50": 0.13846153846153847,
+        "100": 0.5692307692307692
+      },
+      "precision_at_k": {
+        "5": 0.0,
+        "10": 0.0,
+        "20": 0.0,
+        "50": 0.18,
+        "100": 0.37
+      },
+      "false_positives_per_1000": {
+        "5": 1000.0,
+        "10": 1000.0,
+        "20": 1000.0,
+        "50": 820.0,
+        "100": 630.0
+      },
+      "roc_auc": 0.3424038461538462,
+      "pr_auc": 0.44982360335965293
+    },
+    "Ablation_No_Latent": {
+      "method_name": "Ablation_No_Latent",
+      "budget_evaluations": {
+        "5": {
+          "budget_k": 5,
+          "targets_found": 0,
+          "artifacts_leaked": 0,
+          "recall": 0.0,
+          "precision": 0.0,
+          "fp_per_1000": 1000.0
+        },
+        "10": {
+          "budget_k": 10,
+          "targets_found": 0,
+          "artifacts_leaked": 2,
+          "recall": 0.0,
+          "precision": 0.0,
+          "fp_per_1000": 1000.0
+        },
+        "20": {
+          "budget_k": 20,
+          "targets_found": 0,
+          "artifacts_leaked": 11,
+          "recall": 0.0,
+          "precision": 0.0,
+          "fp_per_1000": 1000.0
+        },
+        "50": {
+          "budget_k": 50,
+          "targets_found": 2,
+          "artifacts_leaked": 35,
+          "recall": 0.03076923076923077,
+          "precision": 0.04,
+          "fp_per_1000": 960.0
+        },
+        "100": {
+          "budget_k": 100,
+          "targets_found": 29,
+          "artifacts_leaked": 35,
+          "recall": 0.4461538461538462,
+          "precision": 0.29,
+          "fp_per_1000": 710.0
+        }
+      },
+      "peculiar_yield": {
+        "5": 0,
+        "10": 0,
+        "20": 0,
+        "50": 2,
+        "100": 29
+      },
+      "artifact_contamination": {
+        "5": 0,
+        "10": 2,
+        "20": 11,
+        "50": 35,
+        "100": 35
+      },
+      "recall_at_k": {
+        "5": 0.0,
+        "10": 0.0,
+        "20": 0.0,
+        "50": 0.03076923076923077,
+        "100": 0.4461538461538462
+      },
+      "precision_at_k": {
+        "5": 0.0,
+        "10": 0.0,
+        "20": 0.0,
+        "50": 0.04,
+        "100": 0.29
+      },
+      "false_positives_per_1000": {
+        "5": 1000.0,
+        "10": 1000.0,
+        "20": 1000.0,
+        "50": 960.0,
+        "100": 710.0
+      },
+      "roc_auc": 0.15538461538461537,
+      "pr_auc": 0.39847269254541406
+    }
+  },
+  "signal_injection_recovery": {
+    "SNR_3.0": {
+      "sample_size": 10.0,
+      "astraeus_recall_top50": 0.8,
+      "isolation_forest_recall_top50": 0.6
+    },
+    "SNR_5.0": {
+      "sample_size": 10.0,
+      "astraeus_recall_top50": 0.7,
+      "isolation_forest_recall_top50": 0.5
+    },
+    "SNR_10.0": {
+      "sample_size": 10.0,
+      "astraeus_recall_top50": 1.0,
+      "isolation_forest_recall_top50": 0.9
+    },
+    "SNR_20.0": {
+      "sample_size": 10.0,
+      "astraeus_recall_top50": 1.0,
+      "isolation_forest_recall_top50": 0.4
+    }
+  },
+  "executive_summary": "Evaluated 145 candidates (25 peculiar, 35 artifacts) across 7 methods and 3 ablations. ASTRAEUS Calibrated Composite achieved ROC-AUC = 0.7574 vs Isolation Forest = 0.9921."
+}

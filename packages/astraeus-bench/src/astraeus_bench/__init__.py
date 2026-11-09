@@ -16,6 +16,12 @@ from astraeus_bench.astro_temporal import (
     AstroTemporalBenchmark,
     AstroTemporalComparisonReport,
 )
+from astraeus_bench.rare_event import (
+    CandidateRecord,
+    MethodRankingResult,
+    RareEventBenchmarkReport,
+    RareEventBenchmarkRunner,
+)
 
 __version__ = "0.1.0"
 
@@ -29,4 +35,8 @@ __all__ = [
     "AnomalyBenchmarkMetrics",
     "AstroTemporalBenchmark",
     "AstroTemporalComparisonReport",
+    "CandidateRecord",
+    "MethodRankingResult",
+    "RareEventBenchmarkReport",
+    "RareEventBenchmarkRunner",
 ]
