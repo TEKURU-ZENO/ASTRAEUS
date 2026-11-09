@@ -21,6 +21,10 @@ from astraeus_models.hardware_benchmark import (
     HardwareBenchmarkRunner,
     VramBenchmarkResult,
 )
+from astraeus_models.astromer import (
+    AstromerEncoder,
+    ContinuousTimePositionalEncoding,
+)
 
 __version__ = "0.1.0"
 
@@ -34,4 +38,6 @@ __all__ = [
     "ClassificationBenchmarkResult",
     "HardwareBenchmarkRunner",
     "VramBenchmarkResult",
+    "AstromerEncoder",
+    "ContinuousTimePositionalEncoding",
 ]

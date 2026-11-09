@@ -1,0 +1,178 @@
+{
+  "task_name": "astro_temporal_phase1_3class",
+  "num_classes": 3,
+  "classes": [
+    "rr_lyrae",
+    "supernova_ia",
+    "detector_artifact"
+  ],
+  "num_train": 60,
+  "num_test": 18,
+  "random_forest_metrics": {
+    "macro_f1": 1.0,
+    "weighted_f1": 1.0,
+    "per_class_f1": {
+      "rr_lyrae": 1.0,
+      "supernova_ia": 1.0,
+      "detector_artifact": 1.0
+    },
+    "per_class_precision": {
+      "rr_lyrae": 1.0,
+      "supernova_ia": 1.0,
+      "detector_artifact": 1.0
+    },
+    "per_class_recall": {
+      "rr_lyrae": 1.0,
+      "supernova_ia": 1.0,
+      "detector_artifact": 1.0
+    },
+    "confusion_matrix": [
+      [
+        6,
+        0,
+        0
+      ],
+      [
+        0,
+        6,
+        0
+      ],
+      [
+        0,
+        0,
+        6
+      ]
+    ],
+    "classes": [
+      "rr_lyrae",
+      "supernova_ia",
+      "detector_artifact"
+    ],
+    "calibration": {
+      "expected_calibration_error": 0.03277777777777769,
+      "max_calibration_error": 0.21999999999999997,
+      "brier_score": 0.010177777777777779,
+      "bin_accuracies": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        1.0
+      ],
+      "bin_confidences": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.78,
+        0.0,
+        0.9906250000000001
+      ],
+      "bin_counts": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        2,
+        0,
+        16
+      ]
+    }
+  },
+  "astromer_metrics": {
+    "macro_f1": 0.75,
+    "weighted_f1": 0.75,
+    "per_class_f1": {
+      "rr_lyrae": 1.0,
+      "supernova_ia": 0.75,
+      "detector_artifact": 0.5
+    },
+    "per_class_precision": {
+      "rr_lyrae": 1.0,
+      "supernova_ia": 0.6,
+      "detector_artifact": 1.0
+    },
+    "per_class_recall": {
+      "rr_lyrae": 1.0,
+      "supernova_ia": 1.0,
+      "detector_artifact": 0.3333333333333333
+    },
+    "confusion_matrix": [
+      [
+        6,
+        0,
+        0
+      ],
+      [
+        0,
+        6,
+        0
+      ],
+      [
+        0,
+        4,
+        2
+      ]
+    ],
+    "classes": [
+      "rr_lyrae",
+      "supernova_ia",
+      "detector_artifact"
+    ],
+    "calibration": {
+      "expected_calibration_error": 0.3650905191898346,
+      "max_calibration_error": 0.649530291557312,
+      "brier_score": 0.5496737957000732,
+      "bin_accuracies": [
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.7142857142857143,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "bin_confidences": [
+        0.0,
+        0.0,
+        0.0,
+        0.350469708442688,
+        0.4304637014865875,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "bin_counts": [
+        0,
+        0,
+        0,
+        4,
+        14,
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    }
+  },
+  "rf_latency_ms_per_sample": 0.4879499999030183,
+  "astromer_latency_ms_per_sample": 2.0313999977790647,
+  "astromer_f1_delta": -0.25
+}
