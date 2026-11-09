@@ -1,19 +1,19 @@
 {
   "metadata": {
-    "title": "ASTRAEUS Astronomical Reference Corpus v1.0.3 Manifest & Final Certification",
-    "version": "1.0.3",
+    "title": "ASTRAEUS Astronomical Reference Corpus v1.0.4 Manifest & Final Certification",
+    "version": "1.0.4",
     "phase": "Phase 2: Stage 1 (Days 91-105)",
-    "generated_utc": "2026-11-09T14:10:18.325979+00:00",
+    "generated_utc": "2026-11-09T14:32:52.572228+00:00",
     "audit_passed": true,
     "canonicalization_standard": "RFC-8785-JSON",
-    "authoritative_protocol_sha256": "24fba011a56ba9142c94a42624f31dcf3c6ea1c7f18f0c07c7b7345690fc7391",
+    "authoritative_protocol_sha256": "7df44b73fb80148c14718104da07393699e1ad002a4116401fba79a65b221583",
     "verification_command": "python experiments/phase2_reference_corpus/verify_protocol_hash.py"
   },
   "parquet_checksums": {
-    "data/reference_corpus_v1/split=quarantine/1fa88082f2a24c76ac7a07093bde7c47-0.parquet": "d244004667b9bd38486a6b81d41307afd47a5400ff19df7aaee4ee86160a8240",
-    "data/reference_corpus_v1/split=test/1fa88082f2a24c76ac7a07093bde7c47-0.parquet": "352e5ba370fb8fc52b3de3338012dac803e4e298403a4047b3e389fdb17cab48",
-    "data/reference_corpus_v1/split=train/1fa88082f2a24c76ac7a07093bde7c47-0.parquet": "f0154a3f0ff8df4847858b6eb31e02cdbb474f45b2fef9e907122d3bd3c6ef6a",
-    "data/reference_corpus_v1/split=val/1fa88082f2a24c76ac7a07093bde7c47-0.parquet": "f2b596d55e4f24310e0ad8f2086c563d2a3ca97686cb9b988076049cd0f03a19"
+    "data/reference_corpus_v1/split=quarantine/618546ba3bdc44cbabd6f1190ff7a084-0.parquet": "d244004667b9bd38486a6b81d41307afd47a5400ff19df7aaee4ee86160a8240",
+    "data/reference_corpus_v1/split=test/618546ba3bdc44cbabd6f1190ff7a084-0.parquet": "352e5ba370fb8fc52b3de3338012dac803e4e298403a4047b3e389fdb17cab48",
+    "data/reference_corpus_v1/split=train/618546ba3bdc44cbabd6f1190ff7a084-0.parquet": "f0154a3f0ff8df4847858b6eb31e02cdbb474f45b2fef9e907122d3bd3c6ef6a",
+    "data/reference_corpus_v1/split=val/618546ba3bdc44cbabd6f1190ff7a084-0.parquet": "f2b596d55e4f24310e0ad8f2086c563d2a3ca97686cb9b988076049cd0f03a19"
   },
   "quarantined_entity_diagnostic": {
     "canonical_id": "ASTRAEUS-VARIABLE_STAR-syn-00295",
@@ -46,7 +46,9 @@
         "200": 1637.9342
       },
       "max_step_delta_arcsec": 1e-05,
-      "is_converged_sub_arcsec": true
+      "analytical_sagitta_bound_arcsec": 0.0021,
+      "is_converged_sub_arcsec": true,
+      "discretization_uncertainty_ratio_pct": 0.0002
     },
     {
       "pixel": 50,
@@ -59,7 +61,9 @@
         "200": 1641.7739
       },
       "max_step_delta_arcsec": 0.000256,
-      "is_converged_sub_arcsec": true
+      "analytical_sagitta_bound_arcsec": 0.0021,
+      "is_converged_sub_arcsec": true,
+      "discretization_uncertainty_ratio_pct": 0.0051
     },
     {
       "pixel": 500,
@@ -72,7 +76,9 @@
         "200": 1202.3913
       },
       "max_step_delta_arcsec": 0.001563,
-      "is_converged_sub_arcsec": true
+      "analytical_sagitta_bound_arcsec": 0.0021,
+      "is_converged_sub_arcsec": true,
+      "discretization_uncertainty_ratio_pct": 0.0313
     },
     {
       "pixel": 1049,
@@ -85,7 +91,9 @@
         "200": 1640.4359
       },
       "max_step_delta_arcsec": 0.000381,
-      "is_converged_sub_arcsec": true
+      "analytical_sagitta_bound_arcsec": 0.0021,
+      "is_converged_sub_arcsec": true,
+      "discretization_uncertainty_ratio_pct": 0.0076
     },
     {
       "pixel": 3201,
@@ -98,7 +106,9 @@
         "200": 1641.7739
       },
       "max_step_delta_arcsec": 0.000256,
-      "is_converged_sub_arcsec": true
+      "analytical_sagitta_bound_arcsec": 0.0021,
+      "is_converged_sub_arcsec": true,
+      "discretization_uncertainty_ratio_pct": 0.0051
     },
     {
       "pixel": 6000,
@@ -111,7 +121,9 @@
         "200": 1645.2724
       },
       "max_step_delta_arcsec": 0.001401,
-      "is_converged_sub_arcsec": true
+      "analytical_sagitta_bound_arcsec": 0.0021,
+      "is_converged_sub_arcsec": true,
+      "discretization_uncertainty_ratio_pct": 0.028
     },
     {
       "pixel": 9500,
@@ -124,7 +136,9 @@
         "200": 1196.1996
       },
       "max_step_delta_arcsec": 0.000713,
-      "is_converged_sub_arcsec": true
+      "analytical_sagitta_bound_arcsec": 0.0021,
+      "is_converged_sub_arcsec": true,
+      "discretization_uncertainty_ratio_pct": 0.0143
     },
     {
       "pixel": 12287,
@@ -137,9 +151,193 @@
         "200": 1638.1414
       },
       "max_step_delta_arcsec": 2e-06,
-      "is_converged_sub_arcsec": true
+      "analytical_sagitta_bound_arcsec": 0.0021,
+      "is_converged_sub_arcsec": true,
+      "discretization_uncertainty_ratio_pct": 0.0
     }
   ],
+  "global_convergence_diagnostics": {
+    "total_pixels_audited": 32,
+    "global_max_delta_arcsec": 0.006667,
+    "global_mean_delta_arcsec": 0.001246,
+    "worst_pixel": 1981,
+    "operational_buffer_arcsec": 5.0,
+    "discretization_error_percentage": 0.1333,
+    "is_globally_converged": true
+  },
+  "pilot_dataset_b_lineage_audit": {
+    "total_samples": 500,
+    "verified_count": 460,
+    "rejected_count": 15,
+    "quarantined_count": 25,
+    "dag_has_cycles": false,
+    "cycle_path": [],
+    "is_clean": false,
+    "rejections": [
+      {
+        "sample_id": "ASTRAEUS-PRETRAIN-INJECTED-DERIV-0000",
+        "reason": "DIRECT_PARENT_IN_TEST_SET:ASTRAEUS-ARTIFACT_DIPOLE-syn-00254"
+      },
+      {
+        "sample_id": "ASTRAEUS-PRETRAIN-INJECTED-DERIV-0001",
+        "reason": "TRANSITIVE_ANCESTOR_IN_TEST_SET:ASTRAEUS-ARTIFACT_DIPOLE-syn-00262"
+      },
+      {
+        "sample_id": "ASTRAEUS-PRETRAIN-INJECTED-DERIV-0002",
+        "reason": "SOURCE_OBSERVATION_IN_TEST_SET:OBS-SIM-00042-01"
+      },
+      {
+        "sample_id": "ASTRAEUS-PRETRAIN-INJECTED-DERIV-0003",
+        "reason": "DIRECT_PARENT_IN_TEST_SET:ASTRAEUS-ARTIFACT_DIPOLE-syn-00267"
+      },
+      {
+        "sample_id": "ASTRAEUS-PRETRAIN-INJECTED-DERIV-0004",
+        "reason": "TRANSITIVE_ANCESTOR_IN_TEST_SET:ASTRAEUS-ARTIFACT_DIPOLE-syn-00271"
+      },
+      {
+        "sample_id": "ASTRAEUS-PRETRAIN-INJECTED-DERIV-0005",
+        "reason": "SOURCE_OBSERVATION_IN_TEST_SET:OBS-SIM-00042-01"
+      },
+      {
+        "sample_id": "ASTRAEUS-PRETRAIN-INJECTED-DERIV-0006",
+        "reason": "DIRECT_PARENT_IN_TEST_SET:ASTRAEUS-FBOT-num-00163"
+      },
+      {
+        "sample_id": "ASTRAEUS-PRETRAIN-INJECTED-DERIV-0007",
+        "reason": "TRANSITIVE_ANCESTOR_IN_TEST_SET:ASTRAEUS-FBOT-num-00176"
+      },
+      {
+        "sample_id": "ASTRAEUS-PRETRAIN-INJECTED-DERIV-0008",
+        "reason": "SOURCE_OBSERVATION_IN_TEST_SET:OBS-SIM-00042-01"
+      },
+      {
+        "sample_id": "ASTRAEUS-PRETRAIN-INJECTED-DERIV-0009",
+        "reason": "DIRECT_PARENT_IN_TEST_SET:ASTRAEUS-SLSN-num-00187"
+      },
+      {
+        "sample_id": "ASTRAEUS-PRETRAIN-INJECTED-DERIV-0010",
+        "reason": "TRANSITIVE_ANCESTOR_IN_TEST_SET:ASTRAEUS-SLSN-num-00189"
+      },
+      {
+        "sample_id": "ASTRAEUS-PRETRAIN-INJECTED-DERIV-0011",
+        "reason": "SOURCE_OBSERVATION_IN_TEST_SET:OBS-SIM-00042-01"
+      },
+      {
+        "sample_id": "ASTRAEUS-PRETRAIN-INJECTED-DERIV-0012",
+        "reason": "DIRECT_PARENT_IN_TEST_SET:ASTRAEUS-SLSN-num-00203"
+      },
+      {
+        "sample_id": "ASTRAEUS-PRETRAIN-INJECTED-DERIV-0013",
+        "reason": "TRANSITIVE_ANCESTOR_IN_TEST_SET:ASTRAEUS-SLSN-num-00204"
+      },
+      {
+        "sample_id": "ASTRAEUS-PRETRAIN-INJECTED-DERIV-0014",
+        "reason": "SOURCE_OBSERVATION_IN_TEST_SET:OBS-SIM-00042-01"
+      }
+    ],
+    "quarantined": [
+      {
+        "sample_id": "ASTRAEUS-PRETRAIN-UNLABELED-0000",
+        "reason": "MISSING_PARENT_AND_OBSERVATION_LINEAGE"
+      },
+      {
+        "sample_id": "ASTRAEUS-PRETRAIN-UNLABELED-0001",
+        "reason": "MISSING_PARENT_AND_OBSERVATION_LINEAGE"
+      },
+      {
+        "sample_id": "ASTRAEUS-PRETRAIN-UNLABELED-0002",
+        "reason": "MISSING_PARENT_AND_OBSERVATION_LINEAGE"
+      },
+      {
+        "sample_id": "ASTRAEUS-PRETRAIN-UNLABELED-0003",
+        "reason": "MISSING_PARENT_AND_OBSERVATION_LINEAGE"
+      },
+      {
+        "sample_id": "ASTRAEUS-PRETRAIN-UNLABELED-0004",
+        "reason": "MISSING_PARENT_AND_OBSERVATION_LINEAGE"
+      },
+      {
+        "sample_id": "ASTRAEUS-PRETRAIN-UNLABELED-0005",
+        "reason": "MISSING_PARENT_AND_OBSERVATION_LINEAGE"
+      },
+      {
+        "sample_id": "ASTRAEUS-PRETRAIN-UNLABELED-0006",
+        "reason": "MISSING_PARENT_AND_OBSERVATION_LINEAGE"
+      },
+      {
+        "sample_id": "ASTRAEUS-PRETRAIN-UNLABELED-0007",
+        "reason": "MISSING_PARENT_AND_OBSERVATION_LINEAGE"
+      },
+      {
+        "sample_id": "ASTRAEUS-PRETRAIN-UNLABELED-0008",
+        "reason": "MISSING_PARENT_AND_OBSERVATION_LINEAGE"
+      },
+      {
+        "sample_id": "ASTRAEUS-PRETRAIN-UNLABELED-0009",
+        "reason": "MISSING_PARENT_AND_OBSERVATION_LINEAGE"
+      },
+      {
+        "sample_id": "ASTRAEUS-PRETRAIN-UNLABELED-0010",
+        "reason": "MISSING_PARENT_AND_OBSERVATION_LINEAGE"
+      },
+      {
+        "sample_id": "ASTRAEUS-PRETRAIN-UNLABELED-0011",
+        "reason": "MISSING_PARENT_AND_OBSERVATION_LINEAGE"
+      },
+      {
+        "sample_id": "ASTRAEUS-PRETRAIN-UNLABELED-0012",
+        "reason": "MISSING_PARENT_AND_OBSERVATION_LINEAGE"
+      },
+      {
+        "sample_id": "ASTRAEUS-PRETRAIN-UNLABELED-0013",
+        "reason": "MISSING_PARENT_AND_OBSERVATION_LINEAGE"
+      },
+      {
+        "sample_id": "ASTRAEUS-PRETRAIN-UNLABELED-0014",
+        "reason": "MISSING_PARENT_AND_OBSERVATION_LINEAGE"
+      },
+      {
+        "sample_id": "ASTRAEUS-PRETRAIN-UNLABELED-0015",
+        "reason": "MISSING_PARENT_AND_OBSERVATION_LINEAGE"
+      },
+      {
+        "sample_id": "ASTRAEUS-PRETRAIN-UNLABELED-0016",
+        "reason": "MISSING_PARENT_AND_OBSERVATION_LINEAGE"
+      },
+      {
+        "sample_id": "ASTRAEUS-PRETRAIN-UNLABELED-0017",
+        "reason": "MISSING_PARENT_AND_OBSERVATION_LINEAGE"
+      },
+      {
+        "sample_id": "ASTRAEUS-PRETRAIN-UNLABELED-0018",
+        "reason": "MISSING_PARENT_AND_OBSERVATION_LINEAGE"
+      },
+      {
+        "sample_id": "ASTRAEUS-PRETRAIN-UNLABELED-0019",
+        "reason": "MISSING_PARENT_AND_OBSERVATION_LINEAGE"
+      },
+      {
+        "sample_id": "ASTRAEUS-PRETRAIN-UNLABELED-0020",
+        "reason": "MISSING_PARENT_AND_OBSERVATION_LINEAGE"
+      },
+      {
+        "sample_id": "ASTRAEUS-PRETRAIN-UNLABELED-0021",
+        "reason": "MISSING_PARENT_AND_OBSERVATION_LINEAGE"
+      },
+      {
+        "sample_id": "ASTRAEUS-PRETRAIN-UNLABELED-0022",
+        "reason": "MISSING_PARENT_AND_OBSERVATION_LINEAGE"
+      },
+      {
+        "sample_id": "ASTRAEUS-PRETRAIN-UNLABELED-0023",
+        "reason": "MISSING_PARENT_AND_OBSERVATION_LINEAGE"
+      },
+      {
+        "sample_id": "ASTRAEUS-PRETRAIN-UNLABELED-0024",
+        "reason": "MISSING_PARENT_AND_OBSERVATION_LINEAGE"
+      }
+    ]
+  },
   "audit_report": {
     "passed_all_gates": true,
     "total_records_audited": 283,
@@ -327,7 +525,9 @@
           "200": 1637.9342
         },
         "max_step_delta_arcsec": 1e-05,
-        "is_converged_sub_arcsec": true
+        "analytical_sagitta_bound_arcsec": 0.0021,
+        "is_converged_sub_arcsec": true,
+        "discretization_uncertainty_ratio_pct": 0.0002
       },
       {
         "pixel": 50,
@@ -340,7 +540,9 @@
           "200": 1641.7739
         },
         "max_step_delta_arcsec": 0.000256,
-        "is_converged_sub_arcsec": true
+        "analytical_sagitta_bound_arcsec": 0.0021,
+        "is_converged_sub_arcsec": true,
+        "discretization_uncertainty_ratio_pct": 0.0051
       },
       {
         "pixel": 500,
@@ -353,7 +555,9 @@
           "200": 1202.3913
         },
         "max_step_delta_arcsec": 0.001563,
-        "is_converged_sub_arcsec": true
+        "analytical_sagitta_bound_arcsec": 0.0021,
+        "is_converged_sub_arcsec": true,
+        "discretization_uncertainty_ratio_pct": 0.0313
       },
       {
         "pixel": 1049,
@@ -366,7 +570,9 @@
           "200": 1640.4359
         },
         "max_step_delta_arcsec": 0.000381,
-        "is_converged_sub_arcsec": true
+        "analytical_sagitta_bound_arcsec": 0.0021,
+        "is_converged_sub_arcsec": true,
+        "discretization_uncertainty_ratio_pct": 0.0076
       },
       {
         "pixel": 3201,
@@ -379,7 +585,9 @@
           "200": 1641.7739
         },
         "max_step_delta_arcsec": 0.000256,
-        "is_converged_sub_arcsec": true
+        "analytical_sagitta_bound_arcsec": 0.0021,
+        "is_converged_sub_arcsec": true,
+        "discretization_uncertainty_ratio_pct": 0.0051
       },
       {
         "pixel": 6000,
@@ -392,7 +600,9 @@
           "200": 1645.2724
         },
         "max_step_delta_arcsec": 0.001401,
-        "is_converged_sub_arcsec": true
+        "analytical_sagitta_bound_arcsec": 0.0021,
+        "is_converged_sub_arcsec": true,
+        "discretization_uncertainty_ratio_pct": 0.028
       },
       {
         "pixel": 9500,
@@ -405,7 +615,9 @@
           "200": 1196.1996
         },
         "max_step_delta_arcsec": 0.000713,
-        "is_converged_sub_arcsec": true
+        "analytical_sagitta_bound_arcsec": 0.0021,
+        "is_converged_sub_arcsec": true,
+        "discretization_uncertainty_ratio_pct": 0.0143
       },
       {
         "pixel": 12287,
@@ -418,9 +630,20 @@
           "200": 1638.1414
         },
         "max_step_delta_arcsec": 2e-06,
-        "is_converged_sub_arcsec": true
+        "analytical_sagitta_bound_arcsec": 0.0021,
+        "is_converged_sub_arcsec": true,
+        "discretization_uncertainty_ratio_pct": 0.0
       }
     ],
+    "global_convergence_diagnostics": {
+      "total_pixels_audited": 32,
+      "global_max_delta_arcsec": 0.006667,
+      "global_mean_delta_arcsec": 0.001246,
+      "worst_pixel": 1981,
+      "operational_buffer_arcsec": 5.0,
+      "discretization_error_percentage": 0.1333,
+      "is_globally_converged": true
+    },
     "quarantine_breakdown_by_class": {
       "VARIABLE_STAR": 1
     },
@@ -541,9 +764,9 @@
     "synthetic_objects_count": 175
   },
   "frozen_evaluation_protocol": {
-    "protocol_version": "1.0.3",
-    "frozen_epoch_utc": "2026-11-09T14:10:17.393459+00:00",
-    "protocol_sha256": "24fba011a56ba9142c94a42624f31dcf3c6ea1c7f18f0c07c7b7345690fc7391",
+    "protocol_version": "1.0.4",
+    "frozen_epoch_utc": "2026-11-09T14:32:51.145509+00:00",
+    "protocol_sha256": "7df44b73fb80148c14718104da07393699e1ad002a4116401fba79a65b221583",
     "tasks": [
       {
         "task_id": "task_1_temporal_reconstruction",
@@ -721,6 +944,6 @@
       "Recall_At_Budget_K10": "Fraction of total test-set rare events successfully retrieved in top 10 queue.",
       "Artifact_Contamination_Rate": "Fraction of top-ranked follow-up queue occupied by subtraction artifacts."
     },
-    "dataset_b_exclusion_contract": "Dataset B (temporal foundation pretraining corpus) MUST NOT contain any physical object, IAU counterpart, cross-survey observation, host galaxy, alias, or injected/transformed derivative matching Dataset A's held-out test split (N=45 objects). All Dataset B samples require certified DAG provenance tracking via ProvenanceGraphAuditor; samples lacking lineage are quarantined. Spatial segregation enforces non-geodesic spherical cell-boundary distance with normal-projected astrometric covariance (d_edge <= 5.0'' OR d_edge <= 3*sigma_perp). Validation objects (N=47) may be used for supervised tuning and model selection, but never for self-supervised foundation pretraining."
+    "dataset_b_exclusion_contract": "Dataset B (temporal foundation pretraining corpus) MUST NOT contain any physical object, IAU counterpart, cross-survey observation, host galaxy, alias, or injected/transformed derivative matching Dataset A's held-out test split (N=45 objects). All Dataset B samples require certified acyclic DAG provenance tracking via ProvenanceGraphAuditor with transitive ancestor inspection; samples lacking lineage are quarantined. Spatial segregation enforces non-geodesic spherical cell-boundary distance with 2D tangent-plane anisotropic covariance projection and conservative multi-edge corner handling (d_edge <= 5.0'' OR d_edge <= 3*sigma_perp). Validation objects (N=47) may be used for supervised tuning and model selection, but never for self-supervised foundation pretraining."
   }
 }

@@ -73,22 +73,19 @@ Months 1-2    Months 3-4     Months 5-6     Months 7-8     Months 9-10    Months
 **Core Objective:** Learn scientific representations of irregular astronomical time series, spectra, and multi-band imaging that generalize across surveys without destroying physical information.
 
 ### Restructured Phase 2 Research Stages (Ordered Sequence):
-- **Stage 1 (Days 91–105) — Astronomical Reference Corpus & Provenance Hygiene:**
-  Curate $\ge 10^6$ light curves with spatial HEALPix ($N_{\mathrm{side}}=32$) zero-overlap partitioning, cross-survey coordinate harmonization, barycentric dynamical time (TDB) correction, and automated IVOA Prov-DM lineage validation.
-  *Mandatory Scientific Deliverable:* **11-Point Identity & Provenance Audit Record** for every reference object:
-  1. Canonical IAU/TNS transient designation
-  2. Survey internal alert identifiers (ZTF alert ID, PS1 objID, DECam candidate ID)
-  3. ICRS astrometric coordinates ($\alpha, \delta$ in degrees, J2000) with epoch and formal astrometric uncertainty
-  4. Time standard specification (barycentric dynamical time TDB / BJD vs geocentric UTC MJD)
-  5. Spatial partitioning assignment: HEALPix nested pixel index ($N_{\mathrm{side}}=32$) with boundary isolation buffer verification
-  6. Cross-survey association probability ($P_{\mathrm{match}}$) and chance coincidence probability ($P_{\mathrm{chance}}$) from Bayesian cross-matcher
-  7. Complete passband transmission profile identifier, AB zero-point calibration, and Galactic extinction correction ($A_V, R_V$)
-  8. Photometric representation flag: uncalibrated instrumental flux vs standardized `optical_pseudoflux` vs calibrated physical flux density
-  9. Heteroscedastic measurement uncertainty derivation and non-detection upper-limit handling convention
-  10. Host galaxy identity, spectroscopic or photometric redshift ($z$), angular separation ($\Delta \theta$), and projected physical separation ($d_{\mathrm{proj}}$) with specified cosmological parameters ($H_0, \Omega_m, \Omega_\Lambda$)
-  11. End-to-end IVOA Prov-DM cryptographic hash chain (SHA-256 integrity digest and HMAC-SHA256 authority signature) tracking every pipeline transformation from raw alert packet to feature representation.
-- **Stage 2 (Days 106–125) — Astronomical Temporal Foundation Model (Track A):**
+- **Stage 1 (Days 91–105) — Astronomical Reference Corpus & Provenance Hygiene [COMPLETE & FORMALLY CERTIFIED - v1.0.4]:**
+  Curated Astronomical Reference Corpus v1.0.4 across genuine archival ($N=3$), numerically simulated ($N=105$), and standardized synthetic ($N=175$) transient populations ($N_{\mathrm{total}}=283$). Enforced spatial HEALPix ($N_{\mathrm{side}}=32$) zero-overlap partitioning with non-geodesic curved boundary sampling (400 vertices/cell, analytical sagitta error bound $\delta \le 0.0021'' \ll 5.0''$), 2D tangent plane anisotropic covariance projection with conservative multi-edge corner handling, exact Clopper-Pearson binomial intervals ($[42.13\%, 99.64\%]$ for $6/7$ successes), object-level manifest diff stability (0 partition or class changes), and DAG provenance auditing (`DatasetBSampleLineage` and `ProvenanceGraphAuditor`) with cycle detection, transitive ancestry, and pilot Dataset B ingestion audit ($N=500$: 460 verified clean, 25 quarantined missing lineage, 15 rejected test overlaps, 0 cycles). All 7 audit gates passed; Parquet partitions verified with SHA-256 digests; authoritative protocol hash `7df44b73fb80148c14718104da07393699e1ad002a4116401fba79a65b221583` cryptographically sealed. Stage 1 formally certified; Stage 2 initialization approved.
+- **Stage 2 (Days 106–120) — Astronomical Temporal Foundation Model (Track A) [INITIALIZATION APPROVED]:**
   Continuous-time positional encoding, masked observation autoencoding on irregular cadences, and uncertainty-aware latent projections.
+  *Approved 5-Stage Workstream Schedule:*
+  1. *Days 106–108 (Data & Protocol Reconciliation):* Frozen, reproducible input manifest & Dataset B DAG auditor.
+  2. *Days 109–111 (Temporal Representation Design):* Sequence specification, continuous-time encoding & simple baselines (Linear, Gaussian Process, ASTROMER, Non-pretrained sequence model).
+  3. *Days 112–115 (Initial Controlled Training):* Small-scale pretrained checkpoint on verified spatial split.
+  4. *Days 116–118 (Comprehensive 3-Track Evaluation):*
+     - *Track 1 (Temporal Representation):* Masked reconstruction (CRPS, MAE), temporal forecasting ($t > t_{\mathrm{cutoff}}$), and conformal calibration.
+     - *Track 2 (Physical Transfer):* Zero-shot performance on unseen physical objects and unseen transient classes, decoupling simulated vs archival data.
+     - *Track 3 (Survey Generalization):* Bidirectional zero-shot transfer across ZTF, Pan-STARRS1, and DECam under dilated cadences.
+  5. *Days 119–120 (Scientific Audit):* Stage 2 experiment report, baseline comparison verification, and senior independent go/no-go sign-off for full-scale pretraining.
 - **Stage 3 (Days 126–140) — Cross-Survey Robustness & Transfer (Track D):**
   Zero-shot transfer benchmarks from ZTF to Pan-STARRS1 and DECam, calibrated covariate-shift abstention heads, and robustness testing under severe cadence degradation ($N < 6$).
 - **Stage 4 (Days 141–160) — Multimodal Astronomical Representation (Track B):**

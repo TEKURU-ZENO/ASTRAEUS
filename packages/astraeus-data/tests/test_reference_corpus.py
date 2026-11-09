@@ -122,7 +122,7 @@ def test_frozen_evaluation_protocol_immutability():
 
     protocol = FrozenEvaluationProtocol.freeze(corpus)
 
-    assert protocol.protocol_version == "1.0.3"
+    assert protocol.protocol_version == "1.0.4"
     assert len(protocol.protocol_sha256) == 64
     assert len(protocol.tasks) == 3
     assert len(protocol.frozen_test_ids) > 0
@@ -365,22 +365,34 @@ def test_dataset_b_provenance_graph_auditor():
     # Clean sample with valid parent
     clean_sample = DatasetBSampleLineage(
         sample_id="SAMPLE-B-OK",
-        parent_physical_object_id="TRAIN-NON-OVERLAPPING-OBJECT",
+        parent_physical_object_ids=["TRAIN-NON-OVERLAPPING-OBJECT"],
+        ancestor_chain=["TRAIN-NON-OVERLAPPING-OBJECT"],
         source_observation_ids=["OBS-OK-1"],
         host_galaxy_id="HOST-OK-1",
     )
     res_clean = auditor.audit_sample(clean_sample)
     assert res_clean.lineage_status == LineageStatus.VERIFIED
 
-    # Overlap with test object ID
+    # Overlap with direct test object ID
     overlap_sample = DatasetBSampleLineage(
         sample_id="SAMPLE-B-OVERLAP",
-        parent_physical_object_id=test_recs[0].canonical_id,
+        parent_physical_object_ids=[test_recs[0].canonical_id],
         source_observation_ids=["OBS-TEST-1"],
     )
     res_overlap = auditor.audit_sample(overlap_sample)
     assert res_overlap.lineage_status == LineageStatus.TEST_OVERLAP_REJECTED
-    assert "PARENT_OBJECT_IN_TEST_SET" in res_overlap.rejection_reason
+    assert "DIRECT_PARENT_IN_TEST_SET" in res_overlap.rejection_reason
+
+    # Transitive ancestor overlap (2-hop: child -> intermediate -> test object)
+    transitive_sample = DatasetBSampleLineage(
+        sample_id="SAMPLE-B-TRANSITIVE",
+        parent_physical_object_ids=["INTERMEDIATE-NODE"],
+        ancestor_chain=["INTERMEDIATE-NODE", test_recs[0].canonical_id],
+        source_observation_ids=["OBS-OK-2"],
+    )
+    res_transitive = auditor.audit_sample(transitive_sample)
+    assert res_transitive.lineage_status == LineageStatus.TEST_OVERLAP_REJECTED
+    assert "TRANSITIVE_ANCESTOR_IN_TEST_SET" in res_transitive.rejection_reason
 
     # Missing lineage
     missing_sample = DatasetBSampleLineage(
@@ -388,4 +400,53 @@ def test_dataset_b_provenance_graph_auditor():
     )
     res_missing = auditor.audit_sample(missing_sample)
     assert res_missing.lineage_status == LineageStatus.LINEAGE_UNAVAILABLE_QUARANTINED
+
+    # Cycle detection validation
+    cyclic_dag = {"NodeA": ["NodeB"], "NodeB": ["NodeC"], "NodeC": ["NodeA"]}
+    has_cycle, cycle_path = auditor.detect_cycles(cyclic_dag)
+    assert has_cycle is True
+    assert len(cycle_path) >= 3
+
+    acyclic_dag = {"Child": ["Parent"], "Parent": ["Grandparent"], "Grandparent": []}
+    has_cycle_clean, _ = auditor.detect_cycles(acyclic_dag)
+    assert has_cycle_clean is False
+
+    # Full Pilot Dataset B Cohort Audit (N=500)
+    pilot_samples, pilot_edges = auditor.create_pilot_dataset_b_cohort(n_clean=460, n_missing=25, n_overlap=15)
+    batch_res = auditor.audit_batch(pilot_samples, pilot_edges)
+    assert batch_res["total_samples"] == 500
+    assert batch_res["verified_count"] == 460
+    assert batch_res["quarantined_count"] == 25
+    assert batch_res["rejected_count"] == 15
+    assert batch_res["dag_has_cycles"] is False
+
+
+def test_anisotropic_covariance_projection_with_correlation():
+    """Validates 2D tangent plane anisotropic covariance projection and correlation impact."""
+    from astropy.coordinates import SkyCoord
+    from astropy import units as u
+    from astraeus_data.corpus.geometry import compute_projected_normal_astrometric_uncertainty
+
+    coord = SkyCoord(ra=100.0 * u.deg, dec=20.0 * u.deg, frame="icrs")
+    closest = SkyCoord(ra=100.001 * u.deg, dec=20.001 * u.deg, frame="icrs")
+
+    # Positive correlation vs negative correlation
+    unc_pos = {"ra": 40.0, "dec": 20.0, "rho": 0.8}
+    unc_neg = {"ra": 40.0, "dec": 20.0, "rho": -0.8}
+
+    s_pos, _, _ = compute_projected_normal_astrometric_uncertainty(coord, closest, unc_pos)
+    s_neg, _, _ = compute_projected_normal_astrometric_uncertainty(coord, closest, unc_neg)
+
+    # When both u_alpha and u_delta have same sign, positive rho increases projected variance
+    assert s_pos > s_neg
+
+
+def test_global_convergence_sweep():
+    """Validates global convergence validator across sampled HEALPix pixels."""
+    from astraeus_data.corpus.geometry import validate_healpix_boundary_convergence_global
+
+    global_res = validate_healpix_boundary_convergence_global(num_sample_pixels=16)
+    assert global_res["is_globally_converged"] is True
+    assert global_res["global_max_delta_arcsec"] < 0.01
+
 

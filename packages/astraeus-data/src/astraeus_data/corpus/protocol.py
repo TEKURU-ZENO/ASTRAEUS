@@ -36,7 +36,7 @@ class FrozenEvaluationProtocol(BaseModel):
     any physical objects, counterparts, or injected/transformed derivatives in Dataset A held-out test split.
     """
     model_config = ConfigDict(frozen=True)
-    protocol_version: str = "1.0.3"
+    protocol_version: str = "1.0.4"
     frozen_epoch_utc: str
     protocol_sha256: str
     tasks: List[EvaluationTask]
@@ -47,18 +47,19 @@ class FrozenEvaluationProtocol(BaseModel):
     dataset_b_exclusion_contract: str = (
         "Dataset B (temporal foundation pretraining corpus) MUST NOT contain any physical object, "
         "IAU counterpart, cross-survey observation, host galaxy, alias, or injected/transformed derivative matching "
-        "Dataset A's held-out test split (N=45 objects). All Dataset B samples require certified DAG provenance tracking "
-        "via ProvenanceGraphAuditor; samples lacking lineage are quarantined. Spatial segregation enforces "
-        "non-geodesic spherical cell-boundary distance with normal-projected astrometric covariance "
-        "(d_edge <= 5.0'' OR d_edge <= 3*sigma_perp). Validation objects (N=47) may be used for supervised tuning "
-        "and model selection, but never for self-supervised foundation pretraining."
+        "Dataset A's held-out test split (N=45 objects). All Dataset B samples require certified acyclic DAG provenance "
+        "tracking via ProvenanceGraphAuditor with transitive ancestor inspection; samples lacking lineage are quarantined. "
+        "Spatial segregation enforces non-geodesic spherical cell-boundary distance with 2D tangent-plane anisotropic "
+        "covariance projection and conservative multi-edge corner handling (d_edge <= 5.0'' OR d_edge <= 3*sigma_perp). "
+        "Validation objects (N=47) may be used for supervised tuning and model selection, but never for self-supervised "
+        "foundation pretraining."
     )
 
     @classmethod
     def freeze(
         cls,
         records: List[ReferenceObjectRecord],
-        version: str = "1.0.3",
+        version: str = "1.0.4",
     ) -> "FrozenEvaluationProtocol":
         """Freezes evaluation tasks and held-out test/val/quarantine splits from a reference corpus."""
         val_ids = sorted([r.canonical_id for r in records if r.spatial_partition.split == "val"])
@@ -146,11 +147,12 @@ class FrozenEvaluationProtocol(BaseModel):
         exclusion_contract = (
             "Dataset B (temporal foundation pretraining corpus) MUST NOT contain any physical object, "
             "IAU counterpart, cross-survey observation, host galaxy, alias, or injected/transformed derivative matching "
-            "Dataset A's held-out test split (N=45 objects). All Dataset B samples require certified DAG provenance tracking "
-            "via ProvenanceGraphAuditor; samples lacking lineage are quarantined. Spatial segregation enforces "
-            "non-geodesic spherical cell-boundary distance with normal-projected astrometric covariance "
-            "(d_edge <= 5.0'' OR d_edge <= 3*sigma_perp). Validation objects (N=47) may be used for supervised tuning "
-            "and model selection, but never for self-supervised foundation pretraining."
+            "Dataset A's held-out test split (N=45 objects). All Dataset B samples require certified acyclic DAG provenance "
+            "tracking via ProvenanceGraphAuditor with transitive ancestor inspection; samples lacking lineage are quarantined. "
+            "Spatial segregation enforces non-geodesic spherical cell-boundary distance with 2D tangent-plane anisotropic "
+            "covariance projection and conservative multi-edge corner handling (d_edge <= 5.0'' OR d_edge <= 3*sigma_perp). "
+            "Validation objects (N=47) may be used for supervised tuning and model selection, but never for self-supervised "
+            "foundation pretraining."
         )
 
         payload = {

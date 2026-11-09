@@ -11,7 +11,10 @@ import numpy as np
 from scipy.stats import beta
 
 from astraeus_data.corpus.record import ReferenceObjectRecord, DEFAULT_PROVENANCE_SECRET
-from astraeus_data.corpus.geometry import verify_healpix_boundary_convergence
+from astraeus_data.corpus.geometry import (
+    verify_healpix_boundary_convergence,
+    validate_healpix_boundary_convergence_global,
+)
 
 
 def compute_clopper_pearson(k: int, n: int, confidence: float = 0.95) -> Tuple[float, float]:
@@ -64,9 +67,10 @@ class CorpusAuditReport(BaseModel):
     median_snr_per_class: Dict[str, float]
     median_cadence_hours_per_class: Dict[str, float]
 
-    # Stage 1 v1.0.3 Additions: Small Test-Set Disclosures & Quarantine Diagnostics
+    # Stage 1 v1.0.4 Additions: Small Test-Set Disclosures & Quarantine Diagnostics
     test_clopper_pearson_intervals: Dict[str, Dict[str, Any]] = Field(default_factory=dict)
     boundary_convergence_diagnostics: List[Dict[str, Any]] = Field(default_factory=list)
+    global_convergence_diagnostics: Dict[str, Any] = Field(default_factory=dict)
     quarantine_breakdown_by_class: Dict[str, int] = Field(default_factory=dict)
     quarantine_breakdown_by_original_split: Dict[str, int] = Field(default_factory=dict)
     quarantine_breakdown_by_reason: Dict[str, int] = Field(default_factory=dict)
@@ -266,11 +270,12 @@ class ReferenceCorpusAuditor:
                 "policy": pol,
             })
 
-        # Stage 1 v1.0.3: Empirical HEALPix boundary convergence across polar and equatorial cells
+        # Stage 1 v1.0.4: Empirical HEALPix boundary convergence across polar and equatorial cells
         convergence_diagnostics = [
             verify_healpix_boundary_convergence(pix)
             for pix in [0, 50, 500, 1049, 3201, 6000, 9500, 12287]
         ]
+        global_conv = validate_healpix_boundary_convergence_global(num_sample_pixels=32)
 
         # Origin Cohort Segregation
         archival_ids = [r.canonical_id for r in records if r.dataset_origin == "ARCHIVAL"]
@@ -315,6 +320,7 @@ class ReferenceCorpusAuditor:
             median_cadence_hours_per_class=median_cad,
             test_clopper_pearson_intervals=clopper_map,
             boundary_convergence_diagnostics=convergence_diagnostics,
+            global_convergence_diagnostics=global_conv,
             quarantine_breakdown_by_class=quar_by_class,
             quarantine_breakdown_by_original_split=quar_by_split,
             quarantine_breakdown_by_reason=quar_by_reason,

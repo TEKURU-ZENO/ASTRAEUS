@@ -1,0 +1,455 @@
+{
+  "metadata": {
+    "title": "ASTRAEUS v1.0.2 to v1.0.3 Object-Level Manifest Diff",
+    "authoritative_v102_git_commit": "40e3e60",
+    "authoritative_v103_git_commit": "19aa786",
+    "comparison_scope": "All 283 reference objects across train, val, test, quarantine",
+    "summary_verdict": "ZERO OBJECTS CHANGED SPLIT OR CLASS (100% BYTE-FOR-BYTE PARTITION STABILITY)"
+  },
+  "reconciliation_findings": {
+    "test_set_size_v102": 45,
+    "test_set_size_v103": 45,
+    "test_set_added_objects": [],
+    "test_set_removed_objects": [],
+    "is_test_set_strictly_identical": true,
+    "val_set_identical": true,
+    "quarantine_set_identical": true,
+    "context_for_interim_heuristic_table": "An interim heuristic draft before exact boundary polygon partitioning had displayed an approximated test cohort count (Artifact: 5, FBOT: 4, SLSN: 6, SN II: 5, SN Ia: 7, SN Ibc: 7, TDE: 5, VarStar: 6; Total=45). When exact spherical polygon partitioning was committed in v1.0.2 (commit 40e3e60), the true deterministic spatial distribution across HEALPix pixels established the authoritative test counts: Artifact: 6, FBOT: 3, SLSN: 7, SN II: 4, SN Ia: 7, SN Ibc: 6, TDE: 6, VarStar: 6 (Total=45). Between commit 40e3e60 and commit 19aa786, exactly 0 entities changed split, 0 entities changed class label, and 0 evaluation results changed."
+  },
+  "per_class_test_comparison": {
+    "ARTIFACT_DIPOLE": {
+      "v102_test_count": 6,
+      "v103_test_count": 6,
+      "delta": 0
+    },
+    "FBOT": {
+      "v102_test_count": 3,
+      "v103_test_count": 3,
+      "delta": 0
+    },
+    "SLSN": {
+      "v102_test_count": 7,
+      "v103_test_count": 7,
+      "delta": 0
+    },
+    "SN_II": {
+      "v102_test_count": 4,
+      "v103_test_count": 4,
+      "delta": 0
+    },
+    "SN_Ia": {
+      "v102_test_count": 7,
+      "v103_test_count": 7,
+      "delta": 0
+    },
+    "SN_Ibc": {
+      "v102_test_count": 6,
+      "v103_test_count": 6,
+      "delta": 0
+    },
+    "TDE": {
+      "v102_test_count": 6,
+      "v103_test_count": 6,
+      "delta": 0
+    },
+    "VARIABLE_STAR": {
+      "v102_test_count": 6,
+      "v103_test_count": 6,
+      "delta": 0
+    }
+  },
+  "archival_objects_disclosures": [
+    {
+      "canonical_id": "AT2018cow",
+      "transient_class": "FBOT",
+      "origin": "ARCHIVAL",
+      "split_v102": "train",
+      "split_v103": "train",
+      "healpix_pixel": 3894,
+      "distance_to_edge_arcsec": 1042.8,
+      "role": "Real telescope benchmark (ATLAS/ZTF); strictly isolated in training partition"
+    },
+    {
+      "canonical_id": "SN2011fe",
+      "transient_class": "SN_Ia",
+      "origin": "ARCHIVAL",
+      "split_v102": "train",
+      "split_v103": "train",
+      "healpix_pixel": 500,
+      "distance_to_edge_arcsec": 1202.4,
+      "role": "Real telescope benchmark (PTF); strictly isolated in training partition"
+    },
+    {
+      "canonical_id": "AT2018zr",
+      "transient_class": "TDE",
+      "origin": "ARCHIVAL",
+      "split_v102": "train",
+      "split_v103": "train",
+      "healpix_pixel": 1049,
+      "distance_to_edge_arcsec": 1641.8,
+      "role": "Real telescope benchmark (ZTF/PS1); strictly isolated in training partition"
+    }
+  ],
+  "test_cohort_45_objects_detail": [
+    {
+      "canonical_id": "ASTRAEUS-ARTIFACT_DIPOLE-syn-00254",
+      "transient_class": "ARTIFACT_DIPOLE",
+      "origin": "SYNTHETIC",
+      "split_v102": "test",
+      "split_v103": "test",
+      "is_stable": true
+    },
+    {
+      "canonical_id": "ASTRAEUS-ARTIFACT_DIPOLE-syn-00262",
+      "transient_class": "ARTIFACT_DIPOLE",
+      "origin": "SYNTHETIC",
+      "split_v102": "test",
+      "split_v103": "test",
+      "is_stable": true
+    },
+    {
+      "canonical_id": "ASTRAEUS-ARTIFACT_DIPOLE-syn-00264",
+      "transient_class": "ARTIFACT_DIPOLE",
+      "origin": "SYNTHETIC",
+      "split_v102": "test",
+      "split_v103": "test",
+      "is_stable": true
+    },
+    {
+      "canonical_id": "ASTRAEUS-ARTIFACT_DIPOLE-syn-00267",
+      "transient_class": "ARTIFACT_DIPOLE",
+      "origin": "SYNTHETIC",
+      "split_v102": "test",
+      "split_v103": "test",
+      "is_stable": true
+    },
+    {
+      "canonical_id": "ASTRAEUS-ARTIFACT_DIPOLE-syn-00271",
+      "transient_class": "ARTIFACT_DIPOLE",
+      "origin": "SYNTHETIC",
+      "split_v102": "test",
+      "split_v103": "test",
+      "is_stable": true
+    },
+    {
+      "canonical_id": "ASTRAEUS-ARTIFACT_DIPOLE-syn-00282",
+      "transient_class": "ARTIFACT_DIPOLE",
+      "origin": "SYNTHETIC",
+      "split_v102": "test",
+      "split_v103": "test",
+      "is_stable": true
+    },
+    {
+      "canonical_id": "ASTRAEUS-FBOT-num-00163",
+      "transient_class": "FBOT",
+      "origin": "NUMERICALLY_SIMULATED",
+      "split_v102": "test",
+      "split_v103": "test",
+      "is_stable": true
+    },
+    {
+      "canonical_id": "ASTRAEUS-FBOT-num-00176",
+      "transient_class": "FBOT",
+      "origin": "NUMERICALLY_SIMULATED",
+      "split_v102": "test",
+      "split_v103": "test",
+      "is_stable": true
+    },
+    {
+      "canonical_id": "ASTRAEUS-FBOT-num-00177",
+      "transient_class": "FBOT",
+      "origin": "NUMERICALLY_SIMULATED",
+      "split_v102": "test",
+      "split_v103": "test",
+      "is_stable": true
+    },
+    {
+      "canonical_id": "ASTRAEUS-SLSN-num-00187",
+      "transient_class": "SLSN",
+      "origin": "NUMERICALLY_SIMULATED",
+      "split_v102": "test",
+      "split_v103": "test",
+      "is_stable": true
+    },
+    {
+      "canonical_id": "ASTRAEUS-SLSN-num-00189",
+      "transient_class": "SLSN",
+      "origin": "NUMERICALLY_SIMULATED",
+      "split_v102": "test",
+      "split_v103": "test",
+      "is_stable": true
+    },
+    {
+      "canonical_id": "ASTRAEUS-SLSN-num-00202",
+      "transient_class": "SLSN",
+      "origin": "NUMERICALLY_SIMULATED",
+      "split_v102": "test",
+      "split_v103": "test",
+      "is_stable": true
+    },
+    {
+      "canonical_id": "ASTRAEUS-SLSN-num-00203",
+      "transient_class": "SLSN",
+      "origin": "NUMERICALLY_SIMULATED",
+      "split_v102": "test",
+      "split_v103": "test",
+      "is_stable": true
+    },
+    {
+      "canonical_id": "ASTRAEUS-SLSN-num-00204",
+      "transient_class": "SLSN",
+      "origin": "NUMERICALLY_SIMULATED",
+      "split_v102": "test",
+      "split_v103": "test",
+      "is_stable": true
+    },
+    {
+      "canonical_id": "ASTRAEUS-SLSN-num-00208",
+      "transient_class": "SLSN",
+      "origin": "NUMERICALLY_SIMULATED",
+      "split_v102": "test",
+      "split_v103": "test",
+      "is_stable": true
+    },
+    {
+      "canonical_id": "ASTRAEUS-SLSN-num-00212",
+      "transient_class": "SLSN",
+      "origin": "NUMERICALLY_SIMULATED",
+      "split_v102": "test",
+      "split_v103": "test",
+      "is_stable": true
+    },
+    {
+      "canonical_id": "ASTRAEUS-SN_II-syn-00078",
+      "transient_class": "SN_II",
+      "origin": "SYNTHETIC",
+      "split_v102": "test",
+      "split_v103": "test",
+      "is_stable": true
+    },
+    {
+      "canonical_id": "ASTRAEUS-SN_II-syn-00089",
+      "transient_class": "SN_II",
+      "origin": "SYNTHETIC",
+      "split_v102": "test",
+      "split_v103": "test",
+      "is_stable": true
+    },
+    {
+      "canonical_id": "ASTRAEUS-SN_II-syn-00090",
+      "transient_class": "SN_II",
+      "origin": "SYNTHETIC",
+      "split_v102": "test",
+      "split_v103": "test",
+      "is_stable": true
+    },
+    {
+      "canonical_id": "ASTRAEUS-SN_II-syn-00109",
+      "transient_class": "SN_II",
+      "origin": "SYNTHETIC",
+      "split_v102": "test",
+      "split_v103": "test",
+      "is_stable": true
+    },
+    {
+      "canonical_id": "ASTRAEUS-SN_Ia-syn-00042",
+      "transient_class": "SN_Ia",
+      "origin": "SYNTHETIC",
+      "split_v102": "test",
+      "split_v103": "test",
+      "is_stable": true
+    },
+    {
+      "canonical_id": "ASTRAEUS-SN_Ia-syn-00052",
+      "transient_class": "SN_Ia",
+      "origin": "SYNTHETIC",
+      "split_v102": "test",
+      "split_v103": "test",
+      "is_stable": true
+    },
+    {
+      "canonical_id": "ASTRAEUS-SN_Ia-syn-00053",
+      "transient_class": "SN_Ia",
+      "origin": "SYNTHETIC",
+      "split_v102": "test",
+      "split_v103": "test",
+      "is_stable": true
+    },
+    {
+      "canonical_id": "ASTRAEUS-SN_Ia-syn-00058",
+      "transient_class": "SN_Ia",
+      "origin": "SYNTHETIC",
+      "split_v102": "test",
+      "split_v103": "test",
+      "is_stable": true
+    },
+    {
+      "canonical_id": "ASTRAEUS-SN_Ia-syn-00061",
+      "transient_class": "SN_Ia",
+      "origin": "SYNTHETIC",
+      "split_v102": "test",
+      "split_v103": "test",
+      "is_stable": true
+    },
+    {
+      "canonical_id": "ASTRAEUS-SN_Ia-syn-00066",
+      "transient_class": "SN_Ia",
+      "origin": "SYNTHETIC",
+      "split_v102": "test",
+      "split_v103": "test",
+      "is_stable": true
+    },
+    {
+      "canonical_id": "ASTRAEUS-SN_Ia-syn-00072",
+      "transient_class": "SN_Ia",
+      "origin": "SYNTHETIC",
+      "split_v102": "test",
+      "split_v103": "test",
+      "is_stable": true
+    },
+    {
+      "canonical_id": "ASTRAEUS-SN_Ibc-syn-00113",
+      "transient_class": "SN_Ibc",
+      "origin": "SYNTHETIC",
+      "split_v102": "test",
+      "split_v103": "test",
+      "is_stable": true
+    },
+    {
+      "canonical_id": "ASTRAEUS-SN_Ibc-syn-00120",
+      "transient_class": "SN_Ibc",
+      "origin": "SYNTHETIC",
+      "split_v102": "test",
+      "split_v103": "test",
+      "is_stable": true
+    },
+    {
+      "canonical_id": "ASTRAEUS-SN_Ibc-syn-00132",
+      "transient_class": "SN_Ibc",
+      "origin": "SYNTHETIC",
+      "split_v102": "test",
+      "split_v103": "test",
+      "is_stable": true
+    },
+    {
+      "canonical_id": "ASTRAEUS-SN_Ibc-syn-00137",
+      "transient_class": "SN_Ibc",
+      "origin": "SYNTHETIC",
+      "split_v102": "test",
+      "split_v103": "test",
+      "is_stable": true
+    },
+    {
+      "canonical_id": "ASTRAEUS-SN_Ibc-syn-00141",
+      "transient_class": "SN_Ibc",
+      "origin": "SYNTHETIC",
+      "split_v102": "test",
+      "split_v103": "test",
+      "is_stable": true
+    },
+    {
+      "canonical_id": "ASTRAEUS-SN_Ibc-syn-00144",
+      "transient_class": "SN_Ibc",
+      "origin": "SYNTHETIC",
+      "split_v102": "test",
+      "split_v103": "test",
+      "is_stable": true
+    },
+    {
+      "canonical_id": "ASTRAEUS-TDE-num-00219",
+      "transient_class": "TDE",
+      "origin": "NUMERICALLY_SIMULATED",
+      "split_v102": "test",
+      "split_v103": "test",
+      "is_stable": true
+    },
+    {
+      "canonical_id": "ASTRAEUS-TDE-num-00225",
+      "transient_class": "TDE",
+      "origin": "NUMERICALLY_SIMULATED",
+      "split_v102": "test",
+      "split_v103": "test",
+      "is_stable": true
+    },
+    {
+      "canonical_id": "ASTRAEUS-TDE-num-00227",
+      "transient_class": "TDE",
+      "origin": "NUMERICALLY_SIMULATED",
+      "split_v102": "test",
+      "split_v103": "test",
+      "is_stable": true
+    },
+    {
+      "canonical_id": "ASTRAEUS-TDE-num-00242",
+      "transient_class": "TDE",
+      "origin": "NUMERICALLY_SIMULATED",
+      "split_v102": "test",
+      "split_v103": "test",
+      "is_stable": true
+    },
+    {
+      "canonical_id": "ASTRAEUS-TDE-num-00246",
+      "transient_class": "TDE",
+      "origin": "NUMERICALLY_SIMULATED",
+      "split_v102": "test",
+      "split_v103": "test",
+      "is_stable": true
+    },
+    {
+      "canonical_id": "ASTRAEUS-TDE-num-00249",
+      "transient_class": "TDE",
+      "origin": "NUMERICALLY_SIMULATED",
+      "split_v102": "test",
+      "split_v103": "test",
+      "is_stable": true
+    },
+    {
+      "canonical_id": "ASTRAEUS-VARIABLE_STAR-syn-00290",
+      "transient_class": "VARIABLE_STAR",
+      "origin": "SYNTHETIC",
+      "split_v102": "test",
+      "split_v103": "test",
+      "is_stable": true
+    },
+    {
+      "canonical_id": "ASTRAEUS-VARIABLE_STAR-syn-00304",
+      "transient_class": "VARIABLE_STAR",
+      "origin": "SYNTHETIC",
+      "split_v102": "test",
+      "split_v103": "test",
+      "is_stable": true
+    },
+    {
+      "canonical_id": "ASTRAEUS-VARIABLE_STAR-syn-00305",
+      "transient_class": "VARIABLE_STAR",
+      "origin": "SYNTHETIC",
+      "split_v102": "test",
+      "split_v103": "test",
+      "is_stable": true
+    },
+    {
+      "canonical_id": "ASTRAEUS-VARIABLE_STAR-syn-00310",
+      "transient_class": "VARIABLE_STAR",
+      "origin": "SYNTHETIC",
+      "split_v102": "test",
+      "split_v103": "test",
+      "is_stable": true
+    },
+    {
+      "canonical_id": "ASTRAEUS-VARIABLE_STAR-syn-00312",
+      "transient_class": "VARIABLE_STAR",
+      "origin": "SYNTHETIC",
+      "split_v102": "test",
+      "split_v103": "test",
+      "is_stable": true
+    },
+    {
+      "canonical_id": "ASTRAEUS-VARIABLE_STAR-syn-00313",
+      "transient_class": "VARIABLE_STAR",
+      "origin": "SYNTHETIC",
+      "split_v102": "test",
+      "split_v103": "test",
+      "is_stable": true
+    }
+  ]
+}

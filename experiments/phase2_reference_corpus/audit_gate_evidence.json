@@ -1,0 +1,510 @@
+{
+  "metadata": {
+    "title": "ASTRAEUS Reference Corpus v1.0.4 Seven-Tier Audit Gate Evidence",
+    "version": "1.0.4",
+    "generated_utc": "2026-11-09T14:32:52.567324+00:00",
+    "authoritative_protocol_sha256": "7df44b73fb80148c14718104da07393699e1ad002a4116401fba79a65b221583"
+  },
+  "gate_1_identity_evidence": {
+    "total_canonical_ids": 283,
+    "unique_canonical_ids": 283,
+    "duplicate_count": 0,
+    "identity_leakage_count": 0,
+    "alias_leakage_count": 0
+  },
+  "gate_2_spatial_healpix_evidence": {
+    "train_pixel_count": 188,
+    "val_pixel_count": 47,
+    "test_pixel_count": 45,
+    "quarantine_pixel_count": 1,
+    "pairwise_intersection_count": 0,
+    "pixels": {
+      "train": [
+        232,
+        310,
+        414,
+        490,
+        596,
+        662,
+        746,
+        750,
+        1049,
+        1062,
+        1222,
+        1319,
+        1400,
+        1434,
+        1443,
+        1486,
+        1567,
+        1598,
+        1761,
+        1892,
+        2053,
+        2113,
+        2116,
+        2141,
+        2148,
+        2152,
+        2168,
+        2172,
+        2211,
+        2275,
+        2389,
+        2410,
+        2428,
+        2494,
+        2587,
+        2638,
+        2717,
+        2858,
+        2907,
+        2993,
+        3009,
+        3167,
+        3205,
+        3250,
+        3252,
+        3296,
+        3344,
+        3350,
+        3360,
+        3378,
+        3392,
+        3413,
+        3434,
+        3475,
+        3532,
+        3563,
+        3671,
+        3693,
+        3713,
+        3728,
+        3736,
+        3743,
+        3831,
+        3853,
+        3904,
+        4016,
+        4124,
+        4136,
+        4356,
+        4416,
+        4419,
+        4459,
+        4479,
+        4498,
+        4508,
+        4523,
+        4612,
+        4699,
+        4720,
+        4722,
+        4781,
+        4801,
+        4809,
+        4872,
+        4886,
+        4905,
+        5068,
+        5101,
+        5299,
+        5427,
+        5610,
+        5653,
+        5706,
+        5745,
+        5747,
+        5822,
+        5866,
+        5889,
+        5942,
+        6049,
+        6061,
+        6169,
+        6206,
+        6344,
+        6509,
+        6510,
+        6516,
+        6595,
+        6631,
+        6658,
+        6663,
+        6796,
+        6868,
+        6888,
+        6925,
+        6943,
+        7100,
+        7144,
+        7317,
+        7327,
+        7355,
+        7456,
+        7482,
+        7486,
+        7512,
+        7606,
+        7631,
+        7639,
+        7658,
+        7725,
+        7740,
+        7819,
+        7821,
+        7832,
+        7864,
+        7884,
+        7900,
+        7904,
+        7917,
+        8090,
+        8095,
+        8119,
+        8132,
+        8146,
+        8164,
+        8247,
+        8467,
+        8626,
+        8937,
+        8958,
+        9010,
+        9048,
+        9393,
+        9493,
+        9501,
+        9520,
+        9613,
+        9659,
+        9678,
+        9758,
+        9935,
+        10325,
+        10326,
+        10339,
+        10346,
+        10362,
+        10473,
+        10584,
+        10600,
+        10797,
+        10845,
+        10987,
+        11002,
+        11140,
+        11387,
+        11454,
+        11479,
+        11537,
+        11562,
+        11711,
+        11726,
+        11773,
+        11786,
+        11841,
+        11886,
+        12032,
+        12251,
+        12257
+      ],
+      "val": [
+        145,
+        182,
+        359,
+        1219,
+        1363,
+        1652,
+        1708,
+        2071,
+        2143,
+        2212,
+        2590,
+        2761,
+        2766,
+        3330,
+        3375,
+        3393,
+        3585,
+        4759,
+        4874,
+        5251,
+        5503,
+        5541,
+        5693,
+        6125,
+        6171,
+        6992,
+        7814,
+        8410,
+        8549,
+        8743,
+        8838,
+        8908,
+        8921,
+        8925,
+        8949,
+        9401,
+        9693,
+        9731,
+        9804,
+        10009,
+        10359,
+        10610,
+        11063,
+        11526,
+        11695,
+        12195,
+        12249
+      ],
+      "test": [
+        394,
+        626,
+        1173,
+        1264,
+        1469,
+        1731,
+        2084,
+        2588,
+        2694,
+        2707,
+        2759,
+        2809,
+        2911,
+        3165,
+        3727,
+        3930,
+        5036,
+        5061,
+        5226,
+        5313,
+        5443,
+        6291,
+        6399,
+        6410,
+        6416,
+        6849,
+        7280,
+        7560,
+        7637,
+        8114,
+        8811,
+        9555,
+        10000,
+        10237,
+        10748,
+        10999,
+        11011,
+        11246,
+        11255,
+        11410,
+        11442,
+        11489,
+        11674,
+        11789,
+        12079
+      ],
+      "quarantine": [
+        8409
+      ]
+    }
+  },
+  "gate_3_host_galaxy_evidence": {
+    "cross_split_host_leakage_count": 0
+  },
+  "gate_4_observation_leakage_evidence": {
+    "cross_split_observation_leakage_count": 0
+  },
+  "gate_5_quarantine_segregation_evidence": {
+    "quarantined_object_count": 1,
+    "boundary_buffer_quarantine_violations": 0,
+    "quarantined_object_id": "ASTRAEUS-VARIABLE_STAR-syn-00295",
+    "quarantined_distance_arcsec": 3.89
+  },
+  "gate_6_temporal_stratification_evidence": {
+    "max_training_mjd": 58293.0,
+    "cutoff_threshold_mjd": 60000.0,
+    "temporal_leakage_count": 0
+  },
+  "gate_7_cryptographic_authenticity_evidence": {
+    "designation": "Gate 7: Record Integrity & HMAC-SHA256 Authority Verification",
+    "total_records": 283,
+    "verified_authentic_records": 283,
+    "cryptographic_failures": 0,
+    "authority_key_id": "astraeus-provenance-key-2026-v1"
+  },
+  "pilot_dataset_b_audit_summary": {
+    "total_samples": 500,
+    "verified_count": 460,
+    "rejected_count": 15,
+    "quarantined_count": 25,
+    "dag_has_cycles": false,
+    "cycle_path": [],
+    "is_clean": false,
+    "rejections": [
+      {
+        "sample_id": "ASTRAEUS-PRETRAIN-INJECTED-DERIV-0000",
+        "reason": "DIRECT_PARENT_IN_TEST_SET:ASTRAEUS-ARTIFACT_DIPOLE-syn-00254"
+      },
+      {
+        "sample_id": "ASTRAEUS-PRETRAIN-INJECTED-DERIV-0001",
+        "reason": "TRANSITIVE_ANCESTOR_IN_TEST_SET:ASTRAEUS-ARTIFACT_DIPOLE-syn-00262"
+      },
+      {
+        "sample_id": "ASTRAEUS-PRETRAIN-INJECTED-DERIV-0002",
+        "reason": "SOURCE_OBSERVATION_IN_TEST_SET:OBS-SIM-00042-01"
+      },
+      {
+        "sample_id": "ASTRAEUS-PRETRAIN-INJECTED-DERIV-0003",
+        "reason": "DIRECT_PARENT_IN_TEST_SET:ASTRAEUS-ARTIFACT_DIPOLE-syn-00267"
+      },
+      {
+        "sample_id": "ASTRAEUS-PRETRAIN-INJECTED-DERIV-0004",
+        "reason": "TRANSITIVE_ANCESTOR_IN_TEST_SET:ASTRAEUS-ARTIFACT_DIPOLE-syn-00271"
+      },
+      {
+        "sample_id": "ASTRAEUS-PRETRAIN-INJECTED-DERIV-0005",
+        "reason": "SOURCE_OBSERVATION_IN_TEST_SET:OBS-SIM-00042-01"
+      },
+      {
+        "sample_id": "ASTRAEUS-PRETRAIN-INJECTED-DERIV-0006",
+        "reason": "DIRECT_PARENT_IN_TEST_SET:ASTRAEUS-FBOT-num-00163"
+      },
+      {
+        "sample_id": "ASTRAEUS-PRETRAIN-INJECTED-DERIV-0007",
+        "reason": "TRANSITIVE_ANCESTOR_IN_TEST_SET:ASTRAEUS-FBOT-num-00176"
+      },
+      {
+        "sample_id": "ASTRAEUS-PRETRAIN-INJECTED-DERIV-0008",
+        "reason": "SOURCE_OBSERVATION_IN_TEST_SET:OBS-SIM-00042-01"
+      },
+      {
+        "sample_id": "ASTRAEUS-PRETRAIN-INJECTED-DERIV-0009",
+        "reason": "DIRECT_PARENT_IN_TEST_SET:ASTRAEUS-SLSN-num-00187"
+      },
+      {
+        "sample_id": "ASTRAEUS-PRETRAIN-INJECTED-DERIV-0010",
+        "reason": "TRANSITIVE_ANCESTOR_IN_TEST_SET:ASTRAEUS-SLSN-num-00189"
+      },
+      {
+        "sample_id": "ASTRAEUS-PRETRAIN-INJECTED-DERIV-0011",
+        "reason": "SOURCE_OBSERVATION_IN_TEST_SET:OBS-SIM-00042-01"
+      },
+      {
+        "sample_id": "ASTRAEUS-PRETRAIN-INJECTED-DERIV-0012",
+        "reason": "DIRECT_PARENT_IN_TEST_SET:ASTRAEUS-SLSN-num-00203"
+      },
+      {
+        "sample_id": "ASTRAEUS-PRETRAIN-INJECTED-DERIV-0013",
+        "reason": "TRANSITIVE_ANCESTOR_IN_TEST_SET:ASTRAEUS-SLSN-num-00204"
+      },
+      {
+        "sample_id": "ASTRAEUS-PRETRAIN-INJECTED-DERIV-0014",
+        "reason": "SOURCE_OBSERVATION_IN_TEST_SET:OBS-SIM-00042-01"
+      }
+    ],
+    "quarantined": [
+      {
+        "sample_id": "ASTRAEUS-PRETRAIN-UNLABELED-0000",
+        "reason": "MISSING_PARENT_AND_OBSERVATION_LINEAGE"
+      },
+      {
+        "sample_id": "ASTRAEUS-PRETRAIN-UNLABELED-0001",
+        "reason": "MISSING_PARENT_AND_OBSERVATION_LINEAGE"
+      },
+      {
+        "sample_id": "ASTRAEUS-PRETRAIN-UNLABELED-0002",
+        "reason": "MISSING_PARENT_AND_OBSERVATION_LINEAGE"
+      },
+      {
+        "sample_id": "ASTRAEUS-PRETRAIN-UNLABELED-0003",
+        "reason": "MISSING_PARENT_AND_OBSERVATION_LINEAGE"
+      },
+      {
+        "sample_id": "ASTRAEUS-PRETRAIN-UNLABELED-0004",
+        "reason": "MISSING_PARENT_AND_OBSERVATION_LINEAGE"
+      },
+      {
+        "sample_id": "ASTRAEUS-PRETRAIN-UNLABELED-0005",
+        "reason": "MISSING_PARENT_AND_OBSERVATION_LINEAGE"
+      },
+      {
+        "sample_id": "ASTRAEUS-PRETRAIN-UNLABELED-0006",
+        "reason": "MISSING_PARENT_AND_OBSERVATION_LINEAGE"
+      },
+      {
+        "sample_id": "ASTRAEUS-PRETRAIN-UNLABELED-0007",
+        "reason": "MISSING_PARENT_AND_OBSERVATION_LINEAGE"
+      },
+      {
+        "sample_id": "ASTRAEUS-PRETRAIN-UNLABELED-0008",
+        "reason": "MISSING_PARENT_AND_OBSERVATION_LINEAGE"
+      },
+      {
+        "sample_id": "ASTRAEUS-PRETRAIN-UNLABELED-0009",
+        "reason": "MISSING_PARENT_AND_OBSERVATION_LINEAGE"
+      },
+      {
+        "sample_id": "ASTRAEUS-PRETRAIN-UNLABELED-0010",
+        "reason": "MISSING_PARENT_AND_OBSERVATION_LINEAGE"
+      },
+      {
+        "sample_id": "ASTRAEUS-PRETRAIN-UNLABELED-0011",
+        "reason": "MISSING_PARENT_AND_OBSERVATION_LINEAGE"
+      },
+      {
+        "sample_id": "ASTRAEUS-PRETRAIN-UNLABELED-0012",
+        "reason": "MISSING_PARENT_AND_OBSERVATION_LINEAGE"
+      },
+      {
+        "sample_id": "ASTRAEUS-PRETRAIN-UNLABELED-0013",
+        "reason": "MISSING_PARENT_AND_OBSERVATION_LINEAGE"
+      },
+      {
+        "sample_id": "ASTRAEUS-PRETRAIN-UNLABELED-0014",
+        "reason": "MISSING_PARENT_AND_OBSERVATION_LINEAGE"
+      },
+      {
+        "sample_id": "ASTRAEUS-PRETRAIN-UNLABELED-0015",
+        "reason": "MISSING_PARENT_AND_OBSERVATION_LINEAGE"
+      },
+      {
+        "sample_id": "ASTRAEUS-PRETRAIN-UNLABELED-0016",
+        "reason": "MISSING_PARENT_AND_OBSERVATION_LINEAGE"
+      },
+      {
+        "sample_id": "ASTRAEUS-PRETRAIN-UNLABELED-0017",
+        "reason": "MISSING_PARENT_AND_OBSERVATION_LINEAGE"
+      },
+      {
+        "sample_id": "ASTRAEUS-PRETRAIN-UNLABELED-0018",
+        "reason": "MISSING_PARENT_AND_OBSERVATION_LINEAGE"
+      },
+      {
+        "sample_id": "ASTRAEUS-PRETRAIN-UNLABELED-0019",
+        "reason": "MISSING_PARENT_AND_OBSERVATION_LINEAGE"
+      },
+      {
+        "sample_id": "ASTRAEUS-PRETRAIN-UNLABELED-0020",
+        "reason": "MISSING_PARENT_AND_OBSERVATION_LINEAGE"
+      },
+      {
+        "sample_id": "ASTRAEUS-PRETRAIN-UNLABELED-0021",
+        "reason": "MISSING_PARENT_AND_OBSERVATION_LINEAGE"
+      },
+      {
+        "sample_id": "ASTRAEUS-PRETRAIN-UNLABELED-0022",
+        "reason": "MISSING_PARENT_AND_OBSERVATION_LINEAGE"
+      },
+      {
+        "sample_id": "ASTRAEUS-PRETRAIN-UNLABELED-0023",
+        "reason": "MISSING_PARENT_AND_OBSERVATION_LINEAGE"
+      },
+      {
+        "sample_id": "ASTRAEUS-PRETRAIN-UNLABELED-0024",
+        "reason": "MISSING_PARENT_AND_OBSERVATION_LINEAGE"
+      }
+    ]
+  }
+}

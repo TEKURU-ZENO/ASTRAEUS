@@ -17,8 +17,8 @@ sys.path.insert(0, str(repo_root / "packages" / "astraeus-data" / "src"))
 from astraeus_data.corpus.builder import ReferenceCorpusBuilder
 from astraeus_data.corpus.protocol import FrozenEvaluationProtocol
 
-# Authoritative SHA-256 protocol digest for Reference Corpus v1.0.3
-AUTHORITATIVE_PROTOCOL_SHA256 = "24fba011a56ba9142c94a42624f31dcf3c6ea1c7f18f0c07c7b7345690fc7391"
+# Authoritative SHA-256 protocol digest for Reference Corpus v1.0.4
+AUTHORITATIVE_PROTOCOL_SHA256 = "7df44b73fb80148c14718104da07393699e1ad002a4116401fba79a65b221583"
 
 
 def verify_authoritative_protocol() -> bool:
@@ -30,8 +30,8 @@ def verify_authoritative_protocol() -> bool:
     builder = ReferenceCorpusBuilder()
     records = builder.build_reference_corpus_v1()
 
-    # 2. Freeze evaluation protocol v1.0.3
-    protocol = FrozenEvaluationProtocol.freeze(records, version="1.0.3")
+    # 2. Freeze evaluation protocol v1.0.4
+    protocol = FrozenEvaluationProtocol.freeze(records, version="1.0.4")
 
     print(f"Protocol Version:              {protocol.protocol_version}")
     print(f"Frozen Val Objects:            {len(protocol.frozen_val_ids)}")
