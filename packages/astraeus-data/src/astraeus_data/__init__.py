@@ -56,8 +56,16 @@ from astraeus_data.photometry.harmonization import (
     HarmonizedPhotometricEpoch,
     PhotometricHarmonizer,
 )
+from astraeus_data.corpus import (
+    ReferenceObjectRecord,
+    ReferenceCorpusBuilder,
+    ReferenceCorpusAuditor,
+    CorpusAuditReport,
+    FrozenEvaluationProtocol,
+    EvaluationTask,
+)
 
-__version__ = "0.1.0"
+__version__ = "0.2.0"
 
 __all__ = [
     "ZtfAlertPacket",
@@ -95,4 +103,10 @@ __all__ = [
     "SURVEY_FILTER_METADATA",
     "HarmonizedPhotometricEpoch",
     "PhotometricHarmonizer",
+    "ReferenceObjectRecord",
+    "ReferenceCorpusBuilder",
+    "ReferenceCorpusAuditor",
+    "CorpusAuditReport",
+    "FrozenEvaluationProtocol",
+    "EvaluationTask",
 ]
