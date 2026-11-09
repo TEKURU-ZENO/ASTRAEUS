@@ -1,50 +1,178 @@
 {
   "metadata": {
-    "title": "ASTRAEUS Day 90 Flagship Scientific Investigation Dossier",
-    "generated_utc": "2026-11-09T09:09:48.249344+00:00",
+    "title": "ASTRAEUS Day 90 Flagship Scientific Investigation Dossier & Audit Reconciliation",
+    "version": "2.0.0",
+    "generated_utc": "2026-11-09T11:10:00.980842+00:00",
     "phase": "Phase 1: Days 1-90",
-    "status": "COMPLETED"
+    "reconciliation_status": "FORMALLY_RECONCILED_AND_APPROVED"
   },
-  "benchmark_metrics": {
+  "governance_benchmark_and_ablations": {
     "cohort_size": 50,
     "cohort_breakdown": {
-      "fbot_transients": 15,
-      "standard_supernovae": 20,
-      "subtraction_artifacts": 10,
-      "sparse_triggers": 5
+      "FBOT_novelty": 15,
+      "Normal_Supernovae": 20,
+      "Subtraction_Artifacts": 10,
+      "Sparse_Triggers": 5
     },
-    "astraeus_pipeline": {
-      "completion_rate": 1.0,
-      "epistemic_violation_rate": 0.0,
-      "artifact_false_discovery_rate": 0.0,
-      "skeptic_challenge_coverage": 1.0,
-      "total_skeptic_challenges_raised": 18,
-      "too_followup_precision": 0.9375,
-      "too_followup_count": 16,
-      "status_distribution": {
-        "INSUFFICIENT_EVIDENCE": 5,
-        "CANDIDATE_REQUIRES_FOLLOWUP": 16,
+    "confusion_matrix_4x4_governed_runtime": {
+      "FBOT": {
+        "CANDIDATE_REQUIRES_FOLLOWUP": 15,
+        "KNOWN_OBJECT": 0,
+        "REJECTED_AS_ARTIFACT": 0,
+        "INSUFFICIENT_EVIDENCE": 0
+      },
+      "NORMAL_SN": {
+        "CANDIDATE_REQUIRES_FOLLOWUP": 1,
+        "KNOWN_OBJECT": 19,
+        "REJECTED_AS_ARTIFACT": 0,
+        "INSUFFICIENT_EVIDENCE": 0
+      },
+      "ARTIFACT": {
+        "CANDIDATE_REQUIRES_FOLLOWUP": 0,
+        "KNOWN_OBJECT": 0,
         "REJECTED_AS_ARTIFACT": 10,
-        "KNOWN_OBJECT": 19
+        "INSUFFICIENT_EVIDENCE": 0
+      },
+      "SPARSE": {
+        "CANDIDATE_REQUIRES_FOLLOWUP": 0,
+        "KNOWN_OBJECT": 0,
+        "REJECTED_AS_ARTIFACT": 0,
+        "INSUFFICIENT_EVIDENCE": 5
       }
     },
-    "unconstrained_baseline": {
-      "completion_rate": 1.0,
-      "epistemic_violation_rate": 0.48,
-      "artifact_false_discovery_rate": 0.7,
-      "skeptic_challenge_coverage": 0.0,
-      "total_skeptic_challenges_raised": 0,
-      "too_followup_precision": 0.5357142857142857,
-      "too_followup_count": 28
+    "binary_confusion_matrix_governed_runtime": {
+      "TP": 15,
+      "FP": 1,
+      "TN": 34,
+      "FN": 0
+    },
+    "formal_metrics_definitions": {
+      "Artifact_Promotion_Rate": "FP_artifact / N_artifact (fraction of instrumental artifacts promoted to follow-up)",
+      "Artifact_Rejection_Rate": "TN_artifact / N_artifact (fraction of artifacts quarantined)",
+      "Artifact_False_Discovery_Rate": "FP_artifact / Total_FollowUp_Triggers (fraction of follow-up queue contaminated by artifacts)",
+      "ToO_Precision": "TP_novelty / Total_FollowUp_Triggers (fraction of follow-up queue representing genuine novel physics)",
+      "Epistemic_Invariant_Violation": "Fraction of cohort asserting ungrounded discovery without empirical observation"
+    },
+    "ablations": {
+      "Ablation_A_Unconstrained_Single_LLM": {
+        "TP": 15,
+        "FP": 13,
+        "TN": 22,
+        "FN": 0,
+        "ToO_Precision": 0.5357142857142857,
+        "ToO_Precision_95CI": [
+          0.3581,
+          0.7047
+        ],
+        "ToO_Recall": 1.0,
+        "ToO_Specificity": 0.6285714285714286,
+        "ToO_F1": 0.6976744186046512,
+        "Total_FollowUp_Triggers": 28,
+        "Artifact_Promotion_Rate": 0.7,
+        "Artifact_Promotion_Count": 7,
+        "Artifact_False_Discovery_Rate": 0.25,
+        "Epistemic_Violation_Rate": 0.48,
+        "Epistemic_Violation_Count": 24,
+        "Skeptic_Coverage": 0.0,
+        "Skeptic_Objections": 0
+      },
+      "Ablation_B_Single_LLM_Plus_Evidence_Gates": {
+        "TP": 15,
+        "FP": 4,
+        "TN": 31,
+        "FN": 0,
+        "ToO_Precision": 0.7894736842105263,
+        "ToO_Precision_95CI": [
+          0.5667,
+          0.9149
+        ],
+        "ToO_Recall": 1.0,
+        "ToO_Specificity": 0.8857142857142857,
+        "ToO_F1": 0.8823529411764706,
+        "Total_FollowUp_Triggers": 19,
+        "Artifact_Promotion_Rate": 0.3,
+        "Artifact_Promotion_Count": 3,
+        "Artifact_False_Discovery_Rate": 0.15789473684210525,
+        "Epistemic_Violation_Rate": 0.0,
+        "Epistemic_Violation_Count": 0,
+        "Skeptic_Coverage": 0.0,
+        "Skeptic_Objections": 0
+      },
+      "Ablation_C_Single_LLM_Plus_Skeptic": {
+        "TP": 15,
+        "FP": 6,
+        "TN": 29,
+        "FN": 0,
+        "ToO_Precision": 0.7142857142857143,
+        "ToO_Precision_95CI": [
+          0.5004,
+          0.8619
+        ],
+        "ToO_Recall": 1.0,
+        "ToO_Specificity": 0.8285714285714286,
+        "ToO_F1": 0.8333333333333333,
+        "Total_FollowUp_Triggers": 21,
+        "Artifact_Promotion_Rate": 0.3,
+        "Artifact_Promotion_Count": 3,
+        "Artifact_False_Discovery_Rate": 0.14285714285714285,
+        "Epistemic_Violation_Rate": 0.26,
+        "Epistemic_Violation_Count": 13,
+        "Skeptic_Coverage": 1.0,
+        "Skeptic_Objections": 14
+      },
+      "Ablation_D_Multi_Agent_No_Gates": {
+        "TP": 15,
+        "FP": 2,
+        "TN": 33,
+        "FN": 0,
+        "ToO_Precision": 0.8823529411764706,
+        "ToO_Precision_95CI": [
+          0.6566,
+          0.9671
+        ],
+        "ToO_Recall": 1.0,
+        "ToO_Specificity": 0.9428571428571428,
+        "ToO_F1": 0.9375,
+        "Total_FollowUp_Triggers": 17,
+        "Artifact_Promotion_Rate": 0.1,
+        "Artifact_Promotion_Count": 1,
+        "Artifact_False_Discovery_Rate": 0.058823529411764705,
+        "Epistemic_Violation_Rate": 0.18,
+        "Epistemic_Violation_Count": 9,
+        "Skeptic_Coverage": 1.0,
+        "Skeptic_Objections": 16
+      },
+      "Ablation_E_Full_Governed_ASTRAEUS_Runtime": {
+        "TP": 15,
+        "FP": 1,
+        "TN": 34,
+        "FN": 0,
+        "ToO_Precision": 0.9375,
+        "ToO_Precision_95CI": [
+          0.7167,
+          0.9889
+        ],
+        "ToO_Recall": 1.0,
+        "ToO_Specificity": 0.9714285714285714,
+        "ToO_F1": 0.967741935483871,
+        "Total_FollowUp_Triggers": 16,
+        "Artifact_Promotion_Rate": 0.0,
+        "Artifact_Promotion_Count": 0,
+        "Artifact_False_Discovery_Rate": 0.0,
+        "Epistemic_Violation_Rate": 0.0,
+        "Epistemic_Violation_Count": 0,
+        "Skeptic_Coverage": 1.0,
+        "Skeptic_Objections": 18
+      }
     }
   },
   "canonical_investigations": {
     "fbot": {
-      "dossier_id": "dossier:ASTRAEUS-FBOT-AT2018cow:1794215386",
-      "target_entity_id": "ASTRAEUS-FBOT-AT2018cow",
-      "ra_deg": 244.597115,
-      "dec_deg": 22.268021,
-      "timestamp_utc": "2026-11-09T09:09:46.533739+00:00",
+      "dossier_id": "dossier:AT2018cow-Archival-Replay:1794222599",
+      "target_entity_id": "AT2018cow-Archival-Replay",
+      "ra_deg": 244.000917,
+      "dec_deg": 22.268031,
+      "timestamp_utc": "2026-11-09T11:09:58.982330+00:00",
       "terminal_status": "CANDIDATE_REQUIRES_FOLLOWUP",
       "recommended_action": "Recommend urgent multi-band photometric and spectroscopic follow-up for human astronomer review.",
       "data_summary": {
@@ -53,21 +181,21 @@
         "time_baseline_days": 9.0
       },
       "cross_match": {
-        "query_entity_id": "ASTRAEUS-FBOT-AT2018cow",
+        "query_entity_id": "AT2018cow-Archival-Replay",
         "matched_candidate": {
           "catalog_name": "Pan-STARRS1",
-          "source_id": "PS1_DR2_1244597+221605",
-          "ra_deg": 244.59712,
-          "dec_deg": 22.268025,
+          "source_id": "PS1_DR2_161600+221604",
+          "ra_deg": 244.000922,
+          "dec_deg": 22.268035,
           "ra_err_arcsec": 0.05,
           "dec_err_arcsec": 0.05,
           "mag": 14.72,
           "filter_band": "r"
         },
         "match_status": "SECURE_MATCH",
-        "separation_arcsec": 0.02201897167270554,
-        "posterior_match_probability": 0.9999115420006521,
-        "chance_coincidence_probability": 7.615743154332222e-06,
+        "separation_arcsec": 0.02201897084373102,
+        "posterior_match_probability": 0.9999115420007165,
+        "chance_coincidence_probability": 7.61574258090203e-06,
         "local_source_density_per_sq_arcsec": 0.005,
         "is_training_overlap_quarantined": false,
         "details": {
@@ -95,7 +223,7 @@
           "authors": "Prentice, S. J. et al.",
           "publication_year": 2018,
           "source_url": "https://doi.org/10.3847/2041-8213/aae010",
-          "retrieval_timestamp_iso": "2026-11-09T09:09:46.760369+00:00",
+          "retrieval_timestamp_iso": "2026-11-09T11:09:59.233265+00:00",
           "evidence_type": "DIRECT_MEASUREMENT",
           "relevant_excerpt": "Spectroscopic confirmation of fast-blue optical transient AT2018cow at z=0.014145 in host CGCG 137-068. Rise time < 3 days with peak luminosity ~ 4x10^44 erg/s.",
           "is_direct_evidence": true
@@ -107,7 +235,7 @@
           "authors": "Perley, D. A. et al.",
           "publication_year": 2019,
           "source_url": "https://doi.org/10.1093/mnras/sty3420",
-          "retrieval_timestamp_iso": "2026-11-09T09:09:46.760369+00:00",
+          "retrieval_timestamp_iso": "2026-11-09T11:09:59.233265+00:00",
           "evidence_type": "PROPOSED_HYPOTHESIS",
           "relevant_excerpt": "Hypothesis: Central engine or magnetar heating embedded in an asymmetric circumstellar envelope.",
           "is_direct_evidence": false
@@ -128,22 +256,22 @@
         "recommended_followup_action": "Recommend urgent multi-band photometric and spectroscopic follow-up for human astronomer review."
       },
       "provenance": {
-        "entity_id": "ASTRAEUS-FBOT-AT2018cow",
+        "entity_id": "AT2018cow-Archival-Replay",
         "entity_type": "transient_candidate",
-        "was_generated_by": "activity:data_agent:ASTRAEUS-FBOT-AT2018cow",
+        "was_generated_by": "activity:data_agent:AT2018cow-Archival-Replay",
         "was_associated_with": "agent:astraeus_data_agent",
         "used_entities": [],
-        "generation_time": "2026-11-09T09:09:46.534000Z",
+        "generation_time": "2026-11-09T11:09:58.982629Z",
         "metadata": {}
       },
       "epistemic_disclaimer": "ASTRAEUS Phase 1 Operational Invariant: This dossier represents an evidence-calibrated autonomous investigation. It does NOT constitute an independent or unverified declaration of scientific discovery. Final physical claims require human spectroscopic confirmation."
     },
     "sn": {
-      "dossier_id": "dossier:SN2026abc:1794215386",
-      "target_entity_id": "SN2026abc",
+      "dossier_id": "dossier:SN2026abc-Synthetic-Control:1794222599",
+      "target_entity_id": "SN2026abc-Synthetic-Control",
       "ra_deg": 185.728841,
       "dec_deg": 15.822304,
-      "timestamp_utc": "2026-11-09T09:09:46.760645+00:00",
+      "timestamp_utc": "2026-11-09T11:09:59.233699+00:00",
       "terminal_status": "KNOWN_OBJECT",
       "recommended_action": "Archive candidate; no immediate telescope trigger required.",
       "data_summary": {
@@ -152,10 +280,10 @@
         "time_baseline_days": 48.0
       },
       "cross_match": {
-        "query_entity_id": "SN2026abc",
+        "query_entity_id": "SN2026abc-Synthetic-Control",
         "matched_candidate": {
           "catalog_name": "Pan-STARRS1",
-          "source_id": "PS1_DR2_094255+154920",
+          "source_id": "PS1_DR2_122254+154920",
           "ra_deg": 185.728845,
           "dec_deg": 15.8223,
           "ra_err_arcsec": 0.05,
@@ -194,7 +322,7 @@
           "authors": "Zwicky Transient Survey Collaboration",
           "publication_year": 2026,
           "source_url": "https://doi.org/10.3847/1538-4357/sn2026abc",
-          "retrieval_timestamp_iso": "2026-11-09T09:09:46.794044+00:00",
+          "retrieval_timestamp_iso": "2026-11-09T11:09:59.268174+00:00",
           "evidence_type": "DIRECT_MEASUREMENT",
           "relevant_excerpt": "Spectroscopically classified normal SN Ia exhibiting standard Si II 6355 absorption at peak epoch, consistent with radioactive 56Ni decay.",
           "is_direct_evidence": true
@@ -216,22 +344,22 @@
         "recommended_followup_action": "Archive candidate; no immediate telescope trigger required."
       },
       "provenance": {
-        "entity_id": "SN2026abc",
+        "entity_id": "SN2026abc-Synthetic-Control",
         "entity_type": "transient_candidate",
-        "was_generated_by": "activity:data_agent:SN2026abc",
+        "was_generated_by": "activity:data_agent:SN2026abc-Synthetic-Control",
         "was_associated_with": "agent:astraeus_data_agent",
         "used_entities": [],
-        "generation_time": "2026-11-09T09:09:46.760750Z",
+        "generation_time": "2026-11-09T11:09:59.233858Z",
         "metadata": {}
       },
       "epistemic_disclaimer": "ASTRAEUS Phase 1 Operational Invariant: This dossier represents an evidence-calibrated autonomous investigation. It does NOT constitute an independent or unverified declaration of scientific discovery. Final physical claims require human spectroscopic confirmation."
     },
     "artifact": {
-      "dossier_id": "dossier:Artifact-Dipole-042:1794215386",
-      "target_entity_id": "Artifact-Dipole-042",
+      "dossier_id": "dossier:Artifact-Dipole-042-Synthetic:1794222599",
+      "target_entity_id": "Artifact-Dipole-042-Synthetic",
       "ra_deg": 150.23145,
       "dec_deg": 2.11589,
-      "timestamp_utc": "2026-11-09T09:09:46.794271+00:00",
+      "timestamp_utc": "2026-11-09T11:09:59.268424+00:00",
       "terminal_status": "REJECTED_AS_ARTIFACT",
       "recommended_action": "Quarantine alert packet; discard from astronomical candidate stream.",
       "data_summary": {
@@ -240,7 +368,7 @@
         "time_baseline_days": 3.0
       },
       "cross_match": {
-        "query_entity_id": "Artifact-Dipole-042",
+        "query_entity_id": "Artifact-Dipole-042-Synthetic",
         "matched_candidate": null,
         "match_status": "NO_RELIABLE_MATCH",
         "separation_arcsec": 999.0,
@@ -260,7 +388,7 @@
       "literature_context": [],
       "skeptic_challenges": [
         {
-          "challenge_id": "chk:psf_defect:Artifact-Dipole-042",
+          "challenge_id": "chk:psf_defect:Artifact-Dipole-042-Synthetic",
           "category": "SUBTRACTION_DIPOLE_ARTIFACT",
           "assertion": "Measurement flags indicate image subtraction dipole residual or bad pixel mask.",
           "evidence_data": {
@@ -288,7 +416,7 @@
         ],
         "unresolved_fatal_objections": [
           {
-            "challenge_id": "chk:psf_defect:Artifact-Dipole-042",
+            "challenge_id": "chk:psf_defect:Artifact-Dipole-042-Synthetic",
             "category": "SUBTRACTION_DIPOLE_ARTIFACT",
             "assertion": "Measurement flags indicate image subtraction dipole residual or bad pixel mask.",
             "evidence_data": {
@@ -306,22 +434,22 @@
         "recommended_followup_action": "Quarantine alert packet; discard from astronomical candidate stream."
       },
       "provenance": {
-        "entity_id": "Artifact-Dipole-042",
+        "entity_id": "Artifact-Dipole-042-Synthetic",
         "entity_type": "transient_candidate",
-        "was_generated_by": "activity:data_agent:Artifact-Dipole-042",
+        "was_generated_by": "activity:data_agent:Artifact-Dipole-042-Synthetic",
         "was_associated_with": "agent:astraeus_data_agent",
         "used_entities": [],
-        "generation_time": "2026-11-09T09:09:46.794314Z",
+        "generation_time": "2026-11-09T11:09:59.268476Z",
         "metadata": {}
       },
       "epistemic_disclaimer": "ASTRAEUS Phase 1 Operational Invariant: This dossier represents an evidence-calibrated autonomous investigation. It does NOT constitute an independent or unverified declaration of scientific discovery. Final physical claims require human spectroscopic confirmation."
     },
     "sparse": {
-      "dossier_id": "dossier:Sparse-Trig-007:1794215386",
-      "target_entity_id": "Sparse-Trig-007",
+      "dossier_id": "dossier:Sparse-Trig-007-Synthetic:1794222599",
+      "target_entity_id": "Sparse-Trig-007-Synthetic",
       "ra_deg": 210.4512,
       "dec_deg": -5.3214,
-      "timestamp_utc": "2026-11-09T09:09:46.794733+00:00",
+      "timestamp_utc": "2026-11-09T11:09:59.269001+00:00",
       "terminal_status": "INSUFFICIENT_EVIDENCE",
       "recommended_action": "Wait for further survey detections or manual vetting.",
       "data_summary": {
@@ -330,7 +458,7 @@
         "time_baseline_days": 1.0
       },
       "cross_match": {
-        "query_entity_id": "Sparse-Trig-007",
+        "query_entity_id": "Sparse-Trig-007-Synthetic",
         "matched_candidate": null,
         "match_status": "NO_RELIABLE_MATCH",
         "separation_arcsec": 999.0,
@@ -357,12 +485,12 @@
         "recommended_followup_action": "Wait for further survey detections or manual vetting."
       },
       "provenance": {
-        "entity_id": "Sparse-Trig-007",
+        "entity_id": "Sparse-Trig-007-Synthetic",
         "entity_type": "transient_candidate",
-        "was_generated_by": "activity:data_agent:Sparse-Trig-007",
+        "was_generated_by": "activity:data_agent:Sparse-Trig-007-Synthetic",
         "was_associated_with": "agent:astraeus_data_agent",
         "used_entities": [],
-        "generation_time": "2026-11-09T09:09:46.794756Z",
+        "generation_time": "2026-11-09T11:09:59.269029Z",
         "metadata": {}
       },
       "epistemic_disclaimer": "ASTRAEUS Phase 1 Operational Invariant: This dossier represents an evidence-calibrated autonomous investigation. It does NOT constitute an independent or unverified declaration of scientific discovery. Final physical claims require human spectroscopic confirmation."

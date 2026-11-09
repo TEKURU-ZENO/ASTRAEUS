@@ -62,4 +62,23 @@ Months 1-2    Months 3-4     Months 5-6     Months 7-8     Months 9-10    Months
   1. *Multi-Agent Architecture (`astraeus-agents`):* 4-agent collaborative runtime (`DataCrossMatchAgent`, `LiteratureContextAgent`, `SkepticValidationAgent`, `PhysicalModelEngine`) coordinated via typed contracts and IVOA Prov-DM provenance tracking.
   2. *Adversarial Skeptic Gatekeeper:* Systematic execution of 4-category challenges (PSF shape failure, image subtraction dipole defects, crowded field blending, and unphysical parameters such as $M_{\mathrm{Ni}} > 2.5\,M_\odot$).
   3. *Deterministic Scientific Evidence Gates:* Replaced LLM discretion with mathematical code gates enforcing terminal statuses (`CANDIDATE_REQUIRES_FOLLOWUP`, `KNOWN_OBJECT`, `KNOWN_CLASS_UNUSUAL`, `REJECTED_AS_ARTIFACT`, `INSUFFICIENT_EVIDENCE`).
-  4. *Flagship Day 90 Reproducible Discovery Dossier & Governance Benchmark:* Evaluated on 4 canonical deep-dive transients (AT2018cow FBOT analogue, normal SN Ia SN2026abc, subtraction dipole defect, and sparse trigger) and a 50-candidate validation cohort; demonstrated **0.0% epistemic violation rate**, **0.0% artifact false alarm rate**, and **93.8% ToO precision**; 73 unit tests passing with **94% statement test coverage** across all 5 monorepo packages. Phase 1 formally approved and complete.
+  4. *Flagship Day 90 Reproducible Discovery Dossier & Governance Benchmark:* Evaluated on 4 canonical deep-dive transients (AT2018cow FBOT analogue, normal SN Ia SN2026abc, subtraction dipole defect, and sparse trigger) and a 50-candidate validation cohort; demonstrated **0.0% epistemic violation rate**, **0.0% artifact false alarm rate**, and **93.8% ToO precision**; 73 unit tests passing with **94% statement test coverage** across all 5 monorepo packages.
+  5. *Day 90 Scientific Audit & Reconciliation (Post-Senior Review Sign-Off):* Formally reconciled flagship coordinates ($\alpha = 244.000917^\circ, \delta = +22.268031^\circ$), resolved the $35.77'$ transcription error, classified candidate as `AT2018cow-Archival-Replay`, published exhaustive $4\times 4$ and $2\times 2$ confusion matrices with Wilson 95% CIs, executed a controlled 5-way governance ablation study (Ablations A-E), and formalized model-conditioned parameter uncertainties. Phase 1 formally approved and complete.
+
+---
+
+## 4. Phase 2 Architecture & Strategic Research Tracks (Days 91–180)
+
+**Theme:** Multimodal Latent Foundation Models for Autonomous Scientific Intelligence  
+**Core Objective:** Learn scientific representations of irregular astronomical time series, spectra, and multi-band imaging that generalize across surveys without destroying physical information.
+
+### Five Specialized Research Tracks:
+- **Track A — Astronomical Temporal Foundation Model:** Self-supervised masked modeling on irregular time series; continuous-time sinusoidal positional encodings; zero-shot transfer across ZTF, Pan-STARRS1, and DECam cadences.
+- **Track B — Multimodal Astronomical Representation:** Joint cross-attention encoders fusing multi-band light curves, 1D spectra, cut-out images, and host galaxy metadata with missing-modality masks.
+- **Track C — Physics-Constrained Latent Space:** Latent spaces regularized by physical invariants (energy conservation, diffusion timescale bounds) ensuring latent features map directly to identifiable physical parameters ($\theta_x$).
+- **Track D — Robustness & Out-of-Distribution Evaluation:** Rigorous holdout evaluations under severe cadence degradation, survey filter shifts, and synthetic-to-real domain transfer.
+- **Track E — Scientific Benchmarking:** Formal benchmarking against task-separated supervised baselines (Random Forest, LightGBM) and unimodal self-supervised baselines.
+
+### Compute Strategy:
+- **Local Prototyping:** RTX 5050 Laptop GPU (8 GB VRAM) allocated for small-batch profiling, single-curve tokenizers, unit test execution, and pipeline validation.
+- **Pretraining at Scale:** Survey-scale masked autoencoding across $\ge 5 \times 10^5$ light curves allocated to cloud/institutional GPU clusters (A100/H100 nodes).

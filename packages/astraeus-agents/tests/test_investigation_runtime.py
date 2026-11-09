@@ -24,8 +24,8 @@ def test_orchestrator_investigates_fbot_candidate():
 
     dossier = orchestrator.investigate_candidate(
         entity_id="candidate_fbot_at2018cow_analog",
-        ra_deg=244.5972,
-        dec_deg=22.2680,
+        ra_deg=244.000917,
+        dec_deg=22.268031,
         times_mjd=t,
         magnitudes=mags,
         errors=errs,
