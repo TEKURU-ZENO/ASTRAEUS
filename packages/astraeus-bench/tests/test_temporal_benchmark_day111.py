@@ -321,31 +321,49 @@ class TestTrack3AndDatasetAManifests:
 
 
 class TestStage2BenchmarkOrchestratorExecution:
-    """Verifies full benchmark suite execution and 32 primary contrast generation."""
+    """Verifies full benchmark suite execution, 24 primary contrasts, 8 reference anchors, and ablations."""
 
-    def test_full_benchmark_suite_generates_32_primary_contrasts(self):
+    def test_full_benchmark_suite_generates_24_primary_contrasts_and_8_anchors(self):
         orchestrator = Stage2TemporalBenchmarkOrchestrator(device="cpu")
         report = orchestrator.run_benchmark_suite()
 
         assert isinstance(report, Stage2BenchmarkReport)
-        assert report.num_primary_contrasts == 32
-        assert len(report.primary_contrasts_32) == 32
+        assert report.num_primary_contrasts == 24
+        assert len(report.primary_contrasts_24) == 24
+        assert len(report.reference_anchors_8) == 8
+        assert len(report.full_grid_32) == 32
 
-        # Check contrast IDs C01 to C32
-        expected_ids = [f"C{i:02d}" for i in range(1, 33)]
-        actual_ids = [c.contrast_id for c in report.primary_contrasts_32]
+        # Check contrast IDs C01 to C24
+        expected_ids = [f"C{i:02d}" for i in range(1, 25)]
+        actual_ids = [c.contrast_id for c in report.primary_contrasts_24]
         assert actual_ids == expected_ids
 
-        # Check task partition of contrasts
-        t1_contrasts = [c for c in report.primary_contrasts_32 if c.task_id == "T1"]
-        t2_contrasts = [c for c in report.primary_contrasts_32 if c.task_id == "T2"]
-        t3_contrasts = [c for c in report.primary_contrasts_32 if c.task_id == "T3"]
-        t4_contrasts = [c for c in report.primary_contrasts_32 if c.task_id == "T4"]
+        # Check reference anchor IDs R01 to R08
+        expected_r_ids = [f"R{i:02d}" for i in range(1, 9)]
+        actual_r_ids = [c.contrast_id for c in report.reference_anchors_8]
+        assert actual_r_ids == expected_r_ids
 
-        assert len(t1_contrasts) == 8  # C01-C08
-        assert len(t2_contrasts) == 8  # C09-C16
-        assert len(t3_contrasts) == 8  # C17-C24
-        assert len(t4_contrasts) == 8  # C25-C32
+        # Check task partition of 24 primary contrasts (6 per task)
+        t1_contrasts = [c for c in report.primary_contrasts_24 if c.task_id == "T1"]
+        t2_contrasts = [c for c in report.primary_contrasts_24 if c.task_id == "T2"]
+        t3_contrasts = [c for c in report.primary_contrasts_24 if c.task_id == "T3"]
+        t4_contrasts = [c for c in report.primary_contrasts_24 if c.task_id == "T4"]
+
+        assert len(t1_contrasts) == 6  # C01-C06
+        assert len(t2_contrasts) == 6  # C07-C12
+        assert len(t3_contrasts) == 6  # C13-C18
+        assert len(t4_contrasts) == 6  # C19-C24
+
+        # Check task-specific sample size denominators on Track 3
+        # T1, T2, T3 on Track 3 must have N=17; T4 must have N=18
+        for c in report.primary_contrasts_24:
+            if c.cohort_id == "Cohort_2_Track3_Archival":
+                if c.task_id in ("T1", "T2", "T3"):
+                    assert c.sample_size == 17
+                elif c.task_id == "T4":
+                    assert c.sample_size == 18
+            else:
+                assert c.sample_size == 45
 
         # Check test types
         for c in t1_contrasts + t2_contrasts + t4_contrasts:
@@ -354,20 +372,35 @@ class TestStage2BenchmarkOrchestratorExecution:
             assert c.test_type == "Exact Binomial McNemar"
 
         # Check FDR q-values and significance
-        for c in report.primary_contrasts_32:
+        for c in report.primary_contrasts_24:
             assert 0.0 <= c.raw_p_value <= 1.0
             assert 0.0 <= c.bh_q_value <= 1.0
             assert c.bh_q_value >= c.raw_p_value - 1e-9
 
-        # Check secondary diagnostics
-        assert len(report.secondary_top10_diagnostics) == 2
+        # Check secondary diagnostics with published candidate IDs
+        assert len(report.secondary_top10_diagnostics) >= 2
         for diag in report.secondary_top10_diagnostics:
             assert diag.num_permutations == 10000
             assert 0.0 <= diag.empirical_p_value <= 1.0
+            assert len(diag.top10_baseline_ids) == 10
+            assert len(diag.top10_candidate_ids) == 10
 
-        # Check transformer seed stability across 5 seeds
-        assert len(report.transformer_seed_stability) == 5
-        for seed in [42, 137, 1024, 2048, 4096]:
-            assert seed in report.transformer_seed_stability
-            assert "t1_crps" in report.transformer_seed_stability[seed]
-            assert "t2_crps_10d" in report.transformer_seed_stability[seed]
+        # Check transformer seed stability across 5 seeds on full cohorts
+        assert len(report.transformer_seed_stability) == 2
+        for c_id in ["Cohort_1_DatasetA_Test", "Cohort_2_Track3_Archival"]:
+            for seed in [42, 137, 1024, 2048, 4096]:
+                assert seed in report.transformer_seed_stability[c_id]
+                assert "t1_crps" in report.transformer_seed_stability[c_id][seed]
+                assert "t2_crps_10d" in report.transformer_seed_stability[c_id][seed]
+
+        # Check 4-way T4 ablation results
+        assert "Cohort_1_DatasetA_Test" in report.t4_ablation_results
+        c1_abl = report.t4_ablation_results["Cohort_1_DatasetA_Test"]
+        assert "1_Transformer_Full" in c1_abl
+        assert "2_Transformer_No_Attention" in c1_abl
+        assert "3_Transformer_No_Novelty" in c1_abl
+        assert "4_Common_Classifier_No_Timescales" in c1_abl
+
+        # Check ASTROMER lineage audit
+        assert report.astromer_lineage_audit["lineage_verification_status"] == "CERTIFIED_DISJOINT"
+        assert report.astromer_lineage_audit["min_angular_separation_deg"] > 18.0

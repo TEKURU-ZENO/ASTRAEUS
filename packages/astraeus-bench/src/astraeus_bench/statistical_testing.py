@@ -39,12 +39,13 @@ class StatisticalContrast(BaseModel):
 class Top10PermutationDiagnostic(BaseModel):
     """
     Secondary operational sensitivity diagnostic for Top-10 queue selection.
-    Strictly separated from the primary 32-test multiplicity family.
+    Strictly separated from the primary multiplicity family.
     """
     model_config = ConfigDict(frozen=True)
 
     baseline_id: str
-    cohort_id: str
+    candidate_id: str = "candidate"
+    cohort_id: str = "cohort"
     observed_p_at_10_baseline: float
     observed_p_at_10_candidate: float
     delta_p_at_10: float                  # candidate - baseline
@@ -53,6 +54,8 @@ class Top10PermutationDiagnostic(BaseModel):
     ci_lower_95: float
     ci_upper_95: float
     is_exchangeable: bool                 # True if p > 0.05
+    top10_baseline_ids: List[str] = Field(default_factory=list)
+    top10_candidate_ids: List[str] = Field(default_factory=list)
 
 
 def compute_paired_wilcoxon(
@@ -183,6 +186,10 @@ def compute_top10_permutation_test(
     scores_baseline: np.ndarray,
     scores_candidate: np.ndarray,
     is_rare_target: np.ndarray,
+    candidate_ids: Optional[List[str]] = None,
+    baseline_id: str = "B1_Akima",
+    candidate_id: str = "candidate",
+    cohort_id: str = "cohort",
     num_permutations: int = 10000,
     seed: int = 42
 ) -> Top10PermutationDiagnostic:
@@ -201,6 +208,9 @@ def compute_top10_permutation_test(
     p10_base = float(np.sum(is_rare_target[top_base])) / k
     p10_cand = float(np.sum(is_rare_target[top_cand])) / k
     delta_obs = p10_cand - p10_base
+
+    top_base_ids = [candidate_ids[i] for i in top_base] if candidate_ids else []
+    top_cand_ids = [candidate_ids[i] for i in top_cand] if candidate_ids else []
 
     # Permutation loop
     null_deltas = np.zeros(num_permutations, dtype=np.float64)
@@ -225,8 +235,9 @@ def compute_top10_permutation_test(
     ci_high = float(np.percentile(null_deltas, 97.5))
 
     return Top10PermutationDiagnostic(
-        baseline_id="baseline",
-        cohort_id="cohort",
+        baseline_id=baseline_id,
+        candidate_id=candidate_id,
+        cohort_id=cohort_id,
         observed_p_at_10_baseline=p10_base,
         observed_p_at_10_candidate=p10_cand,
         delta_p_at_10=delta_obs,
@@ -235,4 +246,6 @@ def compute_top10_permutation_test(
         ci_lower_95=ci_low,
         ci_upper_95=ci_high,
         is_exchangeable=(emp_p > 0.05),
+        top10_baseline_ids=top_base_ids,
+        top10_candidate_ids=top_cand_ids,
     )
