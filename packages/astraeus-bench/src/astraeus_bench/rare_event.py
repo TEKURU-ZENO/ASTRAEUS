@@ -222,14 +222,8 @@ class RareEventBenchmarkRunner:
         r_norm = np.array([ref_cdfs["physical_residual"].transform(c.physical_residual) for c in all_eval], dtype=float)
 
         # Baseline E: ASTRAEUS Calibrated Composite (0.4 d_M + 0.3 u + 0.3 r_phys)
-        # Note: If an object is flagged as artifact, physical model penalizes or separates
-        # Artifacts typically have high dm and high u, but ASTRAEUS artifact filter flags them
+        # Pure unassisted composite scoring without test-time cohort label access
         astraeus_composite = 0.4 * dm_norm + 0.3 * u_norm + 0.3 * r_norm
-        # Penalize confirmed/filtered artifacts in operational triage ranking:
-        for idx, cand in enumerate(all_eval):
-            if cand.population == "pop3_artifact":
-                # Diagnostic profile marks artifact; suppressed from discovery triage
-                astraeus_composite[idx] *= 0.1
 
         # 4. Evaluate Primary Methods
         methods: Dict[str, MethodRankingResult] = {}

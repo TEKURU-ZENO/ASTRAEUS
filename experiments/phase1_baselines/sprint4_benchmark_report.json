@@ -12,16 +12,20 @@
     "target_property": "peak_magnitude",
     "nominal_coverage": 0.9,
     "calibration_size": 20,
-    "conformal_quantile_threshold": 0.026167840574167656,
+    "conformal_quantile_threshold": 0.02616784057417121,
+    "quantile_standard_error_diagnostic": 0.0027929757319407776,
     "setting_1_exchangeable": {
       "setting_name": "Setting 1: Exchangeable Held-out Population",
       "nominal_coverage": 0.9,
       "empirical_coverage": 0.85,
+      "coverage_ci_95_low": 0.6395816254952756,
+      "coverage_ci_95_high": 0.9476311485644952,
       "coverage_shortfall": 0.050000000000000044,
-      "mean_interval_width": 0.05233568114833531,
-      "median_interval_width": 0.05233568114833531,
-      "mean_aleatoric_uncertainty": 0.040000000000000015,
-      "mean_epistemic_uncertainty": 0.05000000000000001,
+      "mean_interval_width": 0.05233568114834242,
+      "median_interval_width": 0.05233568114834242,
+      "conformal_threshold_q": 0.02616784057417121,
+      "mean_photometric_noise": 0.040000000000000015,
+      "mean_predictive_uncertainty": 0.05000000000000001,
       "mean_distribution_shift_score": 0.9801127294098544,
       "n_eval_samples": 20,
       "exchangeability_satisfied": true
@@ -30,11 +34,14 @@
       "setting_name": "Setting 2: Distribution-Shifted / Cadence Degraded Population",
       "nominal_coverage": 0.9,
       "empirical_coverage": 0.08,
+      "coverage_ci_95_low": 0.022220453017460465,
+      "coverage_ci_95_high": 0.24966064345849504,
       "coverage_shortfall": 0.8200000000000001,
-      "mean_interval_width": 0.05233568114833531,
-      "median_interval_width": 0.05233568114833531,
-      "mean_aleatoric_uncertainty": 0.10000000000000002,
-      "mean_epistemic_uncertainty": 0.05000000000000001,
+      "mean_interval_width": 0.05233568114834242,
+      "median_interval_width": 0.05233568114834242,
+      "conformal_threshold_q": 0.02616784057417121,
+      "mean_photometric_noise": 0.10000000000000002,
+      "mean_predictive_uncertainty": 0.05000000000000001,
       "mean_distribution_shift_score": 7.103910860536994,
       "n_eval_samples": 25,
       "exchangeability_satisfied": false
@@ -538,82 +545,82 @@
       "budget_evaluations": {
         "5": {
           "budget_k": 5,
-          "targets_found": 2,
-          "artifacts_leaked": 0,
-          "recall": 0.03076923076923077,
-          "precision": 0.4,
-          "fp_per_1000": 600.0
+          "targets_found": 0,
+          "artifacts_leaked": 4,
+          "recall": 0.0,
+          "precision": 0.0,
+          "fp_per_1000": 1000.0
         },
         "10": {
           "budget_k": 10,
-          "targets_found": 5,
-          "artifacts_leaked": 0,
-          "recall": 0.07692307692307693,
-          "precision": 0.5,
-          "fp_per_1000": 500.0
+          "targets_found": 0,
+          "artifacts_leaked": 9,
+          "recall": 0.0,
+          "precision": 0.0,
+          "fp_per_1000": 1000.0
         },
         "20": {
           "budget_k": 20,
-          "targets_found": 9,
-          "artifacts_leaked": 0,
-          "recall": 0.13846153846153847,
-          "precision": 0.45,
-          "fp_per_1000": 550.0
+          "targets_found": 0,
+          "artifacts_leaked": 19,
+          "recall": 0.0,
+          "precision": 0.0,
+          "fp_per_1000": 1000.0
         },
         "50": {
           "budget_k": 50,
-          "targets_found": 35,
-          "artifacts_leaked": 0,
-          "recall": 0.5384615384615384,
-          "precision": 0.7,
-          "fp_per_1000": 300.0
+          "targets_found": 8,
+          "artifacts_leaked": 35,
+          "recall": 0.12307692307692308,
+          "precision": 0.16,
+          "fp_per_1000": 840.0
         },
         "100": {
           "budget_k": 100,
-          "targets_found": 65,
-          "artifacts_leaked": 0,
-          "recall": 1.0,
-          "precision": 0.65,
-          "fp_per_1000": 350.0
+          "targets_found": 37,
+          "artifacts_leaked": 35,
+          "recall": 0.5692307692307692,
+          "precision": 0.37,
+          "fp_per_1000": 630.0
         }
       },
       "peculiar_yield": {
-        "5": 2,
-        "10": 5,
-        "20": 9,
-        "50": 35,
-        "100": 65
-      },
-      "artifact_contamination": {
         "5": 0,
         "10": 0,
         "20": 0,
-        "50": 0,
-        "100": 0
+        "50": 8,
+        "100": 37
+      },
+      "artifact_contamination": {
+        "5": 4,
+        "10": 9,
+        "20": 19,
+        "50": 35,
+        "100": 35
       },
       "recall_at_k": {
-        "5": 0.03076923076923077,
-        "10": 0.07692307692307693,
-        "20": 0.13846153846153847,
-        "50": 0.5384615384615384,
-        "100": 1.0
+        "5": 0.0,
+        "10": 0.0,
+        "20": 0.0,
+        "50": 0.12307692307692308,
+        "100": 0.5692307692307692
       },
       "precision_at_k": {
-        "5": 0.4,
-        "10": 0.5,
-        "20": 0.45,
-        "50": 0.7,
-        "100": 0.65
+        "5": 0.0,
+        "10": 0.0,
+        "20": 0.0,
+        "50": 0.16,
+        "100": 0.37
       },
       "false_positives_per_1000": {
-        "5": 600.0,
-        "10": 500.0,
-        "20": 550.0,
-        "50": 300.0,
-        "100": 350.0
+        "5": 1000.0,
+        "10": 1000.0,
+        "20": 1000.0,
+        "50": 840.0,
+        "100": 630.0
       },
-      "roc_auc": 0.7574038461538461,
-      "pr_auc": 0.6519091982758103
+      "roc_auc": 0.31990384615384615,
+      "pr_auc": 0.44286451454051506
     }
   },
   "ablations": {
@@ -867,24 +874,24 @@
   "signal_injection_recovery": {
     "SNR_3.0": {
       "sample_size": 10.0,
-      "astraeus_recall_top50": 0.8,
+      "astraeus_recall_top50": 0.0,
       "isolation_forest_recall_top50": 0.6
     },
     "SNR_5.0": {
       "sample_size": 10.0,
-      "astraeus_recall_top50": 0.7,
+      "astraeus_recall_top50": 0.0,
       "isolation_forest_recall_top50": 0.5
     },
     "SNR_10.0": {
       "sample_size": 10.0,
-      "astraeus_recall_top50": 1.0,
+      "astraeus_recall_top50": 0.0,
       "isolation_forest_recall_top50": 0.9
     },
     "SNR_20.0": {
       "sample_size": 10.0,
-      "astraeus_recall_top50": 1.0,
+      "astraeus_recall_top50": 0.8,
       "isolation_forest_recall_top50": 0.4
     }
   },
-  "executive_summary": "Evaluated 145 candidates (25 peculiar, 35 artifacts) across 7 methods and 3 ablations. ASTRAEUS Calibrated Composite achieved ROC-AUC = 0.7574 vs Isolation Forest = 0.9921."
+  "executive_summary": "Evaluated 145 candidates (25 peculiar, 35 artifacts) across 7 methods and 3 ablations. ASTRAEUS Calibrated Composite achieved ROC-AUC = 0.3199 vs Isolation Forest = 0.9921."
 }

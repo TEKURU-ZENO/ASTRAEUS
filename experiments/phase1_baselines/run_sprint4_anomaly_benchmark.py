@@ -96,9 +96,8 @@ def run_sprint4_experiment(output_path: str = "experiments/phase1_baselines/spri
         f_vec = feature_extractor.extract(times, mags, errs, bands)
         f_list = [f_vec.amplitude, f_vec.rise_rate_mag_per_day, f_vec.decay_rate_mag_per_day, f_vec.peak_mag, f_vec.duration_days]
 
-        # Physics fitting with applicability gating
-        # Map pop to candidate hypothesis
-        hypo = "detector_artifact" if is_art else ("supernova_ia" if pop_name == "pop1_common" else "unknown")
+        # Physics fitting with applicability gating (unsupervised at test time)
+        hypo = "supernova_ia" if pop_name == "pop1_common" else "unknown"
         phys_res = physics_engine.fit_all_applicable(times, mags, errs, candidate_hypothesis=hypo)
 
         # Baseline Mahalanobis placeholder (will be re-centered on Pop 1 training cohort)
