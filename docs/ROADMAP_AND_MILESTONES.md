@@ -3,7 +3,7 @@
 
 **Document Identifier:** `ASTRAEUS-ROADMAP-001`  
 **Classification:** Strategic Planning & Milestone Verification  
-**Version:** 2.2.0 (Formal Scientific Sign-Off Post-Independent Audit v2.2)  
+**Version:** 2.2.1 (Formal Scientific Sign-Off Post-Independent Audit v2.2.1)  
 
 ---
 
@@ -63,7 +63,7 @@ Months 1-2    Months 3-4     Months 5-6     Months 7-8     Months 9-10    Months
   2. *Adversarial Skeptic Gatekeeper:* Systematic execution of 4-category challenges (PSF shape failure, image subtraction dipole defects, crowded field blending, and unphysical parameters such as $M_{\mathrm{Ni}} > 2.5\,M_\odot$).
   3. *Deterministic Scientific Evidence Gates:* Replaced LLM discretion with mathematical code gates enforcing terminal statuses (`CANDIDATE_REQUIRES_FOLLOWUP`, `KNOWN_OBJECT`, `KNOWN_CLASS_UNUSUAL`, `REJECTED_AS_ARTIFACT`, `INSUFFICIENT_EVIDENCE`).
   4. *Flagship Day 90 Reproducible Discovery Dossier & Governance Benchmark:* Evaluated on 4 canonical deep-dive transients (AT2018cow FBOT analogue, normal SN Ia SN2026abc, subtraction dipole defect, and sparse trigger) and a 50-candidate validation cohort; demonstrated **0.0% epistemic violation rate**, **0.0% artifact false alarm rate**, and **93.8% ToO precision**; 81 unit tests passing with **94% statement test coverage** across all 5 monorepo packages.
-  5. *Day 90 Scientific Audit & Reconciliation v2.2.0 (Post-Senior Independent Audit):* Formally reconciled flagship discovery epoch to $t_0 = 58286.04 \pm 0.21\,\mathrm{MJD}$ (June 17.04, 2018 at 00:58 UTC) matching published ATLAS discovery alerts; confirmed host galaxy CGCG 137-068 separation at $\Delta \theta = 5.9''$ ($d_{\mathrm{proj}} \approx 1.73\,\mathrm{kpc}$ in Flat $\Lambda\mathrm{CDM}$) with qualified progenitor interpretation; formally designated Wilson score intervals without continuity correction ($[0.00\%, 27.75\%]$ for 0/10) alongside Clopper-Pearson exact binomial bounds; reported exact paired McNemar test for Config A vs E ($p = 0.000244, \chi^2_{\mathrm{cc}} = 11.08$), paired test on 10 artifacts ($p = 0.50$, Fisher $p = 0.0625$), and 5 individual seed runs ($53.73\% \pm 2.78\%$); reconciled $D_{\mathrm{morph\_RMS}}$ derivations (3.98 for unconstrained fit, 3.92 for literature fiducial); published full $5 \times 5$ correlation matrix $R$, clarified $\mathbb{E}[\chi^2_{\mathrm{red}}] = 1$, and defined quasi-bolometric pseudo-flux; verified queue boundary security via `FollowUpQueueManager` with cryptographic SHA-256 audit digests; and restructured Phase 2 research stages. Phase 1 accepted; Phase 2 authorized.
+  5. *Day 90 Scientific Audit & Reconciliation v2.2.1 (Post-Senior Independent Audit):* Formally reconciled flagship discovery epoch to $t_0 = 58286.04 \pm 0.21\,\mathrm{MJD}$ (June 17.04, 2018 at 00:58 UTC) matching published ATLAS discovery alerts; confirmed host galaxy CGCG 137-068 separation at $\Delta \theta = 5.9''$ ($d_{\mathrm{proj}} \approx 1.73\,\mathrm{kpc}$ in Flat $\Lambda\mathrm{CDM}$) with qualified progenitor interpretation; formally designated Wilson score intervals without continuity correction ($[0.00\%, 27.75\%]$ for 0/10; $[0.00\%, 7.13\%]$ for 0/50) alongside both exact two-sided 95% Clopper-Pearson intervals ($[0.00\%, 30.85\%]$ for 0/10; $[0.00\%, 7.11\%]$ for 0/50) and exact one-sided 95% upper bounds ($\le 25.89\%$ for 0/10; $\le 5.82\%$ for 0/50); reported exact paired McNemar test for Config A vs E ($p = 0.000244, \chi^2_{\mathrm{cc}} = 11.08$) with full paired $2 \times 2$ correctness table ($a=36, b=13, c=0, d=1$); reported strictly paired McNemar test for D2 vs E on 10 artifacts ($p = 0.50$ two-sided, $p = 0.25$ one-sided; $b=2, c=0$, noting $N=10$ cohort is underpowered to establish significance at 5% level); published 5 individual seed runs ($53.73\% \pm 2.78\%$) establishing that baseline achieves 100% target recall but exhibits high false-alarm variance; reconciled $D_{\mathrm{morph\_RMS}}$ derivations (3.98 for unconstrained fit, 3.92 for literature fiducial); published 6-row $\chi^2_{\mathrm{red}}$ reconciliation table ($6.16$ vs $2.78$, clarifying $\mathbb{E}[\chi^2_{\mathrm{red}}] = 1$); published full $5 \times 5$ correlation matrix $R$; designated multi-band feature as `optical_pseudoflux`; verified queue boundary security via `FollowUpQueueManager` with both SHA-256 integrity digests and keyed HMAC-SHA256 authority signatures (`test_gate_bypass_resistance.py`); and restructured Phase 2 research stages. Phase 1 accepted; Phase 2 authorized.
 
 ---
 
@@ -75,6 +75,18 @@ Months 1-2    Months 3-4     Months 5-6     Months 7-8     Months 9-10    Months
 ### Restructured Phase 2 Research Stages (Ordered Sequence):
 - **Stage 1 (Days 91–105) — Astronomical Reference Corpus & Provenance Hygiene:**
   Curate $\ge 10^6$ light curves with spatial HEALPix ($N_{\mathrm{side}}=32$) zero-overlap partitioning, cross-survey coordinate harmonization, barycentric dynamical time (TDB) correction, and automated IVOA Prov-DM lineage validation.
+  *Mandatory Scientific Deliverable:* **11-Point Identity & Provenance Audit Record** for every reference object:
+  1. Canonical IAU/TNS transient designation
+  2. Survey internal alert identifiers (ZTF alert ID, PS1 objID, DECam candidate ID)
+  3. ICRS astrometric coordinates ($\alpha, \delta$ in degrees, J2000) with epoch and formal astrometric uncertainty
+  4. Time standard specification (barycentric dynamical time TDB / BJD vs geocentric UTC MJD)
+  5. Spatial partitioning assignment: HEALPix nested pixel index ($N_{\mathrm{side}}=32$) with boundary isolation buffer verification
+  6. Cross-survey association probability ($P_{\mathrm{match}}$) and chance coincidence probability ($P_{\mathrm{chance}}$) from Bayesian cross-matcher
+  7. Complete passband transmission profile identifier, AB zero-point calibration, and Galactic extinction correction ($A_V, R_V$)
+  8. Photometric representation flag: uncalibrated instrumental flux vs standardized `optical_pseudoflux` vs calibrated physical flux density
+  9. Heteroscedastic measurement uncertainty derivation and non-detection upper-limit handling convention
+  10. Host galaxy identity, spectroscopic or photometric redshift ($z$), angular separation ($\Delta \theta$), and projected physical separation ($d_{\mathrm{proj}}$) with specified cosmological parameters ($H_0, \Omega_m, \Omega_\Lambda$)
+  11. End-to-end IVOA Prov-DM cryptographic hash chain (SHA-256 integrity digest and HMAC-SHA256 authority signature) tracking every pipeline transformation from raw alert packet to feature representation.
 - **Stage 2 (Days 106–125) — Astronomical Temporal Foundation Model (Track A):**
   Continuous-time positional encoding, masked observation autoencoding on irregular cadences, and uncertainty-aware latent projections.
 - **Stage 3 (Days 126–140) — Cross-Survey Robustness & Transfer (Track D):**

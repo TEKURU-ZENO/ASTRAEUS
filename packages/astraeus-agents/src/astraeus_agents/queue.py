@@ -8,6 +8,7 @@ can authorize queue insertion.
 from typing import Dict, Any, List, Optional
 from datetime import datetime, timezone
 import hashlib
+import hmac
 import json
 import copy
 from pydantic import BaseModel, Field, ConfigDict, model_validator
@@ -55,6 +56,7 @@ class AuthorizedFollowUpRecord(BaseModel):
     """
     Cryptographically verifiable, immutable follow-up queue authorization record.
     Generated exclusively by the deterministic gate authority.
+    Contains both an SHA-256 integrity digest and an HMAC-SHA256 authority signature.
     """
     model_config = ConfigDict(frozen=True)
 
@@ -65,6 +67,7 @@ class AuthorizedFollowUpRecord(BaseModel):
     authorized_epoch_utc: str
     terminal_status: TerminalInvestigationStatus
     gate_digest_sha256: str
+    hmac_sha256_signature: str
     authorized_priority_score: float
     gate_justifications: List[str]
     is_authoritative: bool = True
@@ -76,10 +79,13 @@ class FollowUpQueueManager:
     Enforces a strict system boundary:
     1. Agents cannot write directly to the queue.
     2. Proposals are independently validated by the Deterministic Evidence Gate.
-    3. Every queued record is sealed with an SHA-256 audit digest.
+    3. Every queued record is sealed with an SHA-256 audit digest and signed with HMAC-SHA256.
     """
 
-    def __init__(self) -> None:
+    DEFAULT_SECRET = b"astraeus-evidence-gate-authority-v2.2.1-secret"
+
+    def __init__(self, authority_secret_key: Optional[bytes] = None) -> None:
+        self._secret = authority_secret_key or self.DEFAULT_SECRET
         self._queue: List[AuthorizedFollowUpRecord] = []
         self._audit_log: List[Dict[str, Any]] = []
 
@@ -155,8 +161,9 @@ class FollowUpQueueManager:
                     "Submitted dossier gate evaluation does not match independent verification."
                 )
 
-        # 3. Cryptographic Audit Digest
+        # 3. Cryptographic Audit Digest & Keyed HMAC Signature
         digest = self.compute_gate_digest(dossier_safe)
+        signature = self.compute_hmac(digest)
 
         # 4. Construct Immutable Authorized Record
         record_id = f"too-auth:{dossier_safe.target_entity_id}:{int(datetime.now(timezone.utc).timestamp())}"
@@ -168,6 +175,7 @@ class FollowUpQueueManager:
             authorized_epoch_utc=datetime.now(timezone.utc).isoformat(),
             terminal_status=dossier_safe.terminal_status,
             gate_digest_sha256=digest,
+            hmac_sha256_signature=signature,
             authorized_priority_score=float(dossier_safe.physical_modeling.get("parameter_space_deviation", 1.0)),
             gate_justifications=list(gate_res.gate_justifications),
             is_authoritative=True,
@@ -179,19 +187,36 @@ class FollowUpQueueManager:
             "record_id": record_id,
             "target_entity_id": dossier_safe.target_entity_id,
             "digest": digest,
+            "hmac_signature": signature,
             "timestamp": record.authorized_epoch_utc,
         })
 
         return record
+
+    def compute_hmac(self, digest: str) -> str:
+        """Computes a keyed HMAC-SHA256 signature sealing the digest with the authority's secret key."""
+        return hmac.new(self._secret, digest.encode("utf-8"), hashlib.sha256).hexdigest()
+
+    def verify_record_authenticity(self, record: AuthorizedFollowUpRecord) -> bool:
+        """
+        Verifies both the structural validity of the digest and the cryptographic authenticity
+        of the HMAC-SHA256 signature using the authority's protected secret key.
+        """
+        if not record.is_authoritative:
+            return False
+        if len(record.gate_digest_sha256) != 64 or len(record.hmac_sha256_signature) != 64:
+            return False
+        expected_sig = self.compute_hmac(record.gate_digest_sha256)
+        return hmac.compare_digest(expected_sig, record.hmac_sha256_signature)
 
     def get_queue(self) -> List[AuthorizedFollowUpRecord]:
         """Returns a copy of the active follow-up queue sorted by priority score."""
         return sorted(self._queue, key=lambda r: r.authorized_priority_score, reverse=True)
 
     def verify_queue_integrity(self) -> bool:
-        """Verifies that all queued records maintain valid non-empty digests."""
+        """Verifies that all queued records maintain valid non-empty digests and authentic HMAC signatures."""
         for rec in self._queue:
-            if not rec.is_authoritative or len(rec.gate_digest_sha256) != 64:
+            if not self.verify_record_authenticity(rec):
                 return False
         return True
 

@@ -229,8 +229,32 @@ def test_queue_authorizes_genuine_followup_with_cryptographic_digest():
     assert record.target_entity_id == "FBOT-2018cow-replay"
     assert record.is_authoritative is True
     assert len(record.gate_digest_sha256) == 64
+    assert len(record.hmac_sha256_signature) == 64
+    assert queue_mgr.verify_record_authenticity(record) is True
     assert len(queue_mgr.get_queue()) == 1
     assert queue_mgr.verify_queue_integrity() is True
+
+
+def test_queue_detects_hmac_tampering():
+    """If an unauthorized party attempts to forge an AuthorizedFollowUpRecord with altered digest, HMAC verification fails."""
+    from astraeus_agents.queue import FollowUpQueueManager, AuthorizedFollowUpRecord
+
+    queue_mgr = FollowUpQueueManager(authority_secret_key=b"trusted-gate-secret-key-001")
+    tampered_record = AuthorizedFollowUpRecord(
+        record_id="too-auth:forged:001",
+        target_entity_id="Forged-Entity",
+        ra_deg=100.0,
+        dec_deg=20.0,
+        authorized_epoch_utc="2026-11-09T00:00:00Z",
+        terminal_status=TerminalInvestigationStatus.CANDIDATE_REQUIRES_FOLLOWUP,
+        gate_digest_sha256="0" * 64,
+        hmac_sha256_signature="f" * 64,  # Forged signature
+        authorized_priority_score=5.0,
+        gate_justifications=["Forged justification."],
+        is_authoritative=True,
+    )
+
+    assert queue_mgr.verify_record_authenticity(tampered_record) is False
 
 
 def test_queue_rejects_non_followup_terminal_statuses():
