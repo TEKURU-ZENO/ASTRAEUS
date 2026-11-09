@@ -153,3 +153,69 @@ def test_extinction_and_passband_mapping():
     best_decam, delta_decam = PhotometricHarmonizer.find_nearest_passband("ZTF_r", "DECam")
     assert best_decam == "r_DECam"
     assert delta_decam == pytest.approx(25.0, abs=5.0)
+
+
+def test_cross_survey_bayesian_matcher():
+    from astraeus_data.crossmatch.cross_survey_matcher import (
+        CrossSurveyMatcher,
+        CrossSurveyMatchStatus,
+        SurveyCandidate,
+    )
+
+    matcher = CrossSurveyMatcher(completeness_prior_q=0.90)
+
+    # 1. Single Close Counterpart -> Secure Match
+    cand_close = SurveyCandidate(
+        catalog_name="Pan-STARRS1",
+        source_id="PSO_123",
+        ra_deg=100.00005,  # ~ 0.18 arcsec away
+        dec_deg=20.00000,
+        mag=18.5,
+        filter_band="g_P1",
+    )
+    res_secure = matcher.match_source(
+        query_id="ztf_src_01",
+        query_ra=100.0,
+        query_dec=20.0,
+        query_pos_err_arcsec=0.1,
+        candidates=[cand_close],
+    )
+    assert res_secure.match_status == CrossSurveyMatchStatus.SECURE_MATCH
+    assert res_secure.posterior_match_probability > 0.85
+    assert res_secure.separation_arcsec < 0.5
+
+    # 2. Competing Counterparts -> Ambiguous Match
+    cand_comp1 = SurveyCandidate(
+        catalog_name="DECam",
+        source_id="DECam_01",
+        ra_deg=100.0002,  # ~ 0.7 arcsec
+        dec_deg=20.0,
+        mag=19.0,
+        filter_band="r_DECam",
+    )
+    cand_comp2 = SurveyCandidate(
+        catalog_name="DECam",
+        source_id="DECam_02",
+        ra_deg=100.00025, # ~ 0.9 arcsec
+        dec_deg=20.0,
+        mag=19.2,
+        filter_band="r_DECam",
+    )
+    res_ambig = matcher.match_source(
+        query_id="ztf_src_02",
+        query_ra=100.0,
+        query_dec=20.0,
+        query_pos_err_arcsec=0.2,
+        candidates=[cand_comp1, cand_comp2],
+    )
+    assert res_ambig.match_status == CrossSurveyMatchStatus.AMBIGUOUS_MATCH
+
+    # 3. Training/Test Spatial Overlap Quarantine Audit
+    train_entities = [{"entity_id": "ztf_train_001", "ra_deg": 150.0, "dec_deg": 10.0}]
+    eval_entities = [
+        {"entity_id": "ps1_eval_overlap", "ra_deg": 150.0002, "dec_deg": 10.0},  # ~ 0.7 arcsec overlap (< 3 arcsec)
+        {"entity_id": "ps1_eval_clean", "ra_deg": 150.0100, "dec_deg": 10.0},    # ~ 35 arcsec away
+    ]
+    quarantined = matcher.audit_training_test_overlap(train_entities, eval_entities)
+    assert "ps1_eval_overlap" in quarantined
+    assert "ps1_eval_clean" not in quarantined

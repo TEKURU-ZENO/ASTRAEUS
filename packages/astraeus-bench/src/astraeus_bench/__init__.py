@@ -22,6 +22,13 @@ from astraeus_bench.rare_event import (
     RareEventBenchmarkReport,
     RareEventBenchmarkRunner,
 )
+from astraeus_bench.cross_survey import (
+    PhysicalParameterConsistencyRecord,
+    RankStabilityRecord,
+    NegativeTransferRecord,
+    CrossSurveyBenchmarkReport,
+    CrossSurveyBenchmarkRunner,
+)
 
 __version__ = "0.1.0"
 
@@ -39,4 +46,9 @@ __all__ = [
     "MethodRankingResult",
     "RareEventBenchmarkReport",
     "RareEventBenchmarkRunner",
+    "PhysicalParameterConsistencyRecord",
+    "RankStabilityRecord",
+    "NegativeTransferRecord",
+    "CrossSurveyBenchmarkReport",
+    "CrossSurveyBenchmarkRunner",
 ]

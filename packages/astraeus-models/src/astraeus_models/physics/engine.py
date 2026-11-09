@@ -2,7 +2,10 @@
 ASTRAEUS Physical Model Engine.
 Orchestrates class-conditional and phase-conditional physical forward fitting,
 evaluates parameter identifiability, performs BIC model comparison,
-and returns structured evidence without conflating fit failures with anomalies.
+and returns three decoupled scientific outputs:
+1. Model Fit Quality (reduced chi2, BIC): Does the model describe the data?
+2. Physical Parameter Vector (theta_x): Inferred physical parameters.
+3. Parameter-Space Deviation (D_phys): Statistical novelty relative to known population.
 """
 
 from typing import Dict, Any, Optional, List, Tuple
@@ -16,13 +19,26 @@ from astraeus_models.physics.arnett import fit_arnett, ArnettFitResult
 from astraeus_models.physics.shock_cooling import fit_shock_cooling, ShockCoolingFitResult
 
 
+# Reference parameter priors for ordinary SNe Ia population (mean, std)
+REFERENCE_SN_PARAMETERS = {
+    "tau_rise": (15.0, 4.0),   # days
+    "tau_fall": (35.0, 10.0),  # days
+    "m_ni": (0.50, 0.15),      # solar masses
+    "tau_d": (16.0, 3.5),      # days
+}
+
+
 class PhysicsFitResult(BaseModel):
     """
-    Unified result of physical forward modeling across candidate models.
+    Decoupled physical forward modeling outputs preventing fit failures
+    from being conflated with astrophysical novelty.
     """
     preferred_model: Optional[str] = None
     best_bic: Optional[float] = None
-    physical_residual: float = 0.0
+    model_fit_quality: Optional[float] = None  # reduced chi2 of the best-fitting model
+    physical_parameters: Dict[str, float] = Field(default_factory=dict)
+    parameter_space_deviation: float = 0.0     # D_phys: distance in physical parameter manifold
+    physical_residual: float = 0.0             # Preserved for backward compatibility
     bazin_result: BazinFitResult
     arnett_result: ArnettFitResult
     shock_cooling_result: ShockCoolingFitResult
@@ -32,11 +48,27 @@ class PhysicsFitResult(BaseModel):
 
 class PhysicalModelEngine:
     """
-    Coordinates physics model applicability evaluation, fitting, and model selection.
+    Coordinates physics model applicability evaluation, fitting, model comparison,
+    and parameter-space deviation estimation.
     """
 
     def __init__(self):
         self.applicability_matrix = ModelApplicabilityMatrix()
+
+    def compute_parameter_deviation(self, params: Dict[str, float]) -> float:
+        """
+        Computes standardized parameter deviation D_phys against normal supernova population:
+        D_phys = sqrt(sum_i ((theta_i - mu_i) / sigma_i)^2)
+        """
+        deviations = []
+        for p_name, val in params.items():
+            if p_name in REFERENCE_SN_PARAMETERS:
+                mu, sigma = REFERENCE_SN_PARAMETERS[p_name]
+                deviations.append(((val - mu) / sigma) ** 2)
+
+        if not deviations:
+            return 0.0
+        return float(np.sqrt(np.mean(deviations)))
 
     def fit_all_applicable(
         self,
@@ -49,8 +81,6 @@ class PhysicalModelEngine:
         Runs applicability checks and forward fits for all candidate physical models.
         """
         # 1. Applicability Matrix Check
-        # Convert flux to pseudo-magnitude for applicability heuristics if needed
-        # (mag ~ -2.5 log10(flux) + 25)
         pos_flux = np.clip(fluxes, 1e-4, None)
         pseudo_mag = -2.5 * np.log10(pos_flux) + 25.0
 
@@ -92,7 +122,7 @@ class PhysicalModelEngine:
 
         # 5. Model Comparison (BIC & Residual Ranking)
         comparison: Dict[str, Dict[str, Any]] = {}
-        successful_models: List[Tuple[str, float, float]] = [] # (name, bic, chi2_red)
+        successful_models: List[Tuple[str, float, float, Dict[str, float]]] = [] # (name, bic, chi2_red, params)
 
         for name, res in [("bazin", bazin_res), ("arnett", arnett_res), ("shock_cooling", shock_res)]:
             comparison[name] = {
@@ -102,10 +132,13 @@ class PhysicalModelEngine:
                 "justification": res.applicability_justification,
             }
             if res.status == FitStatus.FIT_SUCCESS:
-                successful_models.append((name, res.bic, res.reduced_chi2))
+                successful_models.append((name, res.bic, res.reduced_chi2, res.best_fit_params))
 
         preferred_model: Optional[str] = None
         best_bic: Optional[float] = None
+        model_fit_quality: Optional[float] = None
+        physical_parameters: Dict[str, float] = {}
+        parameter_deviation: float = 0.0
         physical_residual: float = 0.0
 
         if successful_models:
@@ -113,21 +146,27 @@ class PhysicalModelEngine:
             successful_models.sort(key=lambda x: x[1])
             preferred_model = successful_models[0][0]
             best_bic = successful_models[0][1]
-            physical_residual = successful_models[0][2] # reduced chi2 of best physical fit
+            model_fit_quality = successful_models[0][2] # reduced chi2 of best physical fit
+            physical_parameters = successful_models[0][3]
+            parameter_deviation = self.compute_parameter_deviation(physical_parameters)
+            physical_residual = model_fit_quality
 
             # Add delta BIC to comparison
             for name in comparison:
                 if comparison[name]["bic"] is not None and best_bic is not None:
                     comparison[name]["delta_bic"] = float(comparison[name]["bic"] - best_bic)
         else:
-            # If no model converged or was applicable, compute empirical scatter as baseline residual
-            # (standard deviation of flux normalised by median uncertainty)
+            # If no physical model converged, compute observational scatter
             med_err = float(np.median(np.clip(flux_errors, 1e-4, None)))
             physical_residual = float(np.std(fluxes) / med_err) if med_err > 0 else 0.0
+            parameter_deviation = 0.0
 
         return PhysicsFitResult(
             preferred_model=preferred_model,
             best_bic=best_bic,
+            model_fit_quality=model_fit_quality,
+            physical_parameters=physical_parameters,
+            parameter_space_deviation=parameter_deviation,
             physical_residual=physical_residual,
             bazin_result=bazin_res,
             arnett_result=arnett_res,

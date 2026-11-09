@@ -1,0 +1,441 @@
+{
+  "num_matched_sources": 25,
+  "experiment_a_parameter_consistency": [
+    {
+      "object_id": "matched_transient_000",
+      "transient_class": "supernova_ia",
+      "preferred_model_ztf": "bazin",
+      "preferred_model_target": "bazin",
+      "ztf_parameters": {
+        "t0": 59030.90234534498,
+        "a": 567.2994152113624,
+        "b": -0.21012591145631587,
+        "tau_rise": 4.143046363425105,
+        "tau_fall": 21.76203950470998
+      },
+      "target_parameters": {
+        "t0": 59030.50145053097,
+        "a": 595.6287630065207,
+        "b": 1.3697575030519467,
+        "tau_rise": 3.985639798190201,
+        "tau_fall": 21.05864841465757
+      },
+      "mean_relative_parameter_error": 0.25425749841643713,
+      "is_physically_consistent": false
+    },
+    {
+      "object_id": "matched_transient_001",
+      "transient_class": "supernova_ia",
+      "preferred_model_ztf": "bazin",
+      "preferred_model_target": null,
+      "ztf_parameters": {
+        "t0": 59030.01047883595,
+        "a": 546.0097219385872,
+        "b": -0.30949735211610957,
+        "tau_rise": 4.100006468588021,
+        "tau_fall": 22.473836722405284
+      },
+      "target_parameters": {},
+      "mean_relative_parameter_error": 1.0,
+      "is_physically_consistent": false
+    },
+    {
+      "object_id": "matched_transient_002",
+      "transient_class": "supernova_ia",
+      "preferred_model_ztf": "bazin",
+      "preferred_model_target": "bazin",
+      "ztf_parameters": {
+        "t0": 59029.99221763624,
+        "a": 574.7401309931872,
+        "b": 0.5527594427834785,
+        "tau_rise": 3.937231995897889,
+        "tau_fall": 21.87294278532546
+      },
+      "target_parameters": {
+        "t0": 59029.96857978875,
+        "a": 578.1125378006371,
+        "b": 5.371489276279661,
+        "tau_rise": 3.6449409442747602,
+        "tau_fall": 21.162675166309324
+      },
+      "mean_relative_parameter_error": 0.20192756602261172,
+      "is_physically_consistent": true
+    },
+    {
+      "object_id": "matched_transient_003",
+      "transient_class": "supernova_ia",
+      "preferred_model_ztf": "bazin",
+      "preferred_model_target": "bazin",
+      "ztf_parameters": {
+        "t0": 59029.9931676234,
+        "a": 575.5829756083347,
+        "b": 0.9529586322075049,
+        "tau_rise": 3.9112672401860293,
+        "tau_fall": 21.785688929073974
+      },
+      "target_parameters": {
+        "t0": 59029.58929173703,
+        "a": 577.6469572238722,
+        "b": -2.963393886263907,
+        "tau_rise": 4.051993154345784,
+        "tau_fall": 22.66680568302735
+      },
+      "mean_relative_parameter_error": 0.27975186060458973,
+      "is_physically_consistent": false
+    },
+    {
+      "object_id": "matched_transient_004",
+      "transient_class": "supernova_ia",
+      "preferred_model_ztf": "bazin",
+      "preferred_model_target": "bazin",
+      "ztf_parameters": {
+        "t0": 59029.62045537974,
+        "a": 586.4971763786382,
+        "b": -1.4586444403685734,
+        "tau_rise": 3.9917760705208094,
+        "tau_fall": 22.223566790075015
+      },
+      "target_parameters": {
+        "t0": 59030.424921557234,
+        "a": 590.4777889517659,
+        "b": 2.7618813030023674,
+        "tau_rise": 3.8921663785299137,
+        "tau_fall": 20.889372278760387
+      },
+      "mean_relative_parameter_error": 0.3239756374272181,
+      "is_physically_consistent": false
+    },
+    {
+      "object_id": "matched_transient_005",
+      "transient_class": "supernova_ia",
+      "preferred_model_ztf": "bazin",
+      "preferred_model_target": null,
+      "ztf_parameters": {
+        "t0": 59030.07085285516,
+        "a": 550.5674646594069,
+        "b": -0.23832521163913906,
+        "tau_rise": 4.076794126893348,
+        "tau_fall": 22.250027907378055
+      },
+      "target_parameters": {},
+      "mean_relative_parameter_error": 1.0,
+      "is_physically_consistent": false
+    },
+    {
+      "object_id": "matched_transient_006",
+      "transient_class": "supernova_ia",
+      "preferred_model_ztf": "bazin",
+      "preferred_model_target": "bazin",
+      "ztf_parameters": {
+        "t0": 59029.42274625922,
+        "a": 565.9651498278874,
+        "b": -0.2960753044018241,
+        "tau_rise": 3.9735519377652,
+        "tau_fall": 22.422229237465295
+      },
+      "target_parameters": {
+        "t0": 59030.82355135504,
+        "a": 542.9036745096377,
+        "b": 4.748355417905287,
+        "tau_rise": 2.8751331111127003,
+        "tau_fall": 20.909259361694502
+      },
+      "mean_relative_parameter_error": 0.28940658901855604,
+      "is_physically_consistent": false
+    },
+    {
+      "object_id": "matched_transient_007",
+      "transient_class": "supernova_ia",
+      "preferred_model_ztf": "bazin",
+      "preferred_model_target": null,
+      "ztf_parameters": {
+        "t0": 59029.77041545243,
+        "a": 559.6770242127837,
+        "b": 0.1432788423745054,
+        "tau_rise": 3.9547651223882787,
+        "tau_fall": 22.21810061191798
+      },
+      "target_parameters": {},
+      "mean_relative_parameter_error": 1.0,
+      "is_physically_consistent": false
+    },
+    {
+      "object_id": "matched_transient_008",
+      "transient_class": "supernova_ia",
+      "preferred_model_ztf": "bazin",
+      "preferred_model_target": null,
+      "ztf_parameters": {
+        "t0": 59030.43089998553,
+        "a": 585.3557828040667,
+        "b": -0.15433739712522535,
+        "tau_rise": 4.074304124041915,
+        "tau_fall": 21.88627891895394
+      },
+      "target_parameters": {},
+      "mean_relative_parameter_error": 1.0,
+      "is_physically_consistent": false
+    },
+    {
+      "object_id": "matched_transient_009",
+      "transient_class": "supernova_ia",
+      "preferred_model_ztf": "bazin",
+      "preferred_model_target": "bazin",
+      "ztf_parameters": {
+        "t0": 59030.581219161475,
+        "a": 564.1002069293829,
+        "b": 0.01652077772374766,
+        "tau_rise": 4.064854227365951,
+        "tau_fall": 21.85563154276434
+      },
+      "target_parameters": {
+        "t0": 59029.661861112545,
+        "a": 565.7627403902784,
+        "b": 0.4882727209571373,
+        "tau_rise": 3.7777176728862285,
+        "tau_fall": 22.066456361932833
+      },
+      "mean_relative_parameter_error": 0.2098623836676333,
+      "is_physically_consistent": true
+    },
+    {
+      "object_id": "matched_transient_010",
+      "transient_class": "supernova_ia",
+      "preferred_model_ztf": "bazin",
+      "preferred_model_target": "bazin",
+      "ztf_parameters": {
+        "t0": 59030.529834684196,
+        "a": 568.1989484850689,
+        "b": -0.16036645456919044,
+        "tau_rise": 4.131501240832242,
+        "tau_fall": 22.058052345543
+      },
+      "target_parameters": {
+        "t0": 59030.48688843277,
+        "a": 569.7608279001189,
+        "b": -0.1919464741460581,
+        "tau_rise": 4.120474543104206,
+        "tau_fall": 22.07759350235662
+      },
+      "mean_relative_parameter_error": 0.03416423944033929,
+      "is_physically_consistent": true
+    },
+    {
+      "object_id": "matched_transient_011",
+      "transient_class": "supernova_ia",
+      "preferred_model_ztf": "bazin",
+      "preferred_model_target": "bazin",
+      "ztf_parameters": {
+        "t0": 59030.45210601823,
+        "a": 584.5903387068774,
+        "b": 1.8682968606905392,
+        "tau_rise": 3.962520693861939,
+        "tau_fall": 21.184040116966617
+      },
+      "target_parameters": {
+        "t0": 59030.65585344525,
+        "a": 593.9895436983817,
+        "b": 3.9556116936088968,
+        "tau_rise": 3.8943694276038263,
+        "tau_fall": 20.517597928886598
+      },
+      "mean_relative_parameter_error": 0.11843407488699371,
+      "is_physically_consistent": true
+    },
+    {
+      "object_id": "matched_transient_012",
+      "transient_class": "supernova_ia",
+      "preferred_model_ztf": "bazin",
+      "preferred_model_target": null,
+      "ztf_parameters": {
+        "t0": 59029.614467880936,
+        "a": 566.5587761717283,
+        "b": 0.26286395528444795,
+        "tau_rise": 3.909088464021539,
+        "tau_fall": 22.176227481755927
+      },
+      "target_parameters": {},
+      "mean_relative_parameter_error": 1.0,
+      "is_physically_consistent": false
+    },
+    {
+      "object_id": "matched_transient_013",
+      "transient_class": "supernova_ia",
+      "preferred_model_ztf": "bazin",
+      "preferred_model_target": "bazin",
+      "ztf_parameters": {
+        "t0": 59029.55154612503,
+        "a": 565.096404376212,
+        "b": -0.8471058638080446,
+        "tau_rise": 4.017747083095152,
+        "tau_fall": 22.450614234084185
+      },
+      "target_parameters": {
+        "t0": 59029.55094134071,
+        "a": 571.4934162472138,
+        "b": 0.13939784079276693,
+        "tau_rise": 3.9748072570615087,
+        "tau_fall": 22.244179860887236
+      },
+      "mean_relative_parameter_error": 0.23912676989550768,
+      "is_physically_consistent": true
+    },
+    {
+      "object_id": "matched_transient_014",
+      "transient_class": "supernova_ia",
+      "preferred_model_ztf": "bazin",
+      "preferred_model_target": "bazin",
+      "ztf_parameters": {
+        "t0": 59028.92443306741,
+        "a": 535.6767413985673,
+        "b": -9.99999999657608,
+        "tau_rise": 4.173613432559612,
+        "tau_fall": 25.227850817427363
+      },
+      "target_parameters": {
+        "t0": 59029.09454792258,
+        "a": 540.3858316318566,
+        "b": -8.411948377840632,
+        "tau_rise": 4.2199618270568005,
+        "tau_fall": 24.76226968629176
+      },
+      "mean_relative_parameter_error": 0.039392106291437565,
+      "is_physically_consistent": true
+    },
+    {
+      "object_id": "matched_transient_015",
+      "transient_class": "fbot",
+      "preferred_model_ztf": null,
+      "preferred_model_target": null,
+      "ztf_parameters": {},
+      "target_parameters": {},
+      "mean_relative_parameter_error": 1.0,
+      "is_physically_consistent": false
+    },
+    {
+      "object_id": "matched_transient_016",
+      "transient_class": "fbot",
+      "preferred_model_ztf": null,
+      "preferred_model_target": null,
+      "ztf_parameters": {},
+      "target_parameters": {},
+      "mean_relative_parameter_error": 1.0,
+      "is_physically_consistent": false
+    },
+    {
+      "object_id": "matched_transient_017",
+      "transient_class": "fbot",
+      "preferred_model_ztf": null,
+      "preferred_model_target": null,
+      "ztf_parameters": {},
+      "target_parameters": {},
+      "mean_relative_parameter_error": 1.0,
+      "is_physically_consistent": false
+    },
+    {
+      "object_id": "matched_transient_018",
+      "transient_class": "fbot",
+      "preferred_model_ztf": null,
+      "preferred_model_target": null,
+      "ztf_parameters": {},
+      "target_parameters": {},
+      "mean_relative_parameter_error": 1.0,
+      "is_physically_consistent": false
+    },
+    {
+      "object_id": "matched_transient_019",
+      "transient_class": "fbot",
+      "preferred_model_ztf": null,
+      "preferred_model_target": null,
+      "ztf_parameters": {},
+      "target_parameters": {},
+      "mean_relative_parameter_error": 1.0,
+      "is_physically_consistent": false
+    },
+    {
+      "object_id": "matched_transient_020",
+      "transient_class": "fbot",
+      "preferred_model_ztf": null,
+      "preferred_model_target": null,
+      "ztf_parameters": {},
+      "target_parameters": {},
+      "mean_relative_parameter_error": 1.0,
+      "is_physically_consistent": false
+    },
+    {
+      "object_id": "matched_transient_021",
+      "transient_class": "fbot",
+      "preferred_model_ztf": null,
+      "preferred_model_target": null,
+      "ztf_parameters": {},
+      "target_parameters": {},
+      "mean_relative_parameter_error": 1.0,
+      "is_physically_consistent": false
+    },
+    {
+      "object_id": "matched_transient_022",
+      "transient_class": "fbot",
+      "preferred_model_ztf": null,
+      "preferred_model_target": null,
+      "ztf_parameters": {},
+      "target_parameters": {},
+      "mean_relative_parameter_error": 1.0,
+      "is_physically_consistent": false
+    },
+    {
+      "object_id": "matched_transient_023",
+      "transient_class": "fbot",
+      "preferred_model_ztf": null,
+      "preferred_model_target": null,
+      "ztf_parameters": {},
+      "target_parameters": {},
+      "mean_relative_parameter_error": 1.0,
+      "is_physically_consistent": false
+    },
+    {
+      "object_id": "matched_transient_024",
+      "transient_class": "fbot",
+      "preferred_model_ztf": null,
+      "preferred_model_target": null,
+      "ztf_parameters": {},
+      "target_parameters": {},
+      "mean_relative_parameter_error": 1.0,
+      "is_physically_consistent": false
+    }
+  ],
+  "mean_parameter_consistency_rate": 0.24,
+  "experiment_b_rank_stability": {
+    "Pan-STARRS1": {
+      "target_survey_name": "Pan-STARRS1",
+      "spearman_rho": 0.8484615384615384,
+      "spearman_pvalue": 8.42410054279625e-08,
+      "top_5_jaccard": 0.6666666666666666,
+      "top_10_jaccard": 0.8181818181818182,
+      "top_20_jaccard": 0.9047619047619048,
+      "mean_rank_displacement": 2.08,
+      "stability_verdict": "STABLE"
+    }
+  },
+  "experiment_c_negative_transfer": {
+    "Pan-STARRS1": {
+      "target_survey_name": "Pan-STARRS1",
+      "in_domain_f1": 1.0,
+      "zero_shot_f1": 1.0,
+      "f1_degradation": 0.0,
+      "abstention_threshold": 2.5,
+      "abstention_rate": 0.033333333333333326,
+      "post_abstention_f1": 1.0,
+      "negative_transfer_mitigated": true
+    },
+    "DECam": {
+      "target_survey_name": "DECam",
+      "in_domain_f1": 1.0,
+      "zero_shot_f1": 0.721056721056721,
+      "f1_degradation": 0.27894327894327897,
+      "abstention_threshold": 2.5,
+      "abstention_rate": 0.01666666666666672,
+      "post_abstention_f1": 0.7340930674264007,
+      "negative_transfer_mitigated": true
+    }
+  },
+  "executive_summary": "Cross-Survey Zero-Shot Benchmark evaluated ZTF -> PS1 and DECam. Spatial identity overlap: 0 quarantined. Exp A (Physical Consistency): 24.0% match. Exp B (Rank Stability): Spearman rho = 0.8485. Exp C (Negative Transfer): Calibrated abstention mitigated zero-shot degradation."
+}

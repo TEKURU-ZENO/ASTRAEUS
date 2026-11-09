@@ -16,6 +16,12 @@ from astraeus_data.crossmatch.gaia_matcher import (
     CrossMatchResult,
     MatchClassification,
 )
+from astraeus_data.crossmatch.cross_survey_matcher import (
+    CrossSurveyMatcher,
+    CrossSurveyMatchStatus,
+    SurveyCandidate,
+    CrossSurveyAssociation,
+)
 from astraeus_data.partitioning import (
     load_split_manifest,
     entities_to_arrow_table,
@@ -63,6 +69,10 @@ __all__ = [
     "GaiaCandidate",
     "CrossMatchResult",
     "MatchClassification",
+    "CrossSurveyMatcher",
+    "CrossSurveyMatchStatus",
+    "SurveyCandidate",
+    "CrossSurveyAssociation",
     "load_split_manifest",
     "entities_to_arrow_table",
     "save_partitioned_parquet",

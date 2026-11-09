@@ -114,6 +114,9 @@ def test_physical_model_engine():
     assert isinstance(res, PhysicsFitResult)
     assert res.preferred_model in {"bazin", "arnett"}
     assert res.best_bic is not None
+    assert res.model_fit_quality is not None
+    assert isinstance(res.physical_parameters, dict)
+    assert res.parameter_space_deviation >= 0.0
     assert res.physical_residual > 0.0
     assert "bazin" in res.model_comparison
     assert res.summary_status == "CONVERGED"
