@@ -4,7 +4,7 @@ Implements the mandatory research gate: freezing benchmark evaluation targets, m
 and held-out test splits before foundation model training to prevent methodological data leakage.
 """
 
-from typing import List, Dict, Any, Literal
+from typing import List, Dict, Any, Literal, Tuple, Optional
 from datetime import datetime, timezone
 import hashlib
 import json
@@ -32,9 +32,11 @@ class FrozenEvaluationProtocol(BaseModel):
     """
     Immutable evaluation contract frozen before foundation model pretraining.
     Mathematically prevents using test-set data for model tuning or architecture selection.
+    Codifies cross-corpus contamination invariant: Dataset B (pretraining) cannot contain
+    any physical objects or counterparts in Dataset A held-out test split.
     """
     model_config = ConfigDict(frozen=True)
-    protocol_version: str = "1.0.0"
+    protocol_version: str = "1.0.1"
     frozen_epoch_utc: str
     protocol_sha256: str
     tasks: List[EvaluationTask]
@@ -42,12 +44,17 @@ class FrozenEvaluationProtocol(BaseModel):
     frozen_test_ids: List[str]
     frozen_quarantine_ids: List[str]
     metric_definitions: Dict[str, str]
+    dataset_b_exclusion_contract: str = (
+        "Dataset B (temporal foundation pretraining corpus) MUST NOT contain any physical object, "
+        "IAU counterpart, cross-survey observation, or alias matching Dataset A's held-out test split "
+        "(N=36 objects). Any overlap invalidates unseen-object cross-survey property estimation."
+    )
 
     @classmethod
     def freeze(
         cls,
         records: List[ReferenceObjectRecord],
-        version: str = "1.0.0",
+        version: str = "1.0.1",
     ) -> "FrozenEvaluationProtocol":
         """Freezes evaluation tasks and held-out test/val/quarantine splits from a reference corpus."""
         val_ids = sorted([r.canonical_id for r in records if r.spatial_partition.split == "val"])
@@ -132,6 +139,12 @@ class FrozenEvaluationProtocol(BaseModel):
             "Artifact_Contamination_Rate": "Fraction of top-ranked follow-up queue occupied by subtraction artifacts.",
         }
 
+        exclusion_contract = (
+            "Dataset B (temporal foundation pretraining corpus) MUST NOT contain any physical object, "
+            "IAU counterpart, cross-survey observation, or alias matching Dataset A's held-out test split "
+            "(N=36 objects). Any overlap invalidates unseen-object cross-survey property estimation."
+        )
+
         payload = {
             "version": version,
             "tasks": [t.model_dump() for t in tasks],
@@ -139,6 +152,7 @@ class FrozenEvaluationProtocol(BaseModel):
             "test_ids": test_ids,
             "quarantine_ids": quarantine_ids,
             "metric_definitions": metric_defs,
+            "dataset_b_exclusion_contract": exclusion_contract,
         }
         canon_json = json.dumps(payload, sort_keys=True, separators=(",", ":"))
         proto_hash = hashlib.sha256(canon_json.encode("utf-8")).hexdigest()
@@ -152,6 +166,7 @@ class FrozenEvaluationProtocol(BaseModel):
             frozen_test_ids=test_ids,
             frozen_quarantine_ids=quarantine_ids,
             metric_definitions=metric_defs,
+            dataset_b_exclusion_contract=exclusion_contract,
         )
 
     def verify_no_contamination(self, train_ids: List[str]) -> bool:
@@ -164,3 +179,19 @@ class FrozenEvaluationProtocol(BaseModel):
         if train_set.intersection(set(self.frozen_quarantine_ids)):
             return False
         return True
+
+    def verify_dataset_b_exclusion(
+        self,
+        dataset_b_ids: List[str],
+        dataset_b_aliases: Optional[List[str]] = None,
+    ) -> Tuple[bool, List[str]]:
+        """
+        Verifies that no candidate object ID or alias from Dataset B (pretraining corpus)
+        overlaps with Dataset A held-out test objects. Returns (is_clean, violations_list).
+        """
+        test_set = set(self.frozen_test_ids)
+        violations = list(test_set.intersection(set(dataset_b_ids)))
+        if dataset_b_aliases:
+            alias_violations = list(test_set.intersection(set(dataset_b_aliases)))
+            violations.extend(alias_violations)
+        return len(violations) == 0, sorted(list(set(violations)))

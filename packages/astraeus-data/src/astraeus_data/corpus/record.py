@@ -33,6 +33,8 @@ class SpatialPartitionInfo(BaseModel):
     distance_to_boundary_arcsec: float
     has_conflicting_neighbor: bool = False
     is_boundary_buffer_quarantined: bool = False
+    quarantine_reason: Optional[str] = None
+    dist_to_center_arcsec: Optional[float] = None
 
 
 class CrossMatchPrior(BaseModel):
@@ -50,15 +52,23 @@ class PhotometricCalibrationInfo(BaseModel):
     """Point 7: Passband profiles, native calibration, AB zero points, and extinction."""
     model_config = ConfigDict(frozen=True)
     native_survey: str = "ZTF"
-    native_zero_point_mag: float = 26.3
+    survey_nominal_zero_point: float = 26.3
+    observation_zero_point: Optional[float] = None
     standardized_zero_point_mag: float = 27.5
     photometric_system: str = "AB"
+    calibration_system: str = "AB"
+    calibration_version: str = "v1.0.1"
     filter_profiles: List[str]
     ebv_mw_mag: float
     a_v_mag: float
     quality_flags_clean: bool = True
     preserves_negative_fluxes: bool = True
     upper_limit_handling: str = "censored_5sigma_flux_floor"
+
+    @property
+    def native_zero_point_mag(self) -> float:
+        """Survey nominal zero point or observation-level zero point if calibrated."""
+        return self.observation_zero_point if self.observation_zero_point is not None else self.survey_nominal_zero_point
 
 
 class PhotometricRepresentationInfo(BaseModel):
@@ -78,9 +88,16 @@ class MeasurementUncertaintyInfo(BaseModel):
     """Point 9: Heteroscedastic uncertainties and non-detection handling."""
     model_config = ConfigDict(frozen=True)
     error_model: str = "heteroscedastic_propagated_photometric"
-    sigma_formula: str = "sigma_F = 0.921 * F * sigma_m"
+    positive_flux_sigma_formula: str = "sigma_F = 0.921 * F * sigma_m"
+    negative_flux_sigma_formula: str = "sigma_F = sigma_F_native (linear pipeline uncertainty; logarithmic magnitude conversion undefined)"
     upper_limit_sigma: float = 5.0
-    non_detection_handling: str = "non_destructive_flux_upper_limit"
+    non_detection_handling: str = "censored_5sigma_flux_upper_limit"
+    preserves_linear_negative_flux_error: bool = True
+
+    @property
+    def sigma_formula(self) -> str:
+        """Backward-compatible alias for primary sigma formula."""
+        return self.positive_flux_sigma_formula
 
 
 class HostAssociationInfo(BaseModel):
@@ -93,12 +110,14 @@ class HostAssociationInfo(BaseModel):
     redshift_type: RedshiftType = "UNKNOWN"
     redshift_source_bibcode: Optional[str] = None
     adopted_distance_mpc: Optional[float] = None
+    angular_diameter_distance_mpc: Optional[float] = None
     distance_method: DistanceMethod = "HUBBLE_FLOW"
     distance_uncertainty_mpc: Optional[float] = None
     peculiar_velocity_corrected: bool = False
     angular_separation_arcsec: Optional[float] = None
     nuclear_offset_resolution_arcsec: Optional[float] = None
     projected_offset_kpc: Optional[float] = None
+    projected_offset_uncertainty_kpc: Optional[float] = None
     cosmology: Dict[str, float] = Field(
         default_factory=lambda: {"H0": 70.0, "Om0": 0.3, "Ode0": 0.7}
     )
@@ -116,6 +135,10 @@ class CryptographicSeal(BaseModel):
     key_id: str = DEFAULT_KEY_ID
     canonical_serialization_version: str = "RFC-8785-JSON"
     signing_authority: str = "ASTRAEUS-PROVENANCE-AUTHORITY-v1.0"
+    cryptographic_mechanism: str = (
+        "HMAC-SHA256 (symmetric message authentication code for tamper-evident authorized-origin "
+        "verification; asymmetric digital signatures required for cryptographic non-repudiation)"
+    )
     sealed_at_utc: str
 
     @property
@@ -250,6 +273,8 @@ class ReferenceObjectRecord(BaseModel):
             "redshift_type": self.host_association.redshift_type,
             "host_offset_kpc": self.host_association.projected_offset_kpc if self.host_association.projected_offset_kpc is not None else -999.0,
             "host_leakage_cluster_id": self.host_leakage_cluster_id or "NONE",
+            "survey_nominal_zero_point": self.photometric_calibration.survey_nominal_zero_point,
+            "observation_zero_point": self.photometric_calibration.observation_zero_point if self.photometric_calibration.observation_zero_point is not None else -999.0,
             "sha256_digest": self.cryptographic_seal.sha256_digest,
             "hmac_sha256_mac": self.cryptographic_seal.hmac_sha256_mac,
             "key_id": self.cryptographic_seal.key_id,

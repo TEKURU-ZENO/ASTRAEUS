@@ -5,11 +5,22 @@ Verifies identity uniqueness, 3-tier leakage independence, boundary buffer quara
 cryptographic HMAC seals, and class-balance hygiene before foundation model training.
 """
 
-from typing import List, Dict, Set, Any
+from typing import List, Dict, Set, Any, Tuple
 from pydantic import BaseModel, Field
 import numpy as np
+from scipy.stats import beta
 
 from astraeus_data.corpus.record import ReferenceObjectRecord, DEFAULT_PROVENANCE_SECRET
+
+
+def compute_clopper_pearson(k: int, n: int, confidence: float = 0.95) -> Tuple[float, float]:
+    """Computes exact Clopper-Pearson binomial confidence interval [lower, upper]."""
+    if n <= 0:
+        return (0.0, 1.0)
+    alpha = 1.0 - confidence
+    lower = 0.0 if k == 0 else float(beta.ppf(alpha / 2.0, k, n - k + 1))
+    upper = 1.0 if k == n else float(beta.ppf(1.0 - alpha / 2.0, k + 1, n - k))
+    return (round(lower, 4), round(upper, 4))
 
 
 class CorpusAuditReport(BaseModel):
@@ -51,6 +62,15 @@ class CorpusAuditReport(BaseModel):
     per_class_population_accounting: Dict[str, Dict[str, int]]
     median_snr_per_class: Dict[str, float]
     median_cadence_hours_per_class: Dict[str, float]
+
+    # Stage 1 v1.0.1 Additions: Small Test-Set Disclosures & Quarantine Breakdown
+    test_clopper_pearson_intervals: Dict[str, Dict[str, float]] = Field(default_factory=dict)
+    quarantine_breakdown_by_class: Dict[str, int] = Field(default_factory=dict)
+    quarantine_breakdown_by_original_split: Dict[str, int] = Field(default_factory=dict)
+    quarantine_breakdown_by_reason: Dict[str, int] = Field(default_factory=dict)
+    archival_objects: List[str] = Field(default_factory=list)
+    simulated_objects_count: int = 0
+    synthetic_objects_count: int = 0
 
 
 class ReferenceCorpusAuditor:
@@ -190,6 +210,36 @@ class ReferenceCorpusAuditor:
         median_snr = {cls: float(np.median(vals)) for cls, vals in snr_map.items()}
         median_cad = {cls: float(np.median(vals)) for cls, vals in cadence_map.items()}
 
+        # Stage 1 v1.0.1 Additions: Clopper-Pearson Intervals for Test Set
+        clopper_map: Dict[str, Dict[str, float]] = {}
+        for cls in all_classes:
+            n_t = class_table[cls]["test"]
+            low_100, up_100 = compute_clopper_pearson(n_t, n_t, 0.95)
+            low_m1, up_m1 = compute_clopper_pearson(max(0, n_t - 1), n_t, 0.95)
+            clopper_map[cls] = {
+                "n_test": float(n_t),
+                "recall_100_ci_lower": low_100,
+                "recall_100_ci_upper": up_100,
+                "recall_minus1_ci_lower": low_m1,
+                "recall_minus1_ci_upper": up_m1,
+            }
+
+        # Quarantine Breakdowns
+        quar_by_class: Dict[str, int] = {}
+        quar_by_split: Dict[str, int] = {}
+        quar_by_reason: Dict[str, int] = {}
+        for r in quarantined_recs:
+            quar_by_class[r.transient_class] = quar_by_class.get(r.transient_class, 0) + 1
+            sp = r.spatial_partition
+            quar_by_split[sp.original_assigned_split] = quar_by_split.get(sp.original_assigned_split, 0) + 1
+            reason = sp.quarantine_reason or "CORNER_PERIPHERY_BOUNDARY_RISK"
+            quar_by_reason[reason] = quar_by_reason.get(reason, 0) + 1
+
+        # Origin Cohort Segregation
+        archival_ids = [r.canonical_id for r in records if r.dataset_origin == "ARCHIVAL"]
+        simulated_count = len([r for r in records if r.dataset_origin == "NUMERICALLY_SIMULATED"])
+        synthetic_count = len([r for r in records if r.dataset_origin == "SYNTHETIC"])
+
         passed = (
             duplicate_ids == 0
             and id_leakage == 0
@@ -226,4 +276,11 @@ class ReferenceCorpusAuditor:
             per_class_population_accounting=class_table,
             median_snr_per_class=median_snr,
             median_cadence_hours_per_class=median_cad,
+            test_clopper_pearson_intervals=clopper_map,
+            quarantine_breakdown_by_class=quar_by_class,
+            quarantine_breakdown_by_original_split=quar_by_split,
+            quarantine_breakdown_by_reason=quar_by_reason,
+            archival_objects=archival_ids,
+            simulated_objects_count=simulated_count,
+            synthetic_objects_count=synthetic_count,
         )

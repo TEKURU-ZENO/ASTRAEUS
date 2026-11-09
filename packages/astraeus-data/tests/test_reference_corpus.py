@@ -47,6 +47,13 @@ def test_archival_records_astrometry_and_provenance():
     assert sn11fe.host_association.host_name.startswith("Messier 101")
     assert sn11fe.host_association.distance_method == "INDEPENDENT_TRGB_CEPHEID"
     assert sn11fe.host_association.adopted_distance_mpc == 6.4
+    assert sn11fe.host_association.angular_diameter_distance_mpc == 6.39
+    assert sn11fe.host_association.angular_separation_arcsec == 162.0
+    # Mandatory reconciliation: 162" * 6400 kpc / 206265 = 5.02 kpc (NOT 5.4 kpc)
+    assert sn11fe.host_association.projected_offset_kpc == 5.02
+    assert sn11fe.host_association.projected_offset_uncertainty_kpc == 0.39
+    assert sn11fe.photometric_calibration.survey_nominal_zero_point == 27.0
+    assert sn11fe.photometric_calibration.observation_zero_point is not None
     assert sn11fe.verify_authenticity() is True
 
     tde = builder.create_archival_at2018zr()
@@ -54,6 +61,7 @@ def test_archival_records_astrometry_and_provenance():
     assert tde.transient_class == "TDE"
     assert tde.host_association.angular_separation_arcsec < 0.1  # Nuclear offset
     assert tde.host_association.nuclear_offset_resolution_arcsec == 1.0
+    assert tde.photometric_calibration.survey_nominal_zero_point == 26.3
     assert tde.verify_authenticity() is True
 
 
@@ -114,7 +122,7 @@ def test_frozen_evaluation_protocol_immutability():
 
     protocol = FrozenEvaluationProtocol.freeze(corpus)
 
-    assert protocol.protocol_version == "1.0.0"
+    assert protocol.protocol_version == "1.0.1"
     assert len(protocol.protocol_sha256) == 64
     assert len(protocol.tasks) == 3
     assert len(protocol.frozen_test_ids) > 0
@@ -124,3 +132,71 @@ def test_frozen_evaluation_protocol_immutability():
 
     contaminated_train_ids = train_ids + [protocol.frozen_test_ids[0]]
     assert protocol.verify_no_contamination(contaminated_train_ids) is False
+
+
+def test_frozen_evaluation_protocol_dataset_b_exclusion_contract():
+    builder = ReferenceCorpusBuilder()
+    corpus = builder.build_reference_corpus_v1(n_synthetic_per_class=5, base_seed=400)
+    protocol = FrozenEvaluationProtocol.freeze(corpus)
+
+    # Disjoint Dataset B candidate IDs pass exclusion check
+    clean_dataset_b = ["ASTRAEUS-PRETRAIN-ZTF-000001", "ASTRAEUS-PRETRAIN-PS1-000002"]
+    is_clean, violations = protocol.verify_dataset_b_exclusion(clean_dataset_b)
+    assert is_clean is True
+    assert len(violations) == 0
+
+    # Contaminated Dataset B containing a Dataset A held-out test object fails check
+    leaked_id = protocol.frozen_test_ids[0]
+    contaminated_dataset_b = clean_dataset_b + [leaked_id]
+    is_clean, violations = protocol.verify_dataset_b_exclusion(contaminated_dataset_b)
+    assert is_clean is False
+    assert leaked_id in violations
+
+
+def test_photometric_calibration_and_negative_flux_uncertainty_handling():
+    builder = ReferenceCorpusBuilder()
+    corpus = builder.build_reference_corpus_v1(n_synthetic_per_class=10, base_seed=500)
+
+    # Case A: Positive forced photometry
+    cow = builder.create_archival_at2018cow()
+    assert all(f > 0 for f in cow.flux_native)
+    assert cow.photometric_calibration.survey_nominal_zero_point == 27.5
+    assert cow.photometric_calibration.observation_zero_point == 27.48
+
+    # Case B: Negative noisy difference flux preservation with native linear uncertainty
+    artifact = next(r for r in corpus if r.transient_class == "ARTIFACT_DIPOLE" and any(f < 0 for f in r.flux_native))
+    neg_idx = next(i for i, f in enumerate(artifact.flux_native) if f < 0)
+    assert artifact.flux_native[neg_idx] < 0
+    # Linear pipeline uncertainty is positive and finite, not calculated through log magnitude
+    assert artifact.flux_err_native[neg_idx] > 0
+    assert artifact.photometric_calibration.preserves_negative_fluxes is True
+
+    # Case C: 5-sigma censored upper limits
+    assert artifact.measurement_uncertainty.upper_limit_sigma == 5.0
+    assert artifact.measurement_uncertainty.preserves_linear_negative_flux_error is True
+
+
+def test_clopper_pearson_confidence_intervals_and_quarantine_breakdown():
+    from astraeus_data.corpus.auditor import compute_clopper_pearson
+
+    # FBOT test support N=2: 100% recall (2/2) -> exact 95% CI is [15.81%, 100.0%]
+    low, up = compute_clopper_pearson(2, 2, 0.95)
+    assert low == pytest.approx(0.1581, abs=1e-3)
+    assert up == 1.0
+
+    # SLSN test support N=5: 100% recall (5/5) -> exact 95% CI is [47.82%, 100.0%]
+    low, up = compute_clopper_pearson(5, 5, 0.95)
+    assert low == pytest.approx(0.4782, abs=1e-3)
+    assert up == 1.0
+
+    builder = ReferenceCorpusBuilder()
+    corpus = builder.build_reference_corpus_v1(n_synthetic_per_class=10, base_seed=600)
+    auditor = ReferenceCorpusAuditor()
+    report = auditor.audit_corpus(corpus)
+
+    assert len(report.test_clopper_pearson_intervals) == 8
+    assert "FBOT" in report.test_clopper_pearson_intervals
+    assert len(report.archival_objects) == 3
+    assert set(report.archival_objects) == {"AT2018cow", "SN2011fe", "AT2018zr"}
+    assert sum(report.quarantine_breakdown_by_class.values()) == report.quarantined_boundary_count
+    assert sum(report.quarantine_breakdown_by_original_split.values()) == report.quarantined_boundary_count

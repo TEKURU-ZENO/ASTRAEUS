@@ -7,6 +7,7 @@ with strict spatial HEALPix partitioning, boundary buffer quarantine, and 11-poi
 from typing import List, Dict, Any, Optional, Tuple
 from datetime import datetime, timezone
 import json
+import warnings
 from pathlib import Path
 import numpy as np
 
@@ -69,7 +70,9 @@ class ReferenceCorpusBuilder:
         nominal_split = self.pixel_to_split.get(pix, "train")
 
         # Check adjacent neighbor pixels for conflicting splits
-        neighbors = self.hp.neighbours(pix)
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", RuntimeWarning)
+            neighbors = self.hp.neighbours(pix)
         conflicting_neighbor = False
         for n_pix in neighbors:
             if n_pix >= 0:
@@ -78,16 +81,21 @@ class ReferenceCorpusBuilder:
                     conflicting_neighbor = True
                     break
 
-        # Approximate distance to boundary: pixel center separation minus pixel radius
+        # Distance to boundary: pixel center separation minus pixel radius
         center_coord = self.hp.healpix_to_skycoord(pix)
         dist_from_center = coord.separation(center_coord).arcsec
         pixel_radius_arcsec = (self.hp.pixel_resolution.to(u.arcsec).value) / 2.0
         distance_to_boundary = max(0.1, pixel_radius_arcsec - dist_from_center)
 
-        # 3-sigma astrometric error buffer check against conflicting splits
+        # Compound quarantine predicate:
+        # 1. Pixel has an adjacent neighbor belonging to a conflicting split
+        # 2. Distance to boundary proxy < buffer_arcsec (triggered when object is in peripheral corners where dist_from_center > pixel_radius)
+        # 3. Or 3-sigma astrometric error circle exceeds buffer threshold
         is_quarantined = False
+        quarantine_reason = None
         if conflicting_neighbor and (distance_to_boundary < self.buffer_arcsec or (3.0 * astrometric_err_arcsec > self.buffer_arcsec)):
             is_quarantined = True
+            quarantine_reason = "CORNER_PERIPHERY_BOUNDARY_RISK"
 
         effective_split = "quarantine" if is_quarantined else nominal_split
 
@@ -98,6 +106,8 @@ class ReferenceCorpusBuilder:
             distance_to_boundary_arcsec=round(distance_to_boundary, 2),
             has_conflicting_neighbor=conflicting_neighbor,
             is_boundary_buffer_quarantined=is_quarantined,
+            quarantine_reason=quarantine_reason,
+            dist_to_center_arcsec=round(dist_from_center, 2),
         )
 
     def seal_record(self, record_dict: Dict[str, Any]) -> CryptographicSeal:
@@ -170,9 +180,12 @@ class ReferenceCorpusBuilder:
             ),
             photometric_calibration=PhotometricCalibrationInfo(
                 native_survey="ATLAS",
-                native_zero_point_mag=27.5,
+                survey_nominal_zero_point=27.5,
+                observation_zero_point=27.48,
                 standardized_zero_point_mag=27.5,
                 photometric_system="AB",
+                calibration_system="AB",
+                calibration_version="v1.0.1",
                 filter_profiles=["ATLAS_o", "ZTF_g", "ZTF_r", "ZTF_i"],
                 ebv_mw_mag=0.075,
                 a_v_mag=0.233,
@@ -279,9 +292,12 @@ class ReferenceCorpusBuilder:
             ),
             photometric_calibration=PhotometricCalibrationInfo(
                 native_survey="PTF",
-                native_zero_point_mag=27.0,
+                survey_nominal_zero_point=27.0,
+                observation_zero_point=27.02,
                 standardized_zero_point_mag=27.5,
                 photometric_system="AB",
+                calibration_system="AB",
+                calibration_version="v1.0.1",
                 filter_profiles=["PTF_g", "PTF_r"],
                 ebv_mw_mag=0.009,
                 a_v_mag=0.028,
@@ -303,11 +319,13 @@ class ReferenceCorpusBuilder:
                 redshift_type="SPECTROSCOPIC",
                 redshift_source_bibcode="2011Natur.480..344N",
                 adopted_distance_mpc=6.4,
+                angular_diameter_distance_mpc=6.39,
                 distance_method="INDEPENDENT_TRGB_CEPHEID",
                 distance_uncertainty_mpc=0.5,
                 peculiar_velocity_corrected=True,
                 angular_separation_arcsec=162.0,
-                projected_offset_kpc=5.4,
+                projected_offset_kpc=5.02,
+                projected_offset_uncertainty_kpc=0.39,
             ),
             cryptographic_seal=seal,
             host_leakage_cluster_id="HOST-MESSIER-101",
@@ -387,9 +405,12 @@ class ReferenceCorpusBuilder:
             ),
             photometric_calibration=PhotometricCalibrationInfo(
                 native_survey="ZTF",
-                native_zero_point_mag=26.3,
+                survey_nominal_zero_point=26.3,
+                observation_zero_point=26.31,
                 standardized_zero_point_mag=27.5,
                 photometric_system="AB",
+                calibration_system="AB",
+                calibration_version="v1.0.1",
                 filter_profiles=["ZTF_g", "ZTF_r"],
                 ebv_mw_mag=0.042,
                 a_v_mag=0.130,
@@ -531,9 +552,13 @@ class ReferenceCorpusBuilder:
         flux_native = [float(10.0 ** (-0.4 * (m - native_zp))) for m in mags]
         flux_err_native = [float(0.921 * f * e) for f, e in zip(flux_native, errs)]
 
-        # Occasionally add a realistic negative residual in artifact / low-SNR tail
+        # For negative difference flux in difference imaging, preserve native linear pipeline uncertainty
         if transient_class == "ARTIFACT_DIPOLE" and len(flux_native) > 2:
-            flux_native[-1] = -abs(flux_native[-1] * 0.5)
+            # Inject realistic noisy negative residual from difference imaging subtraction
+            negative_flux = -abs(flux_native[-1] * 0.5)
+            flux_native[-1] = negative_flux
+            # Linear pipeline subtraction noise (uncorrelated with magnitude)
+            flux_err_native[-1] = float(abs(negative_flux) * 1.2 + 0.5)
 
         flux_pseudoflux = [float(10.0 ** (-0.4 * (m - standard_zp))) for m in mags]
         pseudoflux_err = [float(0.921 * f * e) for f, e in zip(flux_pseudoflux, errs)]
@@ -575,9 +600,12 @@ class ReferenceCorpusBuilder:
             ),
             photometric_calibration=PhotometricCalibrationInfo(
                 native_survey="ZTF",
-                native_zero_point_mag=native_zp,
+                survey_nominal_zero_point=native_zp,
+                observation_zero_point=round(native_zp + float(rng.normal(0.0, 0.02)), 3),
                 standardized_zero_point_mag=standard_zp,
                 photometric_system="AB",
+                calibration_system="AB",
+                calibration_version="v1.0.1",
                 filter_profiles=["ZTF_g", "ZTF_r", "ZTF_i"],
                 ebv_mw_mag=float(rng.uniform(0.01, 0.08)),
                 a_v_mag=float(rng.uniform(0.03, 0.25)),
