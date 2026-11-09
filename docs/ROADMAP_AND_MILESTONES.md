@@ -3,7 +3,7 @@
 
 **Document Identifier:** `ASTRAEUS-ROADMAP-001`  
 **Classification:** Strategic Planning & Milestone Verification  
-**Version:** 2.1.0 (Formal Scientific Sign-Off Post-Independent Audit v2)  
+**Version:** 2.2.0 (Formal Scientific Sign-Off Post-Independent Audit v2.2)  
 
 ---
 
@@ -62,8 +62,8 @@ Months 1-2    Months 3-4     Months 5-6     Months 7-8     Months 9-10    Months
   1. *Multi-Agent Architecture (`astraeus-agents`):* 4-agent collaborative runtime (`DataCrossMatchAgent`, `LiteratureContextAgent`, `SkepticValidationAgent`, `PhysicalModelEngine`) coordinated via typed contracts and IVOA Prov-DM provenance tracking.
   2. *Adversarial Skeptic Gatekeeper:* Systematic execution of 4-category challenges (PSF shape failure, image subtraction dipole defects, crowded field blending, and unphysical parameters such as $M_{\mathrm{Ni}} > 2.5\,M_\odot$).
   3. *Deterministic Scientific Evidence Gates:* Replaced LLM discretion with mathematical code gates enforcing terminal statuses (`CANDIDATE_REQUIRES_FOLLOWUP`, `KNOWN_OBJECT`, `KNOWN_CLASS_UNUSUAL`, `REJECTED_AS_ARTIFACT`, `INSUFFICIENT_EVIDENCE`).
-  4. *Flagship Day 90 Reproducible Discovery Dossier & Governance Benchmark:* Evaluated on 4 canonical deep-dive transients (AT2018cow FBOT analogue, normal SN Ia SN2026abc, subtraction dipole defect, and sparse trigger) and a 50-candidate validation cohort; demonstrated **0.0% epistemic violation rate**, **0.0% artifact false alarm rate**, and **93.8% ToO precision**; 77 unit tests passing with **94% statement test coverage** across all 5 monorepo packages.
-  5. *Day 90 Scientific Audit & Reconciliation v2.1.0 (Post-Senior Independent Audit):* Formally reconciled flagship discovery epoch to $t_0 = 58286.04 \pm 0.21\,\mathrm{MJD}$ (June 16.5, 2018 UTC) matching published ATLAS discovery alerts; corrected host galaxy CGCG 137-068 separation to angular offset $\Delta \theta = 5.9''$ and projected distance $d_{\mathrm{proj}} \approx 1.73\,\mathrm{kpc}$ (Flat $\Lambda\mathrm{CDM}$ at $z = 0.014145$); corrected Wilson 95% interval for 0/10 to exact $[0.00\%, 27.75\%]$; executed controlled 6-way governance ablation suite including Configuration D2 (4-Agent + Gates without Skeptic) isolating the marginal value of the Skeptic agent (McNemar $\chi^2 = 12.07, p = 0.00053$, 5-seed variation $53.6 \pm 2.8\%$); standardized deviation terminology to $D_{\mathrm{morph\_RMS}} = 3.98$ (unscaled $D_M = 5.63$), reported $\mathrm{dof} = 6 - 5 = 1$, parameter correlation matrix $R$, and profile likelihood intervals; formalized metric as Target-of-Opportunity (ToO) Follow-Up Allocation Precision for Rare/Rapid Transients; verified gate bypass resistance (`test_gate_bypass_resistance.py`); and finalized Phase 2 research tracks (Tracks A–E) and RTX 5050 compute strategy. Phase 1 unconditionally approved and complete.
+  4. *Flagship Day 90 Reproducible Discovery Dossier & Governance Benchmark:* Evaluated on 4 canonical deep-dive transients (AT2018cow FBOT analogue, normal SN Ia SN2026abc, subtraction dipole defect, and sparse trigger) and a 50-candidate validation cohort; demonstrated **0.0% epistemic violation rate**, **0.0% artifact false alarm rate**, and **93.8% ToO precision**; 81 unit tests passing with **94% statement test coverage** across all 5 monorepo packages.
+  5. *Day 90 Scientific Audit & Reconciliation v2.2.0 (Post-Senior Independent Audit):* Formally reconciled flagship discovery epoch to $t_0 = 58286.04 \pm 0.21\,\mathrm{MJD}$ (June 17.04, 2018 at 00:58 UTC) matching published ATLAS discovery alerts; confirmed host galaxy CGCG 137-068 separation at $\Delta \theta = 5.9''$ ($d_{\mathrm{proj}} \approx 1.73\,\mathrm{kpc}$ in Flat $\Lambda\mathrm{CDM}$) with qualified progenitor interpretation; formally designated Wilson score intervals without continuity correction ($[0.00\%, 27.75\%]$ for 0/10) alongside Clopper-Pearson exact binomial bounds; reported exact paired McNemar test for Config A vs E ($p = 0.000244, \chi^2_{\mathrm{cc}} = 11.08$), paired test on 10 artifacts ($p = 0.50$, Fisher $p = 0.0625$), and 5 individual seed runs ($53.73\% \pm 2.78\%$); reconciled $D_{\mathrm{morph\_RMS}}$ derivations (3.98 for unconstrained fit, 3.92 for literature fiducial); published full $5 \times 5$ correlation matrix $R$, clarified $\mathbb{E}[\chi^2_{\mathrm{red}}] = 1$, and defined quasi-bolometric pseudo-flux; verified queue boundary security via `FollowUpQueueManager` with cryptographic SHA-256 audit digests; and restructured Phase 2 research stages. Phase 1 accepted; Phase 2 authorized.
 
 ---
 
@@ -72,13 +72,18 @@ Months 1-2    Months 3-4     Months 5-6     Months 7-8     Months 9-10    Months
 **Theme:** Multimodal Latent Foundation Models for Autonomous Scientific Intelligence  
 **Core Objective:** Learn scientific representations of irregular astronomical time series, spectra, and multi-band imaging that generalize across surveys without destroying physical information.
 
-### Five Specialized Research Tracks:
-- **Track A — Astronomical Temporal Foundation Model:** Self-supervised masked modeling on irregular time series; continuous-time sinusoidal positional encodings; zero-shot transfer across ZTF, Pan-STARRS1, and DECam cadences.
-- **Track B — Multimodal Astronomical Representation:** Joint cross-attention encoders fusing multi-band light curves, 1D spectra, cut-out images, and host galaxy metadata with missing-modality masks.
-- **Track C — Physics-Constrained Latent Space:** Latent spaces regularized by physical invariants (energy conservation, diffusion timescale bounds) ensuring latent features map directly to identifiable physical parameters ($\theta_x$).
-- **Track D — Robustness & Out-of-Distribution Evaluation:** Rigorous holdout evaluations under severe cadence degradation, survey filter shifts, and synthetic-to-real domain transfer.
-- **Track E — Scientific Benchmarking:** Formal benchmarking against task-separated supervised baselines (Random Forest, LightGBM) and unimodal self-supervised baselines.
+### Restructured Phase 2 Research Stages (Ordered Sequence):
+- **Stage 1 (Days 91–105) — Astronomical Reference Corpus & Provenance Hygiene:**
+  Curate $\ge 10^6$ light curves with spatial HEALPix ($N_{\mathrm{side}}=32$) zero-overlap partitioning, cross-survey coordinate harmonization, barycentric dynamical time (TDB) correction, and automated IVOA Prov-DM lineage validation.
+- **Stage 2 (Days 106–125) — Astronomical Temporal Foundation Model (Track A):**
+  Continuous-time positional encoding, masked observation autoencoding on irregular cadences, and uncertainty-aware latent projections.
+- **Stage 3 (Days 126–140) — Cross-Survey Robustness & Transfer (Track D):**
+  Zero-shot transfer benchmarks from ZTF to Pan-STARRS1 and DECam, calibrated covariate-shift abstention heads, and robustness testing under severe cadence degradation ($N < 6$).
+- **Stage 4 (Days 141–160) — Multimodal Astronomical Representation (Track B):**
+  Joint cross-attention transformer fusing multi-band light curves, low-resolution classification spectra, difference-imaging cutouts, and host galaxy photometric redshifts.
+- **Stage 5 (Days 161–180) — Physics-Conditioned Latent Spaces & Paper Preparation (Tracks C & E):**
+  Self-supervised regularizers enforcing energy conservation and diffusion scaling relations; formal benchmarking against Random Forest and XGBoost baselines; research paper preparation.
 
 ### Compute Strategy:
 - **Local Prototyping:** RTX 5050 Laptop GPU (8 GB VRAM) allocated for small-batch profiling, single-curve tokenizers, unit test execution, and pipeline validation.
-- **Pretraining at Scale:** Survey-scale masked autoencoding across $\ge 5 \times 10^5$ light curves allocated to cloud/institutional GPU clusters (A100/H100 nodes).
+- **Pretraining at Scale:** Survey-scale masked autoencoding across $\ge 10^6$ light curves allocated to cloud/institutional GPU clusters (A100/H100 nodes).

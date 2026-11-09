@@ -21,6 +21,14 @@ from astraeus_agents.skeptic_agent import SkepticValidationAgent
 from astraeus_agents.evidence_gates import DeterministicEvidenceGateEngine, GateEvaluationResult
 from astraeus_agents.orchestrator import InvestigationOrchestrator
 from astraeus_agents.dossier import InvestigationDossier
+from astraeus_agents.queue import (
+    FollowUpQueueManager,
+    AuthorizedFollowUpRecord,
+    InvestigationProposal,
+    UnauthorizedQueueSubmissionError,
+    GateValidationMismatchError,
+    TamperDetectionError,
+)
 
 __version__ = "0.1.0"
 
@@ -42,4 +50,10 @@ __all__ = [
     "GateEvaluationResult",
     "InvestigationOrchestrator",
     "InvestigationDossier",
+    "FollowUpQueueManager",
+    "AuthorizedFollowUpRecord",
+    "InvestigationProposal",
+    "UnauthorizedQueueSubmissionError",
+    "GateValidationMismatchError",
+    "TamperDetectionError",
 ]
