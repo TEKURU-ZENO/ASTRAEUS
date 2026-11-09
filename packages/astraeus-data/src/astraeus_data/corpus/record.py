@@ -35,6 +35,8 @@ class SpatialPartitionInfo(BaseModel):
     is_boundary_buffer_quarantined: bool = False
     quarantine_reason: Optional[str] = None
     dist_to_center_arcsec: Optional[float] = None
+    projected_normal_astrometric_sigma_arcsec: Optional[float] = None
+    crossing_probability: Optional[float] = None
 
 
 class CrossMatchPrior(BaseModel):

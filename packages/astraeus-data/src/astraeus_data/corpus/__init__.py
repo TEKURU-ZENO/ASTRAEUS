@@ -22,6 +22,11 @@ from astraeus_data.corpus.record import (
 from astraeus_data.corpus.builder import ReferenceCorpusBuilder
 from astraeus_data.corpus.auditor import ReferenceCorpusAuditor, CorpusAuditReport
 from astraeus_data.corpus.protocol import FrozenEvaluationProtocol, EvaluationTask
+from astraeus_data.corpus.lineage import (
+    DatasetBSampleLineage,
+    LineageStatus,
+    ProvenanceGraphAuditor,
+)
 
 __all__ = [
     "ReferenceObjectRecord",
@@ -42,4 +47,7 @@ __all__ = [
     "CorpusAuditReport",
     "FrozenEvaluationProtocol",
     "EvaluationTask",
+    "DatasetBSampleLineage",
+    "LineageStatus",
+    "ProvenanceGraphAuditor",
 ]

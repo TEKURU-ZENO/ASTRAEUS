@@ -63,6 +63,7 @@ class ReferenceCorpusBuilder:
         self,
         ra_deg: float,
         dec_deg: float,
+        uncertainty_mas: Optional[Dict[str, float]] = None,
         astrometric_err_arcsec: float = 0.05,
     ) -> SpatialPartitionInfo:
         """
@@ -89,14 +90,27 @@ class ReferenceCorpusBuilder:
         center_coord = self.hp.healpix_to_skycoord(pix)
         dist_from_center = coord.separation(center_coord).arcsec
 
-        is_quarantined, quarantine_reason, d_edge_arcsec = evaluate_quarantine_predicate(
+        if uncertainty_mas is None:
+            uncertainty_mas = {
+                "ra": astrometric_err_arcsec * 1000.0,
+                "dec": astrometric_err_arcsec * 1000.0,
+            }
+
+        (
+            is_quarantined,
+            quarantine_reason,
+            d_edge_arcsec,
+            sigma_perp_arcsec,
+            crossing_prob,
+        ) = evaluate_quarantine_predicate(
             coord=coord,
             hp=self.hp,
             pix=pix,
             has_conflicting_neighbor=conflicting_neighbor,
-            astrometric_err_arcsec=astrometric_err_arcsec,
+            uncertainty_mas=uncertainty_mas,
             buffer_arcsec=self.buffer_arcsec,
             confidence_multiplier=3.0,
+            step=100,
         )
 
         effective_split = "quarantine" if is_quarantined else nominal_split
@@ -110,6 +124,8 @@ class ReferenceCorpusBuilder:
             is_boundary_buffer_quarantined=is_quarantined,
             quarantine_reason=quarantine_reason,
             dist_to_center_arcsec=round(dist_from_center, 2),
+            projected_normal_astrometric_sigma_arcsec=round(sigma_perp_arcsec, 4),
+            crossing_probability=float(crossing_prob),
         )
 
     def seal_record(self, record_dict: Dict[str, Any]) -> CryptographicSeal:
@@ -136,7 +152,9 @@ class ReferenceCorpusBuilder:
             epoch_jyr=2018.5,
             uncertainty_mas={"ra": 30.0, "dec": 30.0},
         )
-        partition = self.compute_spatial_partition(ra, dec, astrometric_err_arcsec=0.03)
+        partition = self.compute_spatial_partition(
+            ra, dec, uncertainty_mas=coords.uncertainty_mas, astrometric_err_arcsec=0.03
+        )
 
         times = [58285.25, 58285.90, 58286.80, 58288.40, 58290.50, 58293.00]
         mags = [18.50, 15.20, 14.70, 16.20, 17.80, 19.40]
@@ -245,7 +263,9 @@ class ReferenceCorpusBuilder:
             epoch_jyr=2011.6,
             uncertainty_mas={"ra": 25.0, "dec": 25.0},
         )
-        partition = self.compute_spatial_partition(ra, dec, astrometric_err_arcsec=0.025)
+        partition = self.compute_spatial_partition(
+            ra, dec, uncertainty_mas=coords.uncertainty_mas, astrometric_err_arcsec=0.025
+        )
 
         times = [55797.2, 55800.5, 55805.0, 55810.2, 55814.8, 55822.0, 55835.0]
         mags = [14.8, 12.2, 10.4, 9.98, 10.2, 11.1, 12.5]
@@ -359,7 +379,9 @@ class ReferenceCorpusBuilder:
             epoch_jyr=2018.2,
             uncertainty_mas={"ra": 20.0, "dec": 20.0},
         )
-        partition = self.compute_spatial_partition(ra, dec, astrometric_err_arcsec=0.02)
+        partition = self.compute_spatial_partition(
+            ra, dec, uncertainty_mas=coords.uncertainty_mas, astrometric_err_arcsec=0.02
+        )
 
         times = [58175.0, 58190.0, 58210.0, 58240.0, 58280.0, 58330.0]
         mags = [19.2, 17.5, 16.8, 17.4, 18.2, 19.1]
@@ -482,7 +504,9 @@ class ReferenceCorpusBuilder:
             epoch_jyr=2026.0,
             uncertainty_mas={"ra": float(rng.uniform(15.0, 45.0)), "dec": float(rng.uniform(15.0, 45.0))},
         )
-        partition = self.compute_spatial_partition(ra, dec, astrometric_err_arcsec=0.04)
+        partition = self.compute_spatial_partition(
+            ra, dec, uncertainty_mas=coords.uncertainty_mas, astrometric_err_arcsec=0.04
+        )
 
         if transient_class == "SN_Ia":
             tau_rise, tau_fall = rng.normal(3.5, 0.4), rng.normal(22.0, 3.0)

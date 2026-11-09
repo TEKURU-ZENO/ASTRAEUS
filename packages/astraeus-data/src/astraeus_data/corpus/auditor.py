@@ -11,6 +11,7 @@ import numpy as np
 from scipy.stats import beta
 
 from astraeus_data.corpus.record import ReferenceObjectRecord, DEFAULT_PROVENANCE_SECRET
+from astraeus_data.corpus.geometry import verify_healpix_boundary_convergence
 
 
 def compute_clopper_pearson(k: int, n: int, confidence: float = 0.95) -> Tuple[float, float]:
@@ -63,8 +64,9 @@ class CorpusAuditReport(BaseModel):
     median_snr_per_class: Dict[str, float]
     median_cadence_hours_per_class: Dict[str, float]
 
-    # Stage 1 v1.0.2 Additions: Small Test-Set Disclosures & Quarantine Diagnostics
-    test_clopper_pearson_intervals: Dict[str, Dict[str, float]] = Field(default_factory=dict)
+    # Stage 1 v1.0.3 Additions: Small Test-Set Disclosures & Quarantine Diagnostics
+    test_clopper_pearson_intervals: Dict[str, Dict[str, Any]] = Field(default_factory=dict)
+    boundary_convergence_diagnostics: List[Dict[str, Any]] = Field(default_factory=list)
     quarantine_breakdown_by_class: Dict[str, int] = Field(default_factory=dict)
     quarantine_breakdown_by_original_split: Dict[str, int] = Field(default_factory=dict)
     quarantine_breakdown_by_reason: Dict[str, int] = Field(default_factory=dict)
@@ -211,16 +213,19 @@ class ReferenceCorpusAuditor:
         median_snr = {cls: float(np.median(vals)) for cls, vals in snr_map.items()}
         median_cad = {cls: float(np.median(vals)) for cls, vals in cadence_map.items()}
 
-        # Stage 1 v1.0.1 Additions: Clopper-Pearson Intervals for Test Set
-        clopper_map: Dict[str, Dict[str, float]] = {}
+        # Stage 1 v1.0.3 Additions: Clopper-Pearson Intervals for Test Set with Explicit (k, n) Integers
+        clopper_map: Dict[str, Dict[str, Any]] = {}
         for cls in all_classes:
             n_t = class_table[cls]["test"]
             low_100, up_100 = compute_clopper_pearson(n_t, n_t, 0.95)
-            low_m1, up_m1 = compute_clopper_pearson(max(0, n_t - 1), n_t, 0.95)
+            k_m1 = max(0, n_t - 1)
+            low_m1, up_m1 = compute_clopper_pearson(k_m1, n_t, 0.95)
             clopper_map[cls] = {
-                "n_test": float(n_t),
+                "n_test": n_t,
+                "k_perfect": n_t,
                 "recall_100_ci_lower": low_100,
                 "recall_100_ci_upper": up_100,
+                "k_minus1": k_m1,
                 "recall_minus1_ci_lower": low_m1,
                 "recall_minus1_ci_upper": up_m1,
             }
@@ -238,10 +243,10 @@ class ReferenceCorpusAuditor:
 
         # Diagnostic Table: 4 Illustrative Cases + Closest Actual Objects
         diag_table: List[Dict[str, Any]] = [
-            {"object": "Case A (Illustrative)", "distance_to_actual_edge_arcsec": 2.0, "astrometric_uncertainty_arcsec": 0.5, "conflicting_neighbour": True, "decision": "Quarantine", "policy": "SPHERICAL_CELL_EDGE_BUFFER_VIOLATION"},
-            {"object": "Case B (Illustrative)", "distance_to_actual_edge_arcsec": 500.0, "astrometric_uncertainty_arcsec": 0.5, "conflicting_neighbour": True, "decision": "Retain", "policy": "SAFE_INTERIOR"},
-            {"object": "Case C (Illustrative)", "distance_to_actual_edge_arcsec": 8.0, "astrometric_uncertainty_arcsec": 4.0, "conflicting_neighbour": True, "decision": "Quarantine", "policy": "ASTROMETRIC_UNCERTAINTY_CROSSING_RISK"},
-            {"object": "Case D (Illustrative)", "distance_to_actual_edge_arcsec": 2.0, "astrometric_uncertainty_arcsec": 0.5, "conflicting_neighbour": False, "decision": "Retain", "policy": "INTERNAL_SPLIT_BOUNDARY"},
+            {"object": "Case A (Illustrative)", "distance_to_actual_edge_arcsec": 2.0, "astrometric_uncertainty_arcsec": 0.5, "sigma_perp_arcsec": 0.5, "crossing_probability": 0.00003, "conflicting_neighbour": True, "decision": "Quarantine", "policy": "SPHERICAL_CELL_EDGE_BUFFER_VIOLATION"},
+            {"object": "Case B (Illustrative)", "distance_to_actual_edge_arcsec": 500.0, "astrometric_uncertainty_arcsec": 0.5, "sigma_perp_arcsec": 0.5, "crossing_probability": 0.0, "conflicting_neighbour": True, "decision": "Retain", "policy": "SAFE_INTERIOR"},
+            {"object": "Case C (Illustrative)", "distance_to_actual_edge_arcsec": 8.0, "astrometric_uncertainty_arcsec": 4.0, "sigma_perp_arcsec": 4.0, "crossing_probability": 0.02275, "conflicting_neighbour": True, "decision": "Quarantine", "policy": "ASTROMETRIC_UNCERTAINTY_CROSSING_RISK"},
+            {"object": "Case D (Illustrative)", "distance_to_actual_edge_arcsec": 2.0, "astrometric_uncertainty_arcsec": 0.5, "sigma_perp_arcsec": 0.5, "crossing_probability": 0.00003, "conflicting_neighbour": False, "decision": "Retain", "policy": "INTERNAL_SPLIT_BOUNDARY"},
         ]
         # Sort actual objects by distance to true boundary
         sorted_by_edge = sorted(records, key=lambda r: r.spatial_partition.distance_to_boundary_arcsec)
@@ -254,10 +259,18 @@ class ReferenceCorpusAuditor:
                 "object": r.canonical_id,
                 "distance_to_actual_edge_arcsec": sp.distance_to_boundary_arcsec,
                 "astrometric_uncertainty_arcsec": round(ast_err, 3),
+                "sigma_perp_arcsec": sp.projected_normal_astrometric_sigma_arcsec,
+                "crossing_probability": sp.crossing_probability,
                 "conflicting_neighbour": sp.has_conflicting_neighbor,
                 "decision": dec,
                 "policy": pol,
             })
+
+        # Stage 1 v1.0.3: Empirical HEALPix boundary convergence across polar and equatorial cells
+        convergence_diagnostics = [
+            verify_healpix_boundary_convergence(pix)
+            for pix in [0, 50, 500, 1049, 3201, 6000, 9500, 12287]
+        ]
 
         # Origin Cohort Segregation
         archival_ids = [r.canonical_id for r in records if r.dataset_origin == "ARCHIVAL"]
@@ -301,6 +314,7 @@ class ReferenceCorpusAuditor:
             median_snr_per_class=median_snr,
             median_cadence_hours_per_class=median_cad,
             test_clopper_pearson_intervals=clopper_map,
+            boundary_convergence_diagnostics=convergence_diagnostics,
             quarantine_breakdown_by_class=quar_by_class,
             quarantine_breakdown_by_original_split=quar_by_split,
             quarantine_breakdown_by_reason=quar_by_reason,

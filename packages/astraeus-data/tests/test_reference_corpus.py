@@ -122,7 +122,7 @@ def test_frozen_evaluation_protocol_immutability():
 
     protocol = FrozenEvaluationProtocol.freeze(corpus)
 
-    assert protocol.protocol_version == "1.0.2"
+    assert protocol.protocol_version == "1.0.3"
     assert len(protocol.protocol_sha256) == 64
     assert len(protocol.tasks) == 3
     assert len(protocol.frozen_test_ids) > 0
@@ -178,12 +178,12 @@ def test_peripheral_object_500arcsec_from_edge_is_not_quarantined():
     assert d_edge > 400.0  # Actually ~425" from the nearest cell edge!
 
     # Evaluated under corrected predicate with conflicting neighbor:
-    is_quarantined, reason, d_computed = evaluate_quarantine_predicate(
+    is_quarantined, reason, d_computed, sigma_perp, p_cross = evaluate_quarantine_predicate(
         coord=c_test,
         hp=hp,
         pix=pix,
         has_conflicting_neighbor=True,
-        astrometric_err_arcsec=0.03,
+        uncertainty_mas={"ra": 30.0, "dec": 30.0},
         buffer_arcsec=5.0,
         confidence_multiplier=3.0,
     )
@@ -201,40 +201,39 @@ def test_astrometric_uncertainty_crossing_risk_quarantine():
     """
     from astropy.coordinates import SkyCoord
     from astropy import units as u
+    from unittest.mock import patch
     from astraeus_data.corpus.geometry import evaluate_quarantine_predicate
 
     builder = ReferenceCorpusBuilder()
     hp = builder.hp
     pix = 1049
 
-    # Entity near boundary with large uncertainty
-    # We test the evaluate_quarantine_predicate logic with mocked distance
-    from unittest.mock import patch
-
     coord = SkyCoord(ra=139.2 * u.deg, dec=10.0 * u.deg, frame="icrs")
 
-    # When d_edge = 8.0", buffer = 5.0", ast_err = 4.0" (3*ast_err = 12.0" >= 8.0")
-    with patch("astraeus_data.corpus.geometry.compute_spherical_edge_distance_arcsec", return_value=8.0):
-        is_quar, reason, dist = evaluate_quarantine_predicate(
+    # When d_edge = 8.0", buffer = 5.0", ast_err = 4000.0 mas (3*ast_err = 12.0" >= 8.0")
+    with patch("astraeus_data.corpus.geometry.compute_spherical_edge_distance_and_closest_point") as mock_dist:
+        mock_dist.return_value = (8.0, coord)
+        is_quar, reason, dist, sigma_perp, p_cross = evaluate_quarantine_predicate(
             coord=coord,
             hp=hp,
             pix=pix,
             has_conflicting_neighbor=True,
-            astrometric_err_arcsec=4.0,
+            uncertainty_mas={"ra": 4000.0, "dec": 4000.0},
             buffer_arcsec=5.0,
             confidence_multiplier=3.0,
         )
         assert is_quar is True
         assert reason == "ASTROMETRIC_UNCERTAINTY_CROSSING_RISK"
         assert dist == 8.0
+        assert sigma_perp == 4.0
 
         # If no conflicting neighbor exists, entity is retained
-        is_quar_no_conf, reason_no_conf, _ = evaluate_quarantine_predicate(
+        is_quar_no_conf, reason_no_conf, _, _, _ = evaluate_quarantine_predicate(
             coord=coord,
             hp=hp,
             pix=pix,
             has_conflicting_neighbor=False,
-            astrometric_err_arcsec=4.0,
+            uncertainty_mas={"ra": 4000.0, "dec": 4000.0},
             buffer_arcsec=5.0,
             confidence_multiplier=3.0,
         )
@@ -329,3 +328,64 @@ def test_clopper_pearson_confidence_intervals_and_quarantine_breakdown():
     assert "Case B (Illustrative)" in obj_names
     assert "Case C (Illustrative)" in obj_names
     assert "Case D (Illustrative)" in obj_names
+
+
+def test_exact_clopper_pearson_six_of_seven():
+    """Validates exact Clopper-Pearson interval for 6 successes in 7 trials."""
+    from astraeus_data.corpus.auditor import compute_clopper_pearson
+
+    low, up = compute_clopper_pearson(6, 7, confidence=0.95)
+    assert low == pytest.approx(0.4213, abs=1e-4)
+    assert up == pytest.approx(0.9964, abs=1e-4)
+
+
+def test_healpix_boundary_convergence():
+    """Validates certified sub-milliarcsecond numerical convergence across HEALPix pixels."""
+    from astraeus_data.corpus.geometry import verify_healpix_boundary_convergence
+
+    for pix in [0, 1049, 3201]:
+        res = verify_healpix_boundary_convergence(pix)
+        assert res["is_converged_sub_arcsec"] is True
+        assert res["max_step_delta_arcsec"] < 0.01
+
+
+def test_dataset_b_provenance_graph_auditor():
+    """Validates DAG provenance audit rules: clean passes, overlaps rejected, missing quarantined."""
+    from astraeus_data.corpus.lineage import (
+        DatasetBSampleLineage,
+        LineageStatus,
+        ProvenanceGraphAuditor,
+    )
+
+    builder = ReferenceCorpusBuilder()
+    corpus = builder.build_reference_corpus_v1(n_synthetic_per_class=5, base_seed=700)
+    test_recs = [r for r in corpus if r.spatial_partition.split == "test"]
+    auditor = ProvenanceGraphAuditor(test_recs)
+
+    # Clean sample with valid parent
+    clean_sample = DatasetBSampleLineage(
+        sample_id="SAMPLE-B-OK",
+        parent_physical_object_id="TRAIN-NON-OVERLAPPING-OBJECT",
+        source_observation_ids=["OBS-OK-1"],
+        host_galaxy_id="HOST-OK-1",
+    )
+    res_clean = auditor.audit_sample(clean_sample)
+    assert res_clean.lineage_status == LineageStatus.VERIFIED
+
+    # Overlap with test object ID
+    overlap_sample = DatasetBSampleLineage(
+        sample_id="SAMPLE-B-OVERLAP",
+        parent_physical_object_id=test_recs[0].canonical_id,
+        source_observation_ids=["OBS-TEST-1"],
+    )
+    res_overlap = auditor.audit_sample(overlap_sample)
+    assert res_overlap.lineage_status == LineageStatus.TEST_OVERLAP_REJECTED
+    assert "PARENT_OBJECT_IN_TEST_SET" in res_overlap.rejection_reason
+
+    # Missing lineage
+    missing_sample = DatasetBSampleLineage(
+        sample_id="SAMPLE-B-MISSING",
+    )
+    res_missing = auditor.audit_sample(missing_sample)
+    assert res_missing.lineage_status == LineageStatus.LINEAGE_UNAVAILABLE_QUARANTINED
+

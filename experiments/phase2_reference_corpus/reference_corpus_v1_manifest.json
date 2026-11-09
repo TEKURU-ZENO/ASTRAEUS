@@ -1,14 +1,145 @@
 {
   "metadata": {
-    "title": "ASTRAEUS Astronomical Reference Corpus v1.0.2 Manifest & Final Reconciliation",
-    "version": "1.0.2",
+    "title": "ASTRAEUS Astronomical Reference Corpus v1.0.3 Manifest & Final Certification",
+    "version": "1.0.3",
     "phase": "Phase 2: Stage 1 (Days 91-105)",
-    "generated_utc": "2026-11-09T13:43:38.767642+00:00",
+    "generated_utc": "2026-11-09T14:10:18.325979+00:00",
     "audit_passed": true,
     "canonicalization_standard": "RFC-8785-JSON",
-    "authoritative_protocol_sha256": "19ce6a78dcc1da48d112884fc65cc9793defb7b6ff62ae71f896a9c718eb4218",
+    "authoritative_protocol_sha256": "24fba011a56ba9142c94a42624f31dcf3c6ea1c7f18f0c07c7b7345690fc7391",
     "verification_command": "python experiments/phase2_reference_corpus/verify_protocol_hash.py"
   },
+  "parquet_checksums": {
+    "data/reference_corpus_v1/split=quarantine/1fa88082f2a24c76ac7a07093bde7c47-0.parquet": "d244004667b9bd38486a6b81d41307afd47a5400ff19df7aaee4ee86160a8240",
+    "data/reference_corpus_v1/split=test/1fa88082f2a24c76ac7a07093bde7c47-0.parquet": "352e5ba370fb8fc52b3de3338012dac803e4e298403a4047b3e389fdb17cab48",
+    "data/reference_corpus_v1/split=train/1fa88082f2a24c76ac7a07093bde7c47-0.parquet": "f0154a3f0ff8df4847858b6eb31e02cdbb474f45b2fef9e907122d3bd3c6ef6a",
+    "data/reference_corpus_v1/split=val/1fa88082f2a24c76ac7a07093bde7c47-0.parquet": "f2b596d55e4f24310e0ad8f2086c563d2a3ca97686cb9b988076049cd0f03a19"
+  },
+  "quarantined_entity_diagnostic": {
+    "canonical_id": "ASTRAEUS-VARIABLE_STAR-syn-00295",
+    "transient_class": "VARIABLE_STAR",
+    "healpix_nside32": 8409,
+    "ra_deg": 50.86202774748406,
+    "dec_deg": -55.86642104407488,
+    "astrometric_uncertainty_mas": {
+      "ra": 43.84749373402569,
+      "dec": 42.13473156734207
+    },
+    "distance_to_boundary_arcsec": 3.89,
+    "projected_normal_astrometric_sigma_arcsec": 0.0432,
+    "crossing_probability": 0.0,
+    "has_conflicting_neighbor": true,
+    "is_boundary_buffer_quarantined": true,
+    "quarantine_reason": "SPHERICAL_CELL_EDGE_BUFFER_VIOLATION",
+    "original_assigned_split": "test",
+    "effective_split": "quarantine"
+  },
+  "convergence_diagnostics": [
+    {
+      "pixel": 0,
+      "dec_deg": 1.19,
+      "region": "Equatorial",
+      "distances_arcsec": {
+        "25": 1637.9358,
+        "50": 1637.9347,
+        "100": 1637.9342,
+        "200": 1637.9342
+      },
+      "max_step_delta_arcsec": 1e-05,
+      "is_converged_sub_arcsec": true
+    },
+    {
+      "pixel": 50,
+      "dec_deg": 12.02,
+      "region": "Equatorial",
+      "distances_arcsec": {
+        "25": 1641.7874,
+        "50": 1641.7746,
+        "100": 1641.7741,
+        "200": 1641.7739
+      },
+      "max_step_delta_arcsec": 0.000256,
+      "is_converged_sub_arcsec": true
+    },
+    {
+      "pixel": 500,
+      "dec_deg": 58.92,
+      "region": "Polar",
+      "distances_arcsec": {
+        "25": 1202.402,
+        "50": 1202.396,
+        "100": 1202.3929,
+        "200": 1202.3913
+      },
+      "max_step_delta_arcsec": 0.001563,
+      "is_converged_sub_arcsec": true
+    },
+    {
+      "pixel": 1049,
+      "dec_deg": 9.59,
+      "region": "Equatorial",
+      "distances_arcsec": {
+        "25": 1640.4466,
+        "50": 1640.437,
+        "100": 1640.4363,
+        "200": 1640.4359
+      },
+      "max_step_delta_arcsec": 0.000381,
+      "is_converged_sub_arcsec": true
+    },
+    {
+      "pixel": 3201,
+      "dec_deg": 12.02,
+      "region": "Equatorial",
+      "distances_arcsec": {
+        "25": 1641.7874,
+        "50": 1641.7746,
+        "100": 1641.7741,
+        "200": 1641.7739
+      },
+      "max_step_delta_arcsec": 0.000256,
+      "is_converged_sub_arcsec": true
+    },
+    {
+      "pixel": 6000,
+      "dec_deg": 20.74,
+      "region": "Equatorial",
+      "distances_arcsec": {
+        "25": 1645.2822,
+        "50": 1645.2766,
+        "100": 1645.2738,
+        "200": 1645.2724
+      },
+      "max_step_delta_arcsec": 0.001401,
+      "is_converged_sub_arcsec": true
+    },
+    {
+      "pixel": 9500,
+      "dec_deg": -52.8,
+      "region": "Polar",
+      "distances_arcsec": {
+        "25": 1196.1712,
+        "50": 1196.1915,
+        "100": 1196.1988,
+        "200": 1196.1996
+      },
+      "max_step_delta_arcsec": 0.000713,
+      "is_converged_sub_arcsec": true
+    },
+    {
+      "pixel": 12287,
+      "dec_deg": -1.19,
+      "region": "Equatorial",
+      "distances_arcsec": {
+        "25": 1638.1412,
+        "50": 1638.1413,
+        "100": 1638.1414,
+        "200": 1638.1414
+      },
+      "max_step_delta_arcsec": 2e-06,
+      "is_converged_sub_arcsec": true
+    }
+  ],
   "audit_report": {
     "passed_all_gates": true,
     "total_records_audited": 283,
@@ -112,62 +243,184 @@
     },
     "test_clopper_pearson_intervals": {
       "ARTIFACT_DIPOLE": {
-        "n_test": 6.0,
+        "n_test": 6,
+        "k_perfect": 6,
         "recall_100_ci_lower": 0.5407,
         "recall_100_ci_upper": 1.0,
+        "k_minus1": 5,
         "recall_minus1_ci_lower": 0.3588,
         "recall_minus1_ci_upper": 0.9958
       },
       "FBOT": {
-        "n_test": 3.0,
+        "n_test": 3,
+        "k_perfect": 3,
         "recall_100_ci_lower": 0.2924,
         "recall_100_ci_upper": 1.0,
+        "k_minus1": 2,
         "recall_minus1_ci_lower": 0.0943,
         "recall_minus1_ci_upper": 0.9916
       },
       "SLSN": {
-        "n_test": 7.0,
+        "n_test": 7,
+        "k_perfect": 7,
         "recall_100_ci_lower": 0.5904,
         "recall_100_ci_upper": 1.0,
+        "k_minus1": 6,
         "recall_minus1_ci_lower": 0.4213,
         "recall_minus1_ci_upper": 0.9964
       },
       "SN_II": {
-        "n_test": 4.0,
+        "n_test": 4,
+        "k_perfect": 4,
         "recall_100_ci_lower": 0.3976,
         "recall_100_ci_upper": 1.0,
+        "k_minus1": 3,
         "recall_minus1_ci_lower": 0.1941,
         "recall_minus1_ci_upper": 0.9937
       },
       "SN_Ia": {
-        "n_test": 7.0,
+        "n_test": 7,
+        "k_perfect": 7,
         "recall_100_ci_lower": 0.5904,
         "recall_100_ci_upper": 1.0,
+        "k_minus1": 6,
         "recall_minus1_ci_lower": 0.4213,
         "recall_minus1_ci_upper": 0.9964
       },
       "SN_Ibc": {
-        "n_test": 6.0,
+        "n_test": 6,
+        "k_perfect": 6,
         "recall_100_ci_lower": 0.5407,
         "recall_100_ci_upper": 1.0,
+        "k_minus1": 5,
         "recall_minus1_ci_lower": 0.3588,
         "recall_minus1_ci_upper": 0.9958
       },
       "TDE": {
-        "n_test": 6.0,
+        "n_test": 6,
+        "k_perfect": 6,
         "recall_100_ci_lower": 0.5407,
         "recall_100_ci_upper": 1.0,
+        "k_minus1": 5,
         "recall_minus1_ci_lower": 0.3588,
         "recall_minus1_ci_upper": 0.9958
       },
       "VARIABLE_STAR": {
-        "n_test": 6.0,
+        "n_test": 6,
+        "k_perfect": 6,
         "recall_100_ci_lower": 0.5407,
         "recall_100_ci_upper": 1.0,
+        "k_minus1": 5,
         "recall_minus1_ci_lower": 0.3588,
         "recall_minus1_ci_upper": 0.9958
       }
     },
+    "boundary_convergence_diagnostics": [
+      {
+        "pixel": 0,
+        "dec_deg": 1.19,
+        "region": "Equatorial",
+        "distances_arcsec": {
+          "25": 1637.9358,
+          "50": 1637.9347,
+          "100": 1637.9342,
+          "200": 1637.9342
+        },
+        "max_step_delta_arcsec": 1e-05,
+        "is_converged_sub_arcsec": true
+      },
+      {
+        "pixel": 50,
+        "dec_deg": 12.02,
+        "region": "Equatorial",
+        "distances_arcsec": {
+          "25": 1641.7874,
+          "50": 1641.7746,
+          "100": 1641.7741,
+          "200": 1641.7739
+        },
+        "max_step_delta_arcsec": 0.000256,
+        "is_converged_sub_arcsec": true
+      },
+      {
+        "pixel": 500,
+        "dec_deg": 58.92,
+        "region": "Polar",
+        "distances_arcsec": {
+          "25": 1202.402,
+          "50": 1202.396,
+          "100": 1202.3929,
+          "200": 1202.3913
+        },
+        "max_step_delta_arcsec": 0.001563,
+        "is_converged_sub_arcsec": true
+      },
+      {
+        "pixel": 1049,
+        "dec_deg": 9.59,
+        "region": "Equatorial",
+        "distances_arcsec": {
+          "25": 1640.4466,
+          "50": 1640.437,
+          "100": 1640.4363,
+          "200": 1640.4359
+        },
+        "max_step_delta_arcsec": 0.000381,
+        "is_converged_sub_arcsec": true
+      },
+      {
+        "pixel": 3201,
+        "dec_deg": 12.02,
+        "region": "Equatorial",
+        "distances_arcsec": {
+          "25": 1641.7874,
+          "50": 1641.7746,
+          "100": 1641.7741,
+          "200": 1641.7739
+        },
+        "max_step_delta_arcsec": 0.000256,
+        "is_converged_sub_arcsec": true
+      },
+      {
+        "pixel": 6000,
+        "dec_deg": 20.74,
+        "region": "Equatorial",
+        "distances_arcsec": {
+          "25": 1645.2822,
+          "50": 1645.2766,
+          "100": 1645.2738,
+          "200": 1645.2724
+        },
+        "max_step_delta_arcsec": 0.001401,
+        "is_converged_sub_arcsec": true
+      },
+      {
+        "pixel": 9500,
+        "dec_deg": -52.8,
+        "region": "Polar",
+        "distances_arcsec": {
+          "25": 1196.1712,
+          "50": 1196.1915,
+          "100": 1196.1988,
+          "200": 1196.1996
+        },
+        "max_step_delta_arcsec": 0.000713,
+        "is_converged_sub_arcsec": true
+      },
+      {
+        "pixel": 12287,
+        "dec_deg": -1.19,
+        "region": "Equatorial",
+        "distances_arcsec": {
+          "25": 1638.1412,
+          "50": 1638.1413,
+          "100": 1638.1414,
+          "200": 1638.1414
+        },
+        "max_step_delta_arcsec": 2e-06,
+        "is_converged_sub_arcsec": true
+      }
+    ],
     "quarantine_breakdown_by_class": {
       "VARIABLE_STAR": 1
     },
@@ -182,6 +435,8 @@
         "object": "Case A (Illustrative)",
         "distance_to_actual_edge_arcsec": 2.0,
         "astrometric_uncertainty_arcsec": 0.5,
+        "sigma_perp_arcsec": 0.5,
+        "crossing_probability": 3e-05,
         "conflicting_neighbour": true,
         "decision": "Quarantine",
         "policy": "SPHERICAL_CELL_EDGE_BUFFER_VIOLATION"
@@ -190,6 +445,8 @@
         "object": "Case B (Illustrative)",
         "distance_to_actual_edge_arcsec": 500.0,
         "astrometric_uncertainty_arcsec": 0.5,
+        "sigma_perp_arcsec": 0.5,
+        "crossing_probability": 0.0,
         "conflicting_neighbour": true,
         "decision": "Retain",
         "policy": "SAFE_INTERIOR"
@@ -198,6 +455,8 @@
         "object": "Case C (Illustrative)",
         "distance_to_actual_edge_arcsec": 8.0,
         "astrometric_uncertainty_arcsec": 4.0,
+        "sigma_perp_arcsec": 4.0,
+        "crossing_probability": 0.02275,
         "conflicting_neighbour": true,
         "decision": "Quarantine",
         "policy": "ASTROMETRIC_UNCERTAINTY_CROSSING_RISK"
@@ -206,38 +465,48 @@
         "object": "Case D (Illustrative)",
         "distance_to_actual_edge_arcsec": 2.0,
         "astrometric_uncertainty_arcsec": 0.5,
+        "sigma_perp_arcsec": 0.5,
+        "crossing_probability": 3e-05,
         "conflicting_neighbour": false,
         "decision": "Retain",
         "policy": "INTERNAL_SPLIT_BOUNDARY"
       },
       {
         "object": "ASTRAEUS-VARIABLE_STAR-syn-00295",
-        "distance_to_actual_edge_arcsec": 3.9,
+        "distance_to_actual_edge_arcsec": 3.89,
         "astrometric_uncertainty_arcsec": 0.044,
+        "sigma_perp_arcsec": 0.0432,
+        "crossing_probability": 0.0,
         "conflicting_neighbour": true,
         "decision": "Quarantine",
         "policy": "SPHERICAL_CELL_EDGE_BUFFER_VIOLATION"
       },
       {
         "object": "ASTRAEUS-ARTIFACT_DIPOLE-syn-00260",
-        "distance_to_actual_edge_arcsec": 5.67,
+        "distance_to_actual_edge_arcsec": 5.68,
         "astrometric_uncertainty_arcsec": 0.036,
+        "sigma_perp_arcsec": 0.0282,
+        "crossing_probability": 0.0,
         "conflicting_neighbour": true,
         "decision": "Retain (val)",
         "policy": "SAFE_INTERIOR"
       },
       {
         "object": "ASTRAEUS-SN_Ia-syn-00072",
-        "distance_to_actual_edge_arcsec": 6.56,
+        "distance_to_actual_edge_arcsec": 6.55,
         "astrometric_uncertainty_arcsec": 0.022,
+        "sigma_perp_arcsec": 0.0203,
+        "crossing_probability": 0.0,
         "conflicting_neighbour": true,
         "decision": "Retain (test)",
         "policy": "SAFE_INTERIOR"
       },
       {
         "object": "ASTRAEUS-SN_II-syn-00096",
-        "distance_to_actual_edge_arcsec": 6.61,
+        "distance_to_actual_edge_arcsec": 6.59,
         "astrometric_uncertainty_arcsec": 0.031,
+        "sigma_perp_arcsec": 0.0306,
+        "crossing_probability": 0.0,
         "conflicting_neighbour": true,
         "decision": "Retain (train)",
         "policy": "SAFE_INTERIOR"
@@ -246,14 +515,18 @@
         "object": "ASTRAEUS-ARTIFACT_DIPOLE-syn-00256",
         "distance_to_actual_edge_arcsec": 17.12,
         "astrometric_uncertainty_arcsec": 0.045,
+        "sigma_perp_arcsec": 0.0443,
+        "crossing_probability": 0.0,
         "conflicting_neighbour": true,
         "decision": "Retain (train)",
         "policy": "SAFE_INTERIOR"
       },
       {
         "object": "ASTRAEUS-TDE-num-00222",
-        "distance_to_actual_edge_arcsec": 22.09,
+        "distance_to_actual_edge_arcsec": 22.11,
         "astrometric_uncertainty_arcsec": 0.041,
+        "sigma_perp_arcsec": 0.0389,
+        "crossing_probability": 0.0,
         "conflicting_neighbour": true,
         "decision": "Retain (val)",
         "policy": "SAFE_INTERIOR"
@@ -268,9 +541,9 @@
     "synthetic_objects_count": 175
   },
   "frozen_evaluation_protocol": {
-    "protocol_version": "1.0.2",
-    "frozen_epoch_utc": "2026-11-09T13:43:37.818785+00:00",
-    "protocol_sha256": "19ce6a78dcc1da48d112884fc65cc9793defb7b6ff62ae71f896a9c718eb4218",
+    "protocol_version": "1.0.3",
+    "frozen_epoch_utc": "2026-11-09T14:10:17.393459+00:00",
+    "protocol_sha256": "24fba011a56ba9142c94a42624f31dcf3c6ea1c7f18f0c07c7b7345690fc7391",
     "tasks": [
       {
         "task_id": "task_1_temporal_reconstruction",
@@ -448,6 +721,6 @@
       "Recall_At_Budget_K10": "Fraction of total test-set rare events successfully retrieved in top 10 queue.",
       "Artifact_Contamination_Rate": "Fraction of top-ranked follow-up queue occupied by subtraction artifacts."
     },
-    "dataset_b_exclusion_contract": "Dataset B (temporal foundation pretraining corpus) MUST NOT contain any physical object, IAU counterpart, cross-survey observation, alias, or injected/transformed derivative matching Dataset A's held-out test split (N=45 objects). Any overlap invalidates unseen-object cross-survey property estimation. Validation objects (N=47) may be used for supervised tuning and model selection, but never for self-supervised foundation pretraining."
+    "dataset_b_exclusion_contract": "Dataset B (temporal foundation pretraining corpus) MUST NOT contain any physical object, IAU counterpart, cross-survey observation, host galaxy, alias, or injected/transformed derivative matching Dataset A's held-out test split (N=45 objects). All Dataset B samples require certified DAG provenance tracking via ProvenanceGraphAuditor; samples lacking lineage are quarantined. Spatial segregation enforces non-geodesic spherical cell-boundary distance with normal-projected astrometric covariance (d_edge <= 5.0'' OR d_edge <= 3*sigma_perp). Validation objects (N=47) may be used for supervised tuning and model selection, but never for self-supervised foundation pretraining."
   }
 }
