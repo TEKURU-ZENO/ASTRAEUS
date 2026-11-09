@@ -18,6 +18,10 @@ from astropy import units as u
 from astraeus_core.coordinates import CelestialCoordinates
 from astraeus_core.epistemic import EpistemicTier
 from astraeus_data.partitioning import load_split_manifest
+from astraeus_data.corpus.geometry import (
+    evaluate_quarantine_predicate,
+    compute_spherical_edge_distance_arcsec,
+)
 from astraeus_data.corpus.record import (
     ReferenceObjectRecord,
     SpatialPartitionInfo,
@@ -81,21 +85,19 @@ class ReferenceCorpusBuilder:
                     conflicting_neighbor = True
                     break
 
-        # Distance to boundary: pixel center separation minus pixel radius
+        # Exact spherical distance to actual cell boundary polygon: d_edge(x) = min_{y in \partial C} angdist(x, y)
         center_coord = self.hp.healpix_to_skycoord(pix)
         dist_from_center = coord.separation(center_coord).arcsec
-        pixel_radius_arcsec = (self.hp.pixel_resolution.to(u.arcsec).value) / 2.0
-        distance_to_boundary = max(0.1, pixel_radius_arcsec - dist_from_center)
 
-        # Compound quarantine predicate:
-        # 1. Pixel has an adjacent neighbor belonging to a conflicting split
-        # 2. Distance to boundary proxy < buffer_arcsec (triggered when object is in peripheral corners where dist_from_center > pixel_radius)
-        # 3. Or 3-sigma astrometric error circle exceeds buffer threshold
-        is_quarantined = False
-        quarantine_reason = None
-        if conflicting_neighbor and (distance_to_boundary < self.buffer_arcsec or (3.0 * astrometric_err_arcsec > self.buffer_arcsec)):
-            is_quarantined = True
-            quarantine_reason = "CORNER_PERIPHERY_BOUNDARY_RISK"
+        is_quarantined, quarantine_reason, d_edge_arcsec = evaluate_quarantine_predicate(
+            coord=coord,
+            hp=self.hp,
+            pix=pix,
+            has_conflicting_neighbor=conflicting_neighbor,
+            astrometric_err_arcsec=astrometric_err_arcsec,
+            buffer_arcsec=self.buffer_arcsec,
+            confidence_multiplier=3.0,
+        )
 
         effective_split = "quarantine" if is_quarantined else nominal_split
 
@@ -103,7 +105,7 @@ class ReferenceCorpusBuilder:
             healpix_nside32=pix,
             split=effective_split,
             original_assigned_split=nominal_split,
-            distance_to_boundary_arcsec=round(distance_to_boundary, 2),
+            distance_to_boundary_arcsec=round(d_edge_arcsec, 2),
             has_conflicting_neighbor=conflicting_neighbor,
             is_boundary_buffer_quarantined=is_quarantined,
             quarantine_reason=quarantine_reason,

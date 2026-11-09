@@ -63,11 +63,12 @@ class CorpusAuditReport(BaseModel):
     median_snr_per_class: Dict[str, float]
     median_cadence_hours_per_class: Dict[str, float]
 
-    # Stage 1 v1.0.1 Additions: Small Test-Set Disclosures & Quarantine Breakdown
+    # Stage 1 v1.0.2 Additions: Small Test-Set Disclosures & Quarantine Diagnostics
     test_clopper_pearson_intervals: Dict[str, Dict[str, float]] = Field(default_factory=dict)
     quarantine_breakdown_by_class: Dict[str, int] = Field(default_factory=dict)
     quarantine_breakdown_by_original_split: Dict[str, int] = Field(default_factory=dict)
     quarantine_breakdown_by_reason: Dict[str, int] = Field(default_factory=dict)
+    quarantine_diagnostic_table: List[Dict[str, Any]] = Field(default_factory=list)
     archival_objects: List[str] = Field(default_factory=list)
     simulated_objects_count: int = 0
     synthetic_objects_count: int = 0
@@ -232,8 +233,31 @@ class ReferenceCorpusAuditor:
             quar_by_class[r.transient_class] = quar_by_class.get(r.transient_class, 0) + 1
             sp = r.spatial_partition
             quar_by_split[sp.original_assigned_split] = quar_by_split.get(sp.original_assigned_split, 0) + 1
-            reason = sp.quarantine_reason or "CORNER_PERIPHERY_BOUNDARY_RISK"
+            reason = sp.quarantine_reason or "SPHERICAL_CELL_EDGE_BUFFER_VIOLATION"
             quar_by_reason[reason] = quar_by_reason.get(reason, 0) + 1
+
+        # Diagnostic Table: 4 Illustrative Cases + Closest Actual Objects
+        diag_table: List[Dict[str, Any]] = [
+            {"object": "Case A (Illustrative)", "distance_to_actual_edge_arcsec": 2.0, "astrometric_uncertainty_arcsec": 0.5, "conflicting_neighbour": True, "decision": "Quarantine", "policy": "SPHERICAL_CELL_EDGE_BUFFER_VIOLATION"},
+            {"object": "Case B (Illustrative)", "distance_to_actual_edge_arcsec": 500.0, "astrometric_uncertainty_arcsec": 0.5, "conflicting_neighbour": True, "decision": "Retain", "policy": "SAFE_INTERIOR"},
+            {"object": "Case C (Illustrative)", "distance_to_actual_edge_arcsec": 8.0, "astrometric_uncertainty_arcsec": 4.0, "conflicting_neighbour": True, "decision": "Quarantine", "policy": "ASTROMETRIC_UNCERTAINTY_CROSSING_RISK"},
+            {"object": "Case D (Illustrative)", "distance_to_actual_edge_arcsec": 2.0, "astrometric_uncertainty_arcsec": 0.5, "conflicting_neighbour": False, "decision": "Retain", "policy": "INTERNAL_SPLIT_BOUNDARY"},
+        ]
+        # Sort actual objects by distance to true boundary
+        sorted_by_edge = sorted(records, key=lambda r: r.spatial_partition.distance_to_boundary_arcsec)
+        for r in sorted_by_edge[:6]:
+            sp = r.spatial_partition
+            ast_err = max(r.coordinates.uncertainty_mas.get("ra", 30.0), r.coordinates.uncertainty_mas.get("dec", 30.0)) / 1000.0
+            dec = "Quarantine" if sp.is_boundary_buffer_quarantined else f"Retain ({sp.split})"
+            pol = sp.quarantine_reason if sp.is_boundary_buffer_quarantined else "SAFE_INTERIOR"
+            diag_table.append({
+                "object": r.canonical_id,
+                "distance_to_actual_edge_arcsec": sp.distance_to_boundary_arcsec,
+                "astrometric_uncertainty_arcsec": round(ast_err, 3),
+                "conflicting_neighbour": sp.has_conflicting_neighbor,
+                "decision": dec,
+                "policy": pol,
+            })
 
         # Origin Cohort Segregation
         archival_ids = [r.canonical_id for r in records if r.dataset_origin == "ARCHIVAL"]
@@ -280,6 +304,7 @@ class ReferenceCorpusAuditor:
             quarantine_breakdown_by_class=quar_by_class,
             quarantine_breakdown_by_original_split=quar_by_split,
             quarantine_breakdown_by_reason=quar_by_reason,
+            quarantine_diagnostic_table=diag_table,
             archival_objects=archival_ids,
             simulated_objects_count=simulated_count,
             synthetic_objects_count=synthetic_count,

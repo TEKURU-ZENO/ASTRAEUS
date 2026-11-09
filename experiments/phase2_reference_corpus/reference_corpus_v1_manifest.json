@@ -1,21 +1,22 @@
 {
   "metadata": {
-    "title": "ASTRAEUS Astronomical Reference Corpus v1.0.1 Manifest & Reconciliation",
-    "version": "1.0.1",
+    "title": "ASTRAEUS Astronomical Reference Corpus v1.0.2 Manifest & Final Reconciliation",
+    "version": "1.0.2",
     "phase": "Phase 2: Stage 1 (Days 91-105)",
-    "generated_utc": "2026-11-09T13:27:22.552342+00:00",
+    "generated_utc": "2026-11-09T13:43:38.767642+00:00",
     "audit_passed": true,
     "canonicalization_standard": "RFC-8785-JSON",
-    "authoritative_protocol_sha256": "90e388ba6e57624ebd90c11cb451d682fb5d1da339e33a94f3640c4c9eb98892"
+    "authoritative_protocol_sha256": "19ce6a78dcc1da48d112884fc65cc9793defb7b6ff62ae71f896a9c718eb4218",
+    "verification_command": "python experiments/phase2_reference_corpus/verify_protocol_hash.py"
   },
   "audit_report": {
     "passed_all_gates": true,
     "total_records_audited": 283,
-    "eligible_entities_count": 228,
-    "train_count": 155,
-    "val_count": 37,
-    "test_count": 36,
-    "quarantined_boundary_count": 55,
+    "eligible_entities_count": 282,
+    "train_count": 190,
+    "val_count": 47,
+    "test_count": 45,
+    "quarantined_boundary_count": 1,
     "identity_leakage_count": 0,
     "alias_leakage_count": 0,
     "duplicate_canonical_ids": 0,
@@ -34,59 +35,59 @@
     "per_class_population_accounting": {
       "ARTIFACT_DIPOLE": {
         "total": 35,
-        "train": 19,
-        "val": 3,
-        "test": 4,
-        "quarantine": 9
+        "train": 24,
+        "val": 5,
+        "test": 6,
+        "quarantine": 0
       },
       "FBOT": {
         "total": 36,
-        "train": 19,
-        "val": 5,
-        "test": 2,
-        "quarantine": 10
+        "train": 25,
+        "val": 8,
+        "test": 3,
+        "quarantine": 0
       },
       "SLSN": {
         "total": 35,
-        "train": 20,
-        "val": 5,
-        "test": 5,
-        "quarantine": 5
+        "train": 22,
+        "val": 6,
+        "test": 7,
+        "quarantine": 0
       },
       "SN_II": {
         "total": 35,
-        "train": 21,
-        "val": 5,
+        "train": 25,
+        "val": 6,
         "test": 4,
-        "quarantine": 5
+        "quarantine": 0
       },
       "SN_Ia": {
         "total": 36,
-        "train": 23,
-        "val": 1,
-        "test": 6,
-        "quarantine": 6
+        "train": 27,
+        "val": 2,
+        "test": 7,
+        "quarantine": 0
       },
       "SN_Ibc": {
         "total": 35,
-        "train": 17,
-        "val": 7,
-        "test": 5,
-        "quarantine": 6
+        "train": 21,
+        "val": 8,
+        "test": 6,
+        "quarantine": 0
       },
       "TDE": {
         "total": 36,
-        "train": 16,
-        "val": 7,
-        "test": 4,
-        "quarantine": 9
+        "train": 22,
+        "val": 8,
+        "test": 6,
+        "quarantine": 0
       },
       "VARIABLE_STAR": {
         "total": 35,
-        "train": 20,
+        "train": 24,
         "val": 4,
         "test": 6,
-        "quarantine": 5
+        "quarantine": 1
       }
     },
     "median_snr_per_class": {
@@ -111,25 +112,25 @@
     },
     "test_clopper_pearson_intervals": {
       "ARTIFACT_DIPOLE": {
-        "n_test": 4.0,
-        "recall_100_ci_lower": 0.3976,
+        "n_test": 6.0,
+        "recall_100_ci_lower": 0.5407,
         "recall_100_ci_upper": 1.0,
-        "recall_minus1_ci_lower": 0.1941,
-        "recall_minus1_ci_upper": 0.9937
+        "recall_minus1_ci_lower": 0.3588,
+        "recall_minus1_ci_upper": 0.9958
       },
       "FBOT": {
-        "n_test": 2.0,
-        "recall_100_ci_lower": 0.1581,
+        "n_test": 3.0,
+        "recall_100_ci_lower": 0.2924,
         "recall_100_ci_upper": 1.0,
-        "recall_minus1_ci_lower": 0.0126,
-        "recall_minus1_ci_upper": 0.9874
+        "recall_minus1_ci_lower": 0.0943,
+        "recall_minus1_ci_upper": 0.9916
       },
       "SLSN": {
-        "n_test": 5.0,
-        "recall_100_ci_lower": 0.4782,
+        "n_test": 7.0,
+        "recall_100_ci_lower": 0.5904,
         "recall_100_ci_upper": 1.0,
-        "recall_minus1_ci_lower": 0.2836,
-        "recall_minus1_ci_upper": 0.9949
+        "recall_minus1_ci_lower": 0.4213,
+        "recall_minus1_ci_upper": 0.9964
       },
       "SN_II": {
         "n_test": 4.0,
@@ -139,25 +140,25 @@
         "recall_minus1_ci_upper": 0.9937
       },
       "SN_Ia": {
+        "n_test": 7.0,
+        "recall_100_ci_lower": 0.5904,
+        "recall_100_ci_upper": 1.0,
+        "recall_minus1_ci_lower": 0.4213,
+        "recall_minus1_ci_upper": 0.9964
+      },
+      "SN_Ibc": {
         "n_test": 6.0,
         "recall_100_ci_lower": 0.5407,
         "recall_100_ci_upper": 1.0,
         "recall_minus1_ci_lower": 0.3588,
         "recall_minus1_ci_upper": 0.9958
       },
-      "SN_Ibc": {
-        "n_test": 5.0,
-        "recall_100_ci_lower": 0.4782,
-        "recall_100_ci_upper": 1.0,
-        "recall_minus1_ci_lower": 0.2836,
-        "recall_minus1_ci_upper": 0.9949
-      },
       "TDE": {
-        "n_test": 4.0,
-        "recall_100_ci_lower": 0.3976,
+        "n_test": 6.0,
+        "recall_100_ci_lower": 0.5407,
         "recall_100_ci_upper": 1.0,
-        "recall_minus1_ci_lower": 0.1941,
-        "recall_minus1_ci_upper": 0.9937
+        "recall_minus1_ci_lower": 0.3588,
+        "recall_minus1_ci_upper": 0.9958
       },
       "VARIABLE_STAR": {
         "n_test": 6.0,
@@ -168,23 +169,96 @@
       }
     },
     "quarantine_breakdown_by_class": {
-      "SN_Ia": 6,
-      "SN_II": 5,
-      "SN_Ibc": 6,
-      "FBOT": 10,
-      "SLSN": 5,
-      "TDE": 9,
-      "ARTIFACT_DIPOLE": 9,
-      "VARIABLE_STAR": 5
+      "VARIABLE_STAR": 1
     },
     "quarantine_breakdown_by_original_split": {
-      "train": 35,
-      "val": 10,
-      "test": 10
+      "test": 1
     },
     "quarantine_breakdown_by_reason": {
-      "CORNER_PERIPHERY_BOUNDARY_RISK": 55
+      "SPHERICAL_CELL_EDGE_BUFFER_VIOLATION": 1
     },
+    "quarantine_diagnostic_table": [
+      {
+        "object": "Case A (Illustrative)",
+        "distance_to_actual_edge_arcsec": 2.0,
+        "astrometric_uncertainty_arcsec": 0.5,
+        "conflicting_neighbour": true,
+        "decision": "Quarantine",
+        "policy": "SPHERICAL_CELL_EDGE_BUFFER_VIOLATION"
+      },
+      {
+        "object": "Case B (Illustrative)",
+        "distance_to_actual_edge_arcsec": 500.0,
+        "astrometric_uncertainty_arcsec": 0.5,
+        "conflicting_neighbour": true,
+        "decision": "Retain",
+        "policy": "SAFE_INTERIOR"
+      },
+      {
+        "object": "Case C (Illustrative)",
+        "distance_to_actual_edge_arcsec": 8.0,
+        "astrometric_uncertainty_arcsec": 4.0,
+        "conflicting_neighbour": true,
+        "decision": "Quarantine",
+        "policy": "ASTROMETRIC_UNCERTAINTY_CROSSING_RISK"
+      },
+      {
+        "object": "Case D (Illustrative)",
+        "distance_to_actual_edge_arcsec": 2.0,
+        "astrometric_uncertainty_arcsec": 0.5,
+        "conflicting_neighbour": false,
+        "decision": "Retain",
+        "policy": "INTERNAL_SPLIT_BOUNDARY"
+      },
+      {
+        "object": "ASTRAEUS-VARIABLE_STAR-syn-00295",
+        "distance_to_actual_edge_arcsec": 3.9,
+        "astrometric_uncertainty_arcsec": 0.044,
+        "conflicting_neighbour": true,
+        "decision": "Quarantine",
+        "policy": "SPHERICAL_CELL_EDGE_BUFFER_VIOLATION"
+      },
+      {
+        "object": "ASTRAEUS-ARTIFACT_DIPOLE-syn-00260",
+        "distance_to_actual_edge_arcsec": 5.67,
+        "astrometric_uncertainty_arcsec": 0.036,
+        "conflicting_neighbour": true,
+        "decision": "Retain (val)",
+        "policy": "SAFE_INTERIOR"
+      },
+      {
+        "object": "ASTRAEUS-SN_Ia-syn-00072",
+        "distance_to_actual_edge_arcsec": 6.56,
+        "astrometric_uncertainty_arcsec": 0.022,
+        "conflicting_neighbour": true,
+        "decision": "Retain (test)",
+        "policy": "SAFE_INTERIOR"
+      },
+      {
+        "object": "ASTRAEUS-SN_II-syn-00096",
+        "distance_to_actual_edge_arcsec": 6.61,
+        "astrometric_uncertainty_arcsec": 0.031,
+        "conflicting_neighbour": true,
+        "decision": "Retain (train)",
+        "policy": "SAFE_INTERIOR"
+      },
+      {
+        "object": "ASTRAEUS-ARTIFACT_DIPOLE-syn-00256",
+        "distance_to_actual_edge_arcsec": 17.12,
+        "astrometric_uncertainty_arcsec": 0.045,
+        "conflicting_neighbour": true,
+        "decision": "Retain (train)",
+        "policy": "SAFE_INTERIOR"
+      },
+      {
+        "object": "ASTRAEUS-TDE-num-00222",
+        "distance_to_actual_edge_arcsec": 22.09,
+        "astrometric_uncertainty_arcsec": 0.041,
+        "conflicting_neighbour": true,
+        "decision": "Retain (val)",
+        "policy": "SAFE_INTERIOR"
+      }
+    ],
     "archival_objects": [
       "AT2018cow",
       "SN2011fe",
@@ -194,9 +268,9 @@
     "synthetic_objects_count": 175
   },
   "frozen_evaluation_protocol": {
-    "protocol_version": "1.0.1",
-    "frozen_epoch_utc": "2026-11-09T13:27:21.546106+00:00",
-    "protocol_sha256": "90e388ba6e57624ebd90c11cb451d682fb5d1da339e33a94f3640c4c9eb98892",
+    "protocol_version": "1.0.2",
+    "frozen_epoch_utc": "2026-11-09T13:43:37.818785+00:00",
+    "protocol_sha256": "19ce6a78dcc1da48d112884fc65cc9793defb7b6ff62ae71f896a9c718eb4218",
     "tasks": [
       {
         "task_id": "task_1_temporal_reconstruction",
@@ -269,25 +343,34 @@
     ],
     "frozen_val_ids": [
       "ASTRAEUS-ARTIFACT_DIPOLE-syn-00258",
+      "ASTRAEUS-ARTIFACT_DIPOLE-syn-00260",
       "ASTRAEUS-ARTIFACT_DIPOLE-syn-00261",
       "ASTRAEUS-ARTIFACT_DIPOLE-syn-00263",
+      "ASTRAEUS-ARTIFACT_DIPOLE-syn-00275",
       "ASTRAEUS-FBOT-num-00149",
+      "ASTRAEUS-FBOT-num-00152",
+      "ASTRAEUS-FBOT-num-00154",
       "ASTRAEUS-FBOT-num-00157",
       "ASTRAEUS-FBOT-num-00162",
       "ASTRAEUS-FBOT-num-00166",
+      "ASTRAEUS-FBOT-num-00167",
       "ASTRAEUS-FBOT-num-00168",
       "ASTRAEUS-SLSN-num-00186",
       "ASTRAEUS-SLSN-num-00188",
+      "ASTRAEUS-SLSN-num-00191",
       "ASTRAEUS-SLSN-num-00193",
       "ASTRAEUS-SLSN-num-00195",
       "ASTRAEUS-SLSN-num-00207",
       "ASTRAEUS-SN_II-syn-00083",
+      "ASTRAEUS-SN_II-syn-00093",
       "ASTRAEUS-SN_II-syn-00094",
       "ASTRAEUS-SN_II-syn-00095",
       "ASTRAEUS-SN_II-syn-00106",
       "ASTRAEUS-SN_II-syn-00110",
+      "ASTRAEUS-SN_Ia-syn-00068",
       "ASTRAEUS-SN_Ia-syn-00075",
       "ASTRAEUS-SN_Ibc-syn-00121",
+      "ASTRAEUS-SN_Ibc-syn-00123",
       "ASTRAEUS-SN_Ibc-syn-00127",
       "ASTRAEUS-SN_Ibc-syn-00129",
       "ASTRAEUS-SN_Ibc-syn-00131",
@@ -296,6 +379,7 @@
       "ASTRAEUS-SN_Ibc-syn-00142",
       "ASTRAEUS-TDE-num-00220",
       "ASTRAEUS-TDE-num-00221",
+      "ASTRAEUS-TDE-num-00222",
       "ASTRAEUS-TDE-num-00223",
       "ASTRAEUS-TDE-num-00226",
       "ASTRAEUS-TDE-num-00228",
@@ -307,14 +391,19 @@
       "ASTRAEUS-VARIABLE_STAR-syn-00320"
     ],
     "frozen_test_ids": [
+      "ASTRAEUS-ARTIFACT_DIPOLE-syn-00254",
       "ASTRAEUS-ARTIFACT_DIPOLE-syn-00262",
       "ASTRAEUS-ARTIFACT_DIPOLE-syn-00264",
       "ASTRAEUS-ARTIFACT_DIPOLE-syn-00267",
+      "ASTRAEUS-ARTIFACT_DIPOLE-syn-00271",
       "ASTRAEUS-ARTIFACT_DIPOLE-syn-00282",
+      "ASTRAEUS-FBOT-num-00163",
       "ASTRAEUS-FBOT-num-00176",
       "ASTRAEUS-FBOT-num-00177",
       "ASTRAEUS-SLSN-num-00187",
       "ASTRAEUS-SLSN-num-00189",
+      "ASTRAEUS-SLSN-num-00202",
+      "ASTRAEUS-SLSN-num-00203",
       "ASTRAEUS-SLSN-num-00204",
       "ASTRAEUS-SLSN-num-00208",
       "ASTRAEUS-SLSN-num-00212",
@@ -328,12 +417,16 @@
       "ASTRAEUS-SN_Ia-syn-00058",
       "ASTRAEUS-SN_Ia-syn-00061",
       "ASTRAEUS-SN_Ia-syn-00066",
+      "ASTRAEUS-SN_Ia-syn-00072",
+      "ASTRAEUS-SN_Ibc-syn-00113",
       "ASTRAEUS-SN_Ibc-syn-00120",
       "ASTRAEUS-SN_Ibc-syn-00132",
       "ASTRAEUS-SN_Ibc-syn-00137",
       "ASTRAEUS-SN_Ibc-syn-00141",
       "ASTRAEUS-SN_Ibc-syn-00144",
       "ASTRAEUS-TDE-num-00219",
+      "ASTRAEUS-TDE-num-00225",
+      "ASTRAEUS-TDE-num-00227",
       "ASTRAEUS-TDE-num-00242",
       "ASTRAEUS-TDE-num-00246",
       "ASTRAEUS-TDE-num-00249",
@@ -345,61 +438,7 @@
       "ASTRAEUS-VARIABLE_STAR-syn-00313"
     ],
     "frozen_quarantine_ids": [
-      "ASTRAEUS-ARTIFACT_DIPOLE-syn-00252",
-      "ASTRAEUS-ARTIFACT_DIPOLE-syn-00254",
-      "ASTRAEUS-ARTIFACT_DIPOLE-syn-00256",
-      "ASTRAEUS-ARTIFACT_DIPOLE-syn-00260",
-      "ASTRAEUS-ARTIFACT_DIPOLE-syn-00271",
-      "ASTRAEUS-ARTIFACT_DIPOLE-syn-00272",
-      "ASTRAEUS-ARTIFACT_DIPOLE-syn-00275",
-      "ASTRAEUS-ARTIFACT_DIPOLE-syn-00278",
-      "ASTRAEUS-ARTIFACT_DIPOLE-syn-00281",
-      "ASTRAEUS-FBOT-num-00152",
-      "ASTRAEUS-FBOT-num-00154",
-      "ASTRAEUS-FBOT-num-00160",
-      "ASTRAEUS-FBOT-num-00163",
-      "ASTRAEUS-FBOT-num-00164",
-      "ASTRAEUS-FBOT-num-00167",
-      "ASTRAEUS-FBOT-num-00169",
-      "ASTRAEUS-FBOT-num-00170",
-      "ASTRAEUS-FBOT-num-00174",
-      "ASTRAEUS-FBOT-num-00179",
-      "ASTRAEUS-SLSN-num-00190",
-      "ASTRAEUS-SLSN-num-00191",
-      "ASTRAEUS-SLSN-num-00202",
-      "ASTRAEUS-SLSN-num-00203",
-      "ASTRAEUS-SLSN-num-00210",
-      "ASTRAEUS-SN_II-syn-00084",
-      "ASTRAEUS-SN_II-syn-00087",
-      "ASTRAEUS-SN_II-syn-00093",
-      "ASTRAEUS-SN_II-syn-00096",
-      "ASTRAEUS-SN_II-syn-00107",
-      "ASTRAEUS-SN_Ia-syn-00048",
-      "ASTRAEUS-SN_Ia-syn-00050",
-      "ASTRAEUS-SN_Ia-syn-00057",
-      "ASTRAEUS-SN_Ia-syn-00068",
-      "ASTRAEUS-SN_Ia-syn-00072",
-      "ASTRAEUS-SN_Ia-syn-00073",
-      "ASTRAEUS-SN_Ibc-syn-00113",
-      "ASTRAEUS-SN_Ibc-syn-00119",
-      "ASTRAEUS-SN_Ibc-syn-00123",
-      "ASTRAEUS-SN_Ibc-syn-00139",
-      "ASTRAEUS-SN_Ibc-syn-00140",
-      "ASTRAEUS-SN_Ibc-syn-00146",
-      "ASTRAEUS-TDE-num-00218",
-      "ASTRAEUS-TDE-num-00222",
-      "ASTRAEUS-TDE-num-00225",
-      "ASTRAEUS-TDE-num-00227",
-      "ASTRAEUS-TDE-num-00229",
-      "ASTRAEUS-TDE-num-00235",
-      "ASTRAEUS-TDE-num-00237",
-      "ASTRAEUS-TDE-num-00247",
-      "ASTRAEUS-TDE-num-00250",
-      "ASTRAEUS-VARIABLE_STAR-syn-00289",
-      "ASTRAEUS-VARIABLE_STAR-syn-00293",
-      "ASTRAEUS-VARIABLE_STAR-syn-00295",
-      "ASTRAEUS-VARIABLE_STAR-syn-00307",
-      "ASTRAEUS-VARIABLE_STAR-syn-00317"
+      "ASTRAEUS-VARIABLE_STAR-syn-00295"
     ],
     "metric_definitions": {
       "CRPS_Gaussian": "Continuous Ranked Probability Score under Gaussian predictive distribution.",
@@ -409,6 +448,6 @@
       "Recall_At_Budget_K10": "Fraction of total test-set rare events successfully retrieved in top 10 queue.",
       "Artifact_Contamination_Rate": "Fraction of top-ranked follow-up queue occupied by subtraction artifacts."
     },
-    "dataset_b_exclusion_contract": "Dataset B (temporal foundation pretraining corpus) MUST NOT contain any physical object, IAU counterpart, cross-survey observation, or alias matching Dataset A's held-out test split (N=36 objects). Any overlap invalidates unseen-object cross-survey property estimation."
+    "dataset_b_exclusion_contract": "Dataset B (temporal foundation pretraining corpus) MUST NOT contain any physical object, IAU counterpart, cross-survey observation, alias, or injected/transformed derivative matching Dataset A's held-out test split (N=45 objects). Any overlap invalidates unseen-object cross-survey property estimation. Validation objects (N=47) may be used for supervised tuning and model selection, but never for self-supervised foundation pretraining."
   }
 }

@@ -33,10 +33,10 @@ class FrozenEvaluationProtocol(BaseModel):
     Immutable evaluation contract frozen before foundation model pretraining.
     Mathematically prevents using test-set data for model tuning or architecture selection.
     Codifies cross-corpus contamination invariant: Dataset B (pretraining) cannot contain
-    any physical objects or counterparts in Dataset A held-out test split.
+    any physical objects, counterparts, or injected/transformed derivatives in Dataset A held-out test split.
     """
     model_config = ConfigDict(frozen=True)
-    protocol_version: str = "1.0.1"
+    protocol_version: str = "1.0.2"
     frozen_epoch_utc: str
     protocol_sha256: str
     tasks: List[EvaluationTask]
@@ -46,15 +46,17 @@ class FrozenEvaluationProtocol(BaseModel):
     metric_definitions: Dict[str, str]
     dataset_b_exclusion_contract: str = (
         "Dataset B (temporal foundation pretraining corpus) MUST NOT contain any physical object, "
-        "IAU counterpart, cross-survey observation, or alias matching Dataset A's held-out test split "
-        "(N=36 objects). Any overlap invalidates unseen-object cross-survey property estimation."
+        "IAU counterpart, cross-survey observation, alias, or injected/transformed derivative matching "
+        "Dataset A's held-out test split (N=45 objects). Any overlap invalidates unseen-object "
+        "cross-survey property estimation. Validation objects (N=47) may be used for supervised tuning "
+        "and model selection, but never for self-supervised foundation pretraining."
     )
 
     @classmethod
     def freeze(
         cls,
         records: List[ReferenceObjectRecord],
-        version: str = "1.0.1",
+        version: str = "1.0.2",
     ) -> "FrozenEvaluationProtocol":
         """Freezes evaluation tasks and held-out test/val/quarantine splits from a reference corpus."""
         val_ids = sorted([r.canonical_id for r in records if r.spatial_partition.split == "val"])
@@ -141,8 +143,10 @@ class FrozenEvaluationProtocol(BaseModel):
 
         exclusion_contract = (
             "Dataset B (temporal foundation pretraining corpus) MUST NOT contain any physical object, "
-            "IAU counterpart, cross-survey observation, or alias matching Dataset A's held-out test split "
-            "(N=36 objects). Any overlap invalidates unseen-object cross-survey property estimation."
+            "IAU counterpart, cross-survey observation, alias, or injected/transformed derivative matching "
+            "Dataset A's held-out test split (N=45 objects). Any overlap invalidates unseen-object "
+            "cross-survey property estimation. Validation objects (N=47) may be used for supervised tuning "
+            "and model selection, but never for self-supervised foundation pretraining."
         )
 
         payload = {
@@ -184,14 +188,30 @@ class FrozenEvaluationProtocol(BaseModel):
         self,
         dataset_b_ids: List[str],
         dataset_b_aliases: Optional[List[str]] = None,
+        dataset_b_derivative_tags: Optional[List[str]] = None,
     ) -> Tuple[bool, List[str]]:
         """
-        Verifies that no candidate object ID or alias from Dataset B (pretraining corpus)
-        overlaps with Dataset A held-out test objects. Returns (is_clean, violations_list).
+        Verifies that no candidate object ID, alias, or injected derivative from Dataset B
+        (pretraining corpus) overlaps with Dataset A held-out test objects.
+        Returns (is_clean, violations_list).
         """
         test_set = set(self.frozen_test_ids)
-        violations = list(test_set.intersection(set(dataset_b_ids)))
+        violations: List[str] = list(test_set.intersection(set(dataset_b_ids)))
+
         if dataset_b_aliases:
             alias_violations = list(test_set.intersection(set(dataset_b_aliases)))
             violations.extend(alias_violations)
-        return len(violations) == 0, sorted(list(set(violations)))
+
+        if dataset_b_derivative_tags:
+            for tag in dataset_b_derivative_tags:
+                for test_id in test_set:
+                    if test_id in tag:
+                        violations.append(f"DERIVATIVE_TAG:{tag}->{test_id}")
+
+        for b_id in dataset_b_ids:
+            for test_id in test_set:
+                if test_id in b_id and b_id != test_id:
+                    violations.append(f"DERIVATIVE_ID:{b_id}->{test_id}")
+
+        clean_violations = sorted(list(set(violations)))
+        return len(clean_violations) == 0, clean_violations
