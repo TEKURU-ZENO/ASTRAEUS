@@ -18,11 +18,14 @@ class EvaluationTask(BaseModel):
     model_config = ConfigDict(frozen=True)
     task_id: str
     name: str
+    evaluation_mode: str
     description: str
     primary_metric: str
     secondary_metrics: List[str]
     target_split: Literal["val", "test"]
     baseline_benchmarks: List[str]
+    transfer_directions: List[str] = Field(default_factory=list)
+    information_separation_guarantee: str
 
 
 class FrozenEvaluationProtocol(BaseModel):
@@ -37,6 +40,7 @@ class FrozenEvaluationProtocol(BaseModel):
     tasks: List[EvaluationTask]
     frozen_val_ids: List[str]
     frozen_test_ids: List[str]
+    frozen_quarantine_ids: List[str]
     metric_definitions: Dict[str, str]
 
     @classmethod
@@ -45,45 +49,87 @@ class FrozenEvaluationProtocol(BaseModel):
         records: List[ReferenceObjectRecord],
         version: str = "1.0.0",
     ) -> "FrozenEvaluationProtocol":
-        """Freezes evaluation tasks and held-out test/val splits from a reference corpus."""
+        """Freezes evaluation tasks and held-out test/val/quarantine splits from a reference corpus."""
         val_ids = sorted([r.canonical_id for r in records if r.spatial_partition.split == "val"])
         test_ids = sorted([r.canonical_id for r in records if r.spatial_partition.split == "test"])
+        quarantine_ids = sorted([r.canonical_id for r in records if r.spatial_partition.split == "quarantine"])
 
         tasks = [
             EvaluationTask(
                 task_id="task_1_temporal_reconstruction",
-                name="Irregular Masked Temporal Autoencoding",
-                description="Reconstruction of masked photometric epochs on irregular cadences.",
+                name="Irregular Masked Span Reconstruction & Forecasting",
+                evaluation_mode="HELD_OUT_OBSERVATIONS_FORECASTING",
+                description=(
+                    "Evaluates probabilistic reconstruction of contiguous masked temporal spans "
+                    "(simulating daytime and weather gaps) and future epoch forecasting ($t > t_{\\mathrm{cutoff}}$)."
+                ),
                 primary_metric="CRPS_Gaussian",
-                secondary_metrics=["MAE_flux", "NLL_uncertainty"],
+                secondary_metrics=["MAE_flux", "NLL_uncertainty", "Coverage_90_Conformal"],
                 target_split="test",
-                baseline_benchmarks=["Interpolation_Linear", "ASTROMER_Base", "GaussianProcess"],
+                baseline_benchmarks=["Interpolation_Linear", "ASTROMER_Base", "GaussianProcess_Matern"],
+                information_separation_guarantee=(
+                    "Input context and evaluated target observations are strictly disjoint; "
+                    "target points are masked before encoder forward pass."
+                ),
             ),
             EvaluationTask(
                 task_id="task_2_cross_survey_transfer",
                 name="Zero-Shot Cross-Survey Property Estimation",
-                description="Evaluation of feature representations transferred from ZTF to PS1 and DECam.",
+                evaluation_mode="UNSEEN_PHYSICAL_OBJECTS_AND_UNSEEN_SURVEYS",
+                description=(
+                    "Evaluates bidirectional zero-shot transfer of learned representations across "
+                    "ZTF, Pan-STARRS1, and DECam without fine-tuning or target-domain label exposure."
+                ),
                 primary_metric="Macro_F1",
-                secondary_metrics=["Expected_Calibration_Error", "Abstention_Recall"],
+                secondary_metrics=["Expected_Calibration_Error", "Abstention_Recall", "Covariate_Shift_Distance"],
                 target_split="test",
                 baseline_benchmarks=["RandomForest_Engineered", "XGBoost_Passbands"],
+                transfer_directions=[
+                    "ZTF -> Pan-STARRS1",
+                    "ZTF -> DECam",
+                    "Pan-STARRS1 -> ZTF",
+                    "Pan-STARRS1 -> DECam",
+                    "DECam -> ZTF",
+                    "DECam -> Pan-STARRS1",
+                ],
+                information_separation_guarantee=(
+                    "Evaluates transfer to entirely unseen physical objects in disjoint HEALPix pixels; "
+                    "no counterparts of target evaluation objects exist in the training corpus."
+                ),
             ),
             EvaluationTask(
                 task_id="task_3_rare_event_triage",
                 name="Rare Transient Discovery & Ranking",
-                description="Ranking anomalous rapid transients (FBOTs, SLSNe) within fixed follow-up budgets.",
+                evaluation_mode="FIXED_RESOURCE_BUDGET_TRIAGE",
+                description=(
+                    "Evaluates discovery prioritization of anomalous rapid transients (FBOTs, SLSNe, TDEs) "
+                    "against normal SNe Ia, variable stars, and subtraction dipole artifacts."
+                ),
                 primary_metric="Precision_At_Budget_K10",
-                secondary_metrics=["Top_K_Recall_K20", "Artifact_FDR"],
+                secondary_metrics=[
+                    "Recall_At_Budget_K10",
+                    "Precision_At_Budget_K5",
+                    "Precision_At_Budget_K20",
+                    "PR_AUC",
+                    "Artifact_Contamination_Rate",
+                    "False_Positives_Per_Thousand",
+                ],
                 target_split="test",
-                baseline_benchmarks=["IsolationForest_Uncalibrated", "Mahalanobis_Distance"],
+                baseline_benchmarks=["IsolationForest_Standardized", "Mahalanobis_Distance_Empirical"],
+                information_separation_guarantee=(
+                    "Baselines receive strictly identical input features (standardized optical_pseudoflux "
+                    "and native uncertainties) to isolate model architecture contribution."
+                ),
             ),
         ]
 
         metric_defs = {
             "CRPS_Gaussian": "Continuous Ranked Probability Score under Gaussian predictive distribution.",
-            "Macro_F1": "Unweighted mean of per-class F1 scores across standard transient classes.",
+            "Macro_F1": "Unweighted arithmetic mean of per-class F1 scores across standard transient classes.",
             "Expected_Calibration_Error": "10-bin confidence calibration error against ground-truth labels.",
             "Precision_At_Budget_K10": "Fraction of genuine high-priority transients among top 10 ranked candidates.",
+            "Recall_At_Budget_K10": "Fraction of total test-set rare events successfully retrieved in top 10 queue.",
+            "Artifact_Contamination_Rate": "Fraction of top-ranked follow-up queue occupied by subtraction artifacts.",
         }
 
         payload = {
@@ -91,6 +137,7 @@ class FrozenEvaluationProtocol(BaseModel):
             "tasks": [t.model_dump() for t in tasks],
             "val_ids": val_ids,
             "test_ids": test_ids,
+            "quarantine_ids": quarantine_ids,
             "metric_definitions": metric_defs,
         }
         canon_json = json.dumps(payload, sort_keys=True, separators=(",", ":"))
@@ -103,14 +150,17 @@ class FrozenEvaluationProtocol(BaseModel):
             tasks=tasks,
             frozen_val_ids=val_ids,
             frozen_test_ids=test_ids,
+            frozen_quarantine_ids=quarantine_ids,
             metric_definitions=metric_defs,
         )
 
     def verify_no_contamination(self, train_ids: List[str]) -> bool:
-        """Verifies that no training IDs contaminate the frozen validation or test sets."""
+        """Verifies that no training IDs contaminate the frozen validation, test, or quarantine sets."""
         train_set = set(train_ids)
         if train_set.intersection(set(self.frozen_val_ids)):
             return False
         if train_set.intersection(set(self.frozen_test_ids)):
+            return False
+        if train_set.intersection(set(self.frozen_quarantine_ids)):
             return False
         return True

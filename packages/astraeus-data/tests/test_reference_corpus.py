@@ -29,7 +29,8 @@ def test_reference_object_record_integrity_and_hmac():
 
     # Point 11: Cryptographic authenticity
     assert len(cow.cryptographic_seal.sha256_digest) == 64
-    assert len(cow.cryptographic_seal.hmac_sha256_signature) == 64
+    assert len(cow.cryptographic_seal.hmac_sha256_mac) == 64
+    assert cow.cryptographic_seal.key_id == "astraeus-provenance-key-2026-v1"
     assert cow.verify_authenticity(DEFAULT_PROVENANCE_SECRET) is True
 
     # Tampering test with incorrect secret key
@@ -44,25 +45,27 @@ def test_archival_records_astrometry_and_provenance():
     assert sn11fe.transient_class == "SN_Ia"
     assert sn11fe.peak_apparent_magnitude < 11.0
     assert sn11fe.host_association.host_name.startswith("Messier 101")
+    assert sn11fe.host_association.distance_method == "INDEPENDENT_TRGB_CEPHEID"
+    assert sn11fe.host_association.adopted_distance_mpc == 6.4
     assert sn11fe.verify_authenticity() is True
 
     tde = builder.create_archival_at2018zr()
     assert tde.canonical_id == "AT2018zr"
     assert tde.transient_class == "TDE"
     assert tde.host_association.angular_separation_arcsec < 0.1  # Nuclear offset
+    assert tde.host_association.nuclear_offset_resolution_arcsec == 1.0
     assert tde.verify_authenticity() is True
 
 
 def test_spatial_partitioning_and_boundary_quarantine():
     builder = ReferenceCorpusBuilder(buffer_arcsec=5.0)
 
-    # Object with large astrometric uncertainty should trigger 3-sigma quarantine near boundary
     partition_clean = builder.compute_spatial_partition(ra_deg=100.0, dec_deg=20.0, astrometric_err_arcsec=0.01)
-    assert partition_clean.split in ["train", "val", "test"]
+    assert partition_clean.split in ["train", "val", "test", "quarantine"]
     assert partition_clean.healpix_nside32 >= 0
 
 
-def test_corpus_auditor_clean_pass():
+def test_corpus_auditor_clean_pass_and_quarantine_reconciliation():
     builder = ReferenceCorpusBuilder()
     corpus = builder.build_reference_corpus_v1(n_synthetic_per_class=10, base_seed=100)
 
@@ -74,24 +77,27 @@ def test_corpus_auditor_clean_pass():
 
     assert report.passed_all_gates is True
     assert report.total_records_audited == 83
+    # Check exact population arithmetic: Eligible + Quarantined == Total
+    assert report.eligible_entities_count + report.quarantined_boundary_count == report.total_records_audited
+    assert report.train_count + report.val_count + report.test_count == report.eligible_entities_count
     assert report.duplicate_canonical_ids == 0
     assert report.identity_leakage_count == 0
     assert report.alias_leakage_count == 0
     assert report.spatial_healpix_overlap_count == 0
+    assert report.host_galaxy_cross_split_leakage_count == 0
+    assert report.observation_cross_split_leakage_count == 0
+    assert report.boundary_buffer_quarantine_violations == 0
     assert report.temporal_leakage_count == 0
     assert report.cryptographic_failures == 0
-    assert "FBOT" in report.class_distribution_per_split["train"] or "FBOT" in report.class_distribution_per_split["test"] or "FBOT" in report.class_distribution_per_split["val"]
 
 
 def test_corpus_auditor_detects_injected_identity_leakage():
     builder = ReferenceCorpusBuilder()
     corpus = builder.build_reference_corpus_v1(n_synthetic_per_class=5, base_seed=300)
 
-    # Force a canonical ID collision between train and test
     train_rec = next(r for r in corpus if r.spatial_partition.split == "train")
     test_rec = next(r for r in corpus if r.spatial_partition.split == "test")
 
-    # Construct a leaked duplicate test record with identical canonical ID
     leaked_rec = test_rec.model_copy(update={"canonical_id": train_rec.canonical_id})
     corrupted_corpus = [r for r in corpus if r.canonical_id != test_rec.canonical_id] + [leaked_rec]
 
@@ -116,6 +122,5 @@ def test_frozen_evaluation_protocol_immutability():
     train_ids = [r.canonical_id for r in corpus if r.spatial_partition.split == "train"]
     assert protocol.verify_no_contamination(train_ids) is True
 
-    # Test contamination detection
     contaminated_train_ids = train_ids + [protocol.frozen_test_ids[0]]
     assert protocol.verify_no_contamination(contaminated_train_ids) is False

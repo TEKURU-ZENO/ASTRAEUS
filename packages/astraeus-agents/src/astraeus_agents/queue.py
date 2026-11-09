@@ -56,7 +56,7 @@ class AuthorizedFollowUpRecord(BaseModel):
     """
     Cryptographically verifiable, immutable follow-up queue authorization record.
     Generated exclusively by the deterministic gate authority.
-    Contains both an SHA-256 integrity digest and an HMAC-SHA256 authority signature.
+    Contains both an SHA-256 integrity digest and an HMAC-SHA256 message authentication code (MAC).
     """
     model_config = ConfigDict(frozen=True)
 
@@ -67,10 +67,22 @@ class AuthorizedFollowUpRecord(BaseModel):
     authorized_epoch_utc: str
     terminal_status: TerminalInvestigationStatus
     gate_digest_sha256: str
-    hmac_sha256_signature: str
+    hmac_sha256_mac: str = ""
+    hmac_sha256_signature: str = ""
+    key_id: str = "astraeus-gate-authority-key-2026-v1"
     authorized_priority_score: float
     gate_justifications: List[str]
     is_authoritative: bool = True
+
+    @model_validator(mode="before")
+    @classmethod
+    def harmonize_mac_fields(cls, data: Any) -> Any:
+        if isinstance(data, dict):
+            # Harmonize hmac_sha256_mac and legacy hmac_sha256_signature
+            mac = data.get("hmac_sha256_mac") or data.get("hmac_sha256_signature") or ""
+            data["hmac_sha256_mac"] = mac
+            data["hmac_sha256_signature"] = mac
+        return data
 
 
 class FollowUpQueueManager:
@@ -175,7 +187,9 @@ class FollowUpQueueManager:
             authorized_epoch_utc=datetime.now(timezone.utc).isoformat(),
             terminal_status=dossier_safe.terminal_status,
             gate_digest_sha256=digest,
+            hmac_sha256_mac=signature,
             hmac_sha256_signature=signature,
+            key_id="astraeus-gate-authority-key-2026-v1",
             authorized_priority_score=float(dossier_safe.physical_modeling.get("parameter_space_deviation", 1.0)),
             gate_justifications=list(gate_res.gate_justifications),
             is_authoritative=True,
@@ -194,20 +208,21 @@ class FollowUpQueueManager:
         return record
 
     def compute_hmac(self, digest: str) -> str:
-        """Computes a keyed HMAC-SHA256 signature sealing the digest with the authority's secret key."""
+        """Computes a keyed HMAC-SHA256 message authentication code (MAC) sealing the digest with the authority's secret key."""
         return hmac.new(self._secret, digest.encode("utf-8"), hashlib.sha256).hexdigest()
 
     def verify_record_authenticity(self, record: AuthorizedFollowUpRecord) -> bool:
         """
         Verifies both the structural validity of the digest and the cryptographic authenticity
-        of the HMAC-SHA256 signature using the authority's protected secret key.
+        of the HMAC-SHA256 MAC tag using the authority's protected secret key.
         """
         if not record.is_authoritative:
             return False
-        if len(record.gate_digest_sha256) != 64 or len(record.hmac_sha256_signature) != 64:
+        mac = record.hmac_sha256_mac or record.hmac_sha256_signature
+        if len(record.gate_digest_sha256) != 64 or len(mac) != 64:
             return False
-        expected_sig = self.compute_hmac(record.gate_digest_sha256)
-        return hmac.compare_digest(expected_sig, record.hmac_sha256_signature)
+        expected_mac = self.compute_hmac(record.gate_digest_sha256)
+        return hmac.compare_digest(expected_mac, mac)
 
     def get_queue(self) -> List[AuthorizedFollowUpRecord]:
         """Returns a copy of the active follow-up queue sorted by priority score."""

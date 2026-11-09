@@ -15,18 +15,21 @@ from astraeus_core.epistemic import EpistemicTier
 
 
 DEFAULT_PROVENANCE_SECRET = b"astraeus-corpus-provenance-authority-v1.0-secret-key"
+DEFAULT_KEY_ID = "astraeus-provenance-key-2026-v1"
 
 DatasetOrigin = Literal["ARCHIVAL", "SYNTHETIC", "NUMERICALLY_SIMULATED", "INJECTED"]
 TimeStandard = Literal["UTC_MJD", "TDB_BJD"]
 RedshiftType = Literal["SPECTROSCOPIC", "PHOTOMETRIC", "UNKNOWN"]
-SplitType = Literal["train", "val", "test"]
+SplitType = Literal["train", "val", "test", "quarantine"]
+DistanceMethod = Literal["HUBBLE_FLOW", "INDEPENDENT_TRGB_CEPHEID", "SURFACE_BRIGHTNESS", "UNKNOWN"]
 
 
 class SpatialPartitionInfo(BaseModel):
-    """Point 5: Spatial HEALPix partitioning and boundary buffer quarantine status."""
+    """Point 5: Spatial HEALPix partitioning and boundary buffer quarantine segregation."""
     model_config = ConfigDict(frozen=True)
     healpix_nside32: int
     split: SplitType
+    original_assigned_split: Literal["train", "val", "test"]
     distance_to_boundary_arcsec: float
     has_conflicting_neighbor: bool = False
     is_boundary_buffer_quarantined: bool = False
@@ -44,14 +47,18 @@ class CrossMatchPrior(BaseModel):
 
 
 class PhotometricCalibrationInfo(BaseModel):
-    """Point 7: Passband profiles, AB zero point, and Galactic extinction."""
+    """Point 7: Passband profiles, native calibration, AB zero points, and extinction."""
     model_config = ConfigDict(frozen=True)
+    native_survey: str = "ZTF"
+    native_zero_point_mag: float = 26.3
+    standardized_zero_point_mag: float = 27.5
     photometric_system: str = "AB"
-    zero_point_mag: float = 27.5
     filter_profiles: List[str]
     ebv_mw_mag: float
     a_v_mag: float
     quality_flags_clean: bool = True
+    preserves_negative_fluxes: bool = True
+    upper_limit_handling: str = "censored_5sigma_flux_floor"
 
 
 class PhotometricRepresentationInfo(BaseModel):
@@ -77,7 +84,7 @@ class MeasurementUncertaintyInfo(BaseModel):
 
 
 class HostAssociationInfo(BaseModel):
-    """Point 10: Host galaxy parameters, redshift provenance, and qualified offset."""
+    """Point 10: Host galaxy parameters, redshift provenance, and distance provenance."""
     model_config = ConfigDict(frozen=True)
     host_name: Optional[str] = None
     host_ra_deg: Optional[float] = None
@@ -85,7 +92,12 @@ class HostAssociationInfo(BaseModel):
     redshift_z: Optional[float] = None
     redshift_type: RedshiftType = "UNKNOWN"
     redshift_source_bibcode: Optional[str] = None
+    adopted_distance_mpc: Optional[float] = None
+    distance_method: DistanceMethod = "HUBBLE_FLOW"
+    distance_uncertainty_mpc: Optional[float] = None
+    peculiar_velocity_corrected: bool = False
     angular_separation_arcsec: Optional[float] = None
+    nuclear_offset_resolution_arcsec: Optional[float] = None
     projected_offset_kpc: Optional[float] = None
     cosmology: Dict[str, float] = Field(
         default_factory=lambda: {"H0": 70.0, "Om0": 0.3, "Ode0": 0.7}
@@ -100,9 +112,16 @@ class CryptographicSeal(BaseModel):
     """Point 11: End-to-end cryptographic hash chain and HMAC-SHA256 authority seal."""
     model_config = ConfigDict(frozen=True)
     sha256_digest: str
-    hmac_sha256_signature: str
+    hmac_sha256_mac: str
+    key_id: str = DEFAULT_KEY_ID
+    canonical_serialization_version: str = "RFC-8785-JSON"
     signing_authority: str = "ASTRAEUS-PROVENANCE-AUTHORITY-v1.0"
     sealed_at_utc: str
+
+    @property
+    def hmac_sha256_signature(self) -> str:
+        """Alias for backward compatibility with earlier v2.2.0 callers."""
+        return self.hmac_sha256_mac
 
 
 class ReferenceObjectRecord(BaseModel):
@@ -123,9 +142,14 @@ class ReferenceObjectRecord(BaseModel):
 
     # Point 3: Astrometric Coordinates & Epoch
     coordinates: CelestialCoordinates
+    coordinate_reference_system: str = "ICRS"
+    coordinate_reference_epoch: str = "J2000.0"
+    observation_epoch_utc: str
 
     # Point 4: Time Standard Specification
     time_standard: TimeStandard = "UTC_MJD"
+    barycentric_correction_applied: bool = False
+    barycentric_correction_provenance: Optional[str] = None
 
     # Point 5: Spatial Partitioning & Boundary Buffer
     spatial_partition: SpatialPartitionInfo
@@ -147,6 +171,10 @@ class ReferenceObjectRecord(BaseModel):
 
     # Point 11: Cryptographic Integrity & Authority Seal
     cryptographic_seal: CryptographicSeal
+
+    # Multi-Tier Leakage Cluster Tags
+    host_leakage_cluster_id: Optional[str] = None
+    observation_leakage_ids: List[str] = Field(default_factory=list)
 
     # Astronomical Classification & Metadata
     transient_class: str
@@ -170,23 +198,23 @@ class ReferenceObjectRecord(BaseModel):
 
     @staticmethod
     def compute_payload_digest(payload: Dict[str, Any]) -> str:
-        """Computes deterministic SHA-256 integrity digest of canonical payload."""
+        """Computes deterministic SHA-256 integrity digest using RFC-8785 canonical JSON sorting."""
         canon_json = json.dumps(payload, sort_keys=True, separators=(",", ":"))
         return hashlib.sha256(canon_json.encode("utf-8")).hexdigest()
 
     @staticmethod
     def compute_hmac(digest: str, secret_key: bytes = DEFAULT_PROVENANCE_SECRET) -> str:
-        """Computes keyed HMAC-SHA256 signature sealing the digest with authority secret."""
+        """Computes keyed HMAC-SHA256 message authentication code (MAC) sealing the digest."""
         return hmac.new(secret_key, digest.encode("utf-8"), hashlib.sha256).hexdigest()
 
     def verify_authenticity(self, secret_key: bytes = DEFAULT_PROVENANCE_SECRET) -> bool:
-        """Verifies both structural integrity and HMAC authority signature."""
+        """Verifies both structural integrity and HMAC authority MAC."""
         if len(self.cryptographic_seal.sha256_digest) != 64:
             return False
-        if len(self.cryptographic_seal.hmac_sha256_signature) != 64:
+        if len(self.cryptographic_seal.hmac_sha256_mac) != 64:
             return False
-        expected_sig = self.compute_hmac(self.cryptographic_seal.sha256_digest, secret_key)
-        return hmac.compare_digest(expected_sig, self.cryptographic_seal.hmac_sha256_signature)
+        expected_mac = self.compute_hmac(self.cryptographic_seal.sha256_digest, secret_key)
+        return hmac.compare_digest(expected_mac, self.cryptographic_seal.hmac_sha256_mac)
 
     def to_flat_dict(self) -> Dict[str, Any]:
         """Flattens key metadata fields for Arrow/Parquet serialization and query indexing."""
@@ -198,8 +226,12 @@ class ReferenceObjectRecord(BaseModel):
             "discovery_mjd": self.discovery_mjd,
             "ra_deg": self.coordinates.ra_deg,
             "dec_deg": self.coordinates.dec_deg,
+            "coordinate_frame": self.coordinate_reference_system,
+            "coordinate_epoch": self.coordinate_reference_epoch,
+            "observation_epoch_utc": self.observation_epoch_utc,
             "healpix_nside32": self.spatial_partition.healpix_nside32,
             "split": self.spatial_partition.split,
+            "original_assigned_split": self.spatial_partition.original_assigned_split,
             "is_boundary_buffer_quarantined": self.spatial_partition.is_boundary_buffer_quarantined,
             "distance_to_boundary_arcsec": self.spatial_partition.distance_to_boundary_arcsec,
             "time_standard": self.time_standard,
@@ -212,9 +244,13 @@ class ReferenceObjectRecord(BaseModel):
             "cadence_median_hours": self.cadence_median_hours,
             "snr_median": self.snr_median,
             "host_name": self.host_association.host_name or "NONE",
-            "host_redshift": self.host_association.redshift_z or -999.0,
+            "host_redshift": self.host_association.redshift_z if self.host_association.redshift_z is not None else -999.0,
+            "adopted_distance_mpc": self.host_association.adopted_distance_mpc if self.host_association.adopted_distance_mpc is not None else -999.0,
+            "distance_method": self.host_association.distance_method,
             "redshift_type": self.host_association.redshift_type,
-            "host_offset_kpc": self.host_association.projected_offset_kpc or -999.0,
+            "host_offset_kpc": self.host_association.projected_offset_kpc if self.host_association.projected_offset_kpc is not None else -999.0,
+            "host_leakage_cluster_id": self.host_leakage_cluster_id or "NONE",
             "sha256_digest": self.cryptographic_seal.sha256_digest,
-            "hmac_sha256_signature": self.cryptographic_seal.hmac_sha256_signature,
+            "hmac_sha256_mac": self.cryptographic_seal.hmac_sha256_mac,
+            "key_id": self.cryptographic_seal.key_id,
         }

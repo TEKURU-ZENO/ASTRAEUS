@@ -27,6 +27,7 @@ from astraeus_data.corpus.record import (
     HostAssociationInfo,
     CryptographicSeal,
     DEFAULT_PROVENANCE_SECRET,
+    DEFAULT_KEY_ID,
     DatasetOrigin,
 )
 
@@ -43,11 +44,13 @@ class ReferenceCorpusBuilder:
         nside: int = 32,
         buffer_arcsec: float = 5.0,
         provenance_secret: bytes = DEFAULT_PROVENANCE_SECRET,
+        key_id: str = DEFAULT_KEY_ID,
     ) -> None:
         self.split_manifest_path = split_manifest_path
         self.nside = nside
         self.buffer_arcsec = buffer_arcsec
         self.secret = provenance_secret
+        self.key_id = key_id
         self.hp = HEALPix(nside=nside, order="nested", frame="icrs")
         self.pixel_to_split = load_split_manifest(split_manifest_path)
 
@@ -59,10 +62,11 @@ class ReferenceCorpusBuilder:
     ) -> SpatialPartitionInfo:
         """
         Determines HEALPix pixel at Nside=32, assigns split, and checks boundary quarantine buffer.
+        If near a conflicting split boundary, assigns split="quarantine" to prevent leakage into active splits.
         """
         coord = SkyCoord(ra=ra_deg * u.deg, dec=dec_deg * u.deg, frame="icrs")
         pix = int(self.hp.skycoord_to_healpix(coord))
-        split = self.pixel_to_split.get(pix, "train")
+        nominal_split = self.pixel_to_split.get(pix, "train")
 
         # Check adjacent neighbor pixels for conflicting splits
         neighbors = self.hp.neighbours(pix)
@@ -70,7 +74,7 @@ class ReferenceCorpusBuilder:
         for n_pix in neighbors:
             if n_pix >= 0:
                 n_split = self.pixel_to_split.get(int(n_pix), "train")
-                if n_split != split:
+                if n_split != nominal_split:
                     conflicting_neighbor = True
                     break
 
@@ -85,9 +89,12 @@ class ReferenceCorpusBuilder:
         if conflicting_neighbor and (distance_to_boundary < self.buffer_arcsec or (3.0 * astrometric_err_arcsec > self.buffer_arcsec)):
             is_quarantined = True
 
+        effective_split = "quarantine" if is_quarantined else nominal_split
+
         return SpatialPartitionInfo(
             healpix_nside32=pix,
-            split=split,
+            split=effective_split,
+            original_assigned_split=nominal_split,
             distance_to_boundary_arcsec=round(distance_to_boundary, 2),
             has_conflicting_neighbor=conflicting_neighbor,
             is_boundary_buffer_quarantined=is_quarantined,
@@ -96,10 +103,12 @@ class ReferenceCorpusBuilder:
     def seal_record(self, record_dict: Dict[str, Any]) -> CryptographicSeal:
         """Generates SHA-256 integrity digest and HMAC-SHA256 authority seal."""
         digest = ReferenceObjectRecord.compute_payload_digest(record_dict)
-        signature = ReferenceObjectRecord.compute_hmac(digest, self.secret)
+        mac = ReferenceObjectRecord.compute_hmac(digest, self.secret)
         return CryptographicSeal(
             sha256_digest=digest,
-            hmac_sha256_signature=signature,
+            hmac_sha256_mac=mac,
+            key_id=self.key_id,
+            canonical_serialization_version="RFC-8785-JSON",
             signing_authority="ASTRAEUS-PROVENANCE-AUTHORITY-v1.0",
             sealed_at_utc=datetime.now(timezone.utc).isoformat(),
         )
@@ -145,7 +154,11 @@ class ReferenceCorpusBuilder:
             discovery_time_utc="2018-06-16T06:00:00Z",
             discovery_mjd=58285.25,
             coordinates=coords,
+            coordinate_reference_system="ICRS",
+            coordinate_reference_epoch="J2000.0",
+            observation_epoch_utc="2018-06-16T06:00:00Z",
             time_standard="UTC_MJD",
+            barycentric_correction_applied=False,
             spatial_partition=partition,
             cross_match_prior=CrossMatchPrior(
                 catalog="Gaia DR3",
@@ -156,12 +169,15 @@ class ReferenceCorpusBuilder:
                 association_status="SECURE_MATCH",
             ),
             photometric_calibration=PhotometricCalibrationInfo(
+                native_survey="ATLAS",
+                native_zero_point_mag=27.5,
+                standardized_zero_point_mag=27.5,
                 photometric_system="AB",
-                zero_point_mag=27.5,
                 filter_profiles=["ATLAS_o", "ZTF_g", "ZTF_r", "ZTF_i"],
                 ebv_mw_mag=0.075,
                 a_v_mag=0.233,
                 quality_flags_clean=True,
+                preserves_negative_fluxes=True,
             ),
             photometric_representation=PhotometricRepresentationInfo(
                 has_native_flux=True,
@@ -177,10 +193,16 @@ class ReferenceCorpusBuilder:
                 redshift_z=0.014145,
                 redshift_type="SPECTROSCOPIC",
                 redshift_source_bibcode="2018ApJ...865L...3P",
+                adopted_distance_mpc=60.5,
+                distance_method="HUBBLE_FLOW",
+                distance_uncertainty_mpc=4.2,
+                peculiar_velocity_corrected=True,
                 angular_separation_arcsec=5.9,
                 projected_offset_kpc=1.73,
             ),
             cryptographic_seal=seal,
+            host_leakage_cluster_id="HOST-CGCG-137-068",
+            observation_leakage_ids=["OBS-ATLAS-18qqn-01", "OBS-ZTF-18abokrym-01"],
             transient_class="FBOT",
             dataset_origin="ARCHIVAL",
             epistemic_tier=EpistemicTier.OBSERVED,
@@ -198,7 +220,7 @@ class ReferenceCorpusBuilder:
         )
 
     def create_archival_sn2011fe(self) -> ReferenceObjectRecord:
-        """Constructs canonical SN 2011fe archival reference object."""
+        """Constructs canonical SN 2011fe archival reference object with independent host distance."""
         ra = 210.80227
         dec = 54.27083
         coords = CelestialCoordinates(
@@ -210,14 +232,17 @@ class ReferenceCorpusBuilder:
         )
         partition = self.compute_spatial_partition(ra, dec, astrometric_err_arcsec=0.025)
 
-        # Standard SN Ia light curve epochs around peak
         times = [55797.2, 55800.5, 55805.0, 55810.2, 55814.8, 55822.0, 55835.0]
         mags = [14.8, 12.2, 10.4, 9.98, 10.2, 11.1, 12.5]
         errs = [0.03, 0.02, 0.02, 0.02, 0.02, 0.03, 0.04]
         bands = ["PTF_g", "PTF_g", "PTF_g", "PTF_r", "PTF_r", "PTF_g", "PTF_r"]
 
-        flux_native = [float(10.0 ** (-0.4 * (m - 27.5))) for m in mags]
+        flux_native = [float(10.0 ** (-0.4 * (m - 27.0))) for m in mags]
         flux_err = [float(0.921 * f * e) for f, e in zip(flux_native, errs)]
+
+        # Standardized optical pseudoflux with ZP=27.5
+        flux_pseudoflux = [float(10.0 ** (-0.4 * (m - 27.5))) for m in mags]
+        pseudoflux_err = [float(0.921 * f * e) for f, e in zip(flux_pseudoflux, errs)]
 
         payload_to_seal = {
             "canonical_id": "SN2011fe",
@@ -239,7 +264,11 @@ class ReferenceCorpusBuilder:
             discovery_time_utc="2011-08-24T19:00:00Z",
             discovery_mjd=55797.2,
             coordinates=coords,
+            coordinate_reference_system="ICRS",
+            coordinate_reference_epoch="J2000.0",
+            observation_epoch_utc="2011-08-24T19:00:00Z",
             time_standard="UTC_MJD",
+            barycentric_correction_applied=False,
             spatial_partition=partition,
             cross_match_prior=CrossMatchPrior(
                 catalog="Gaia DR3",
@@ -249,12 +278,15 @@ class ReferenceCorpusBuilder:
                 association_status="SECURE_MATCH",
             ),
             photometric_calibration=PhotometricCalibrationInfo(
+                native_survey="PTF",
+                native_zero_point_mag=27.0,
+                standardized_zero_point_mag=27.5,
                 photometric_system="AB",
-                zero_point_mag=27.5,
                 filter_profiles=["PTF_g", "PTF_r"],
                 ebv_mw_mag=0.009,
                 a_v_mag=0.028,
                 quality_flags_clean=True,
+                preserves_negative_fluxes=True,
             ),
             photometric_representation=PhotometricRepresentationInfo(
                 has_native_flux=True,
@@ -270,10 +302,16 @@ class ReferenceCorpusBuilder:
                 redshift_z=0.000804,
                 redshift_type="SPECTROSCOPIC",
                 redshift_source_bibcode="2011Natur.480..344N",
+                adopted_distance_mpc=6.4,
+                distance_method="INDEPENDENT_TRGB_CEPHEID",
+                distance_uncertainty_mpc=0.5,
+                peculiar_velocity_corrected=True,
                 angular_separation_arcsec=162.0,
                 projected_offset_kpc=5.4,
             ),
             cryptographic_seal=seal,
+            host_leakage_cluster_id="HOST-MESSIER-101",
+            observation_leakage_ids=["OBS-PTF-11kly-01"],
             transient_class="SN_Ia",
             dataset_origin="ARCHIVAL",
             epistemic_tier=EpistemicTier.OBSERVED,
@@ -286,8 +324,8 @@ class ReferenceCorpusBuilder:
             flux_native=flux_native,
             flux_err_native=flux_err,
             passbands=bands,
-            optical_pseudoflux=flux_native,
-            pseudoflux_err=flux_err,
+            optical_pseudoflux=flux_pseudoflux,
+            pseudoflux_err=pseudoflux_err,
         )
 
     def create_archival_at2018zr(self) -> ReferenceObjectRecord:
@@ -303,14 +341,16 @@ class ReferenceCorpusBuilder:
         )
         partition = self.compute_spatial_partition(ra, dec, astrometric_err_arcsec=0.02)
 
-        # Typical TDE: slow blue rise and t^(-5/3) power-law decay
         times = [58175.0, 58190.0, 58210.0, 58240.0, 58280.0, 58330.0]
         mags = [19.2, 17.5, 16.8, 17.4, 18.2, 19.1]
         errs = [0.08, 0.05, 0.04, 0.05, 0.07, 0.10]
         bands = ["ZTF_g", "ZTF_g", "ZTF_g", "ZTF_r", "ZTF_g", "ZTF_r"]
 
-        flux_native = [float(10.0 ** (-0.4 * (m - 27.5))) for m in mags]
+        flux_native = [float(10.0 ** (-0.4 * (m - 26.3))) for m in mags]
         flux_err = [float(0.921 * f * e) for f, e in zip(flux_native, errs)]
+
+        flux_pseudoflux = [float(10.0 ** (-0.4 * (m - 27.5))) for m in mags]
+        pseudoflux_err = [float(0.921 * f * e) for f, e in zip(flux_pseudoflux, errs)]
 
         payload_to_seal = {
             "canonical_id": "AT2018zr",
@@ -332,7 +372,11 @@ class ReferenceCorpusBuilder:
             discovery_time_utc="2018-03-02T08:00:00Z",
             discovery_mjd=58175.0,
             coordinates=coords,
+            coordinate_reference_system="ICRS",
+            coordinate_reference_epoch="J2000.0",
+            observation_epoch_utc="2018-03-02T08:00:00Z",
             time_standard="UTC_MJD",
+            barycentric_correction_applied=False,
             spatial_partition=partition,
             cross_match_prior=CrossMatchPrior(
                 catalog="Gaia DR3",
@@ -342,12 +386,15 @@ class ReferenceCorpusBuilder:
                 association_status="SECURE_MATCH",
             ),
             photometric_calibration=PhotometricCalibrationInfo(
+                native_survey="ZTF",
+                native_zero_point_mag=26.3,
+                standardized_zero_point_mag=27.5,
                 photometric_system="AB",
-                zero_point_mag=27.5,
                 filter_profiles=["ZTF_g", "ZTF_r"],
                 ebv_mw_mag=0.042,
                 a_v_mag=0.130,
                 quality_flags_clean=True,
+                preserves_negative_fluxes=True,
             ),
             photometric_representation=PhotometricRepresentationInfo(
                 has_native_flux=True,
@@ -363,10 +410,16 @@ class ReferenceCorpusBuilder:
                 redshift_z=0.071,
                 redshift_type="SPECTROSCOPIC",
                 redshift_source_bibcode="2019ApJ...872..198H",
+                adopted_distance_mpc=325.0,
+                distance_method="HUBBLE_FLOW",
+                distance_uncertainty_mpc=22.0,
                 angular_separation_arcsec=0.05,
+                nuclear_offset_resolution_arcsec=1.0,
                 projected_offset_kpc=0.07,
             ),
             cryptographic_seal=seal,
+            host_leakage_cluster_id="HOST-SDSS-J075654",
+            observation_leakage_ids=["OBS-ZTF-18aabtxvd-01", "OBS-PS1-18kh-01"],
             transient_class="TDE",
             dataset_origin="ARCHIVAL",
             epistemic_tier=EpistemicTier.OBSERVED,
@@ -379,8 +432,8 @@ class ReferenceCorpusBuilder:
             flux_native=flux_native,
             flux_err_native=flux_err,
             passbands=bands,
-            optical_pseudoflux=flux_native,
-            pseudoflux_err=flux_err,
+            optical_pseudoflux=flux_pseudoflux,
+            pseudoflux_err=pseudoflux_err,
         )
 
     def generate_synthetic_record(
@@ -391,11 +444,11 @@ class ReferenceCorpusBuilder:
     ) -> ReferenceObjectRecord:
         """
         Generates a physically realistic, simulated/synthetic light curve with full 11-point audit record.
+        Preserves native flux (including potential noisy negative residuals) and derives optical_pseudoflux.
         """
         rng = np.random.default_rng(seed)
         cid = f"ASTRAEUS-{transient_class}-{dataset_origin.lower()[:3]}-{seed:05d}"
 
-        # Uniform celestial distribution
         ra = float(rng.uniform(0.0, 360.0))
         dec = float(np.degrees(np.arcsin(rng.uniform(-0.95, 0.95))))
 
@@ -408,7 +461,6 @@ class ReferenceCorpusBuilder:
         )
         partition = self.compute_spatial_partition(ra, dec, astrometric_err_arcsec=0.04)
 
-        # Baseline timescale configurations
         if transient_class == "SN_Ia":
             tau_rise, tau_fall = rng.normal(3.5, 0.4), rng.normal(22.0, 3.0)
             peak_mag = rng.normal(16.5, 1.2)
@@ -438,7 +490,7 @@ class ReferenceCorpusBuilder:
             tau_rise, tau_fall = rng.normal(15.0, 3.0), rng.normal(45.0, 8.0)
             peak_mag = rng.normal(16.8, 1.4)
             z = rng.uniform(0.03, 0.20)
-            host_sep = rng.uniform(0.01, 0.2)  # Nuclear
+            host_sep = rng.uniform(0.01, 0.2)
         elif transient_class == "ARTIFACT_DIPOLE":
             tau_rise, tau_fall = 0.05, 0.1
             peak_mag = rng.normal(19.0, 1.0)
@@ -453,12 +505,10 @@ class ReferenceCorpusBuilder:
         tau_rise = max(0.1, tau_rise)
         tau_fall = max(0.2, tau_fall)
 
-        # Generate realistic cadences
         n_obs = int(rng.integers(8, 26))
         t0 = 59000.0 + rng.uniform(10.0, 100.0)
         times = sorted([float(t0 + rng.uniform(-10.0, 60.0)) for _ in range(n_obs)])
 
-        # Evaluate Bazin light curve
         mags = []
         errs = []
         bands = []
@@ -469,15 +519,24 @@ class ReferenceCorpusBuilder:
             denom = 1.0 + np.exp(-dt / tau_rise)
             numer = np.exp(-dt / tau_fall)
             flux_rel = numer / denom if denom > 0 else 0.0
-            f_norm = max(0.01, flux_rel)
+            f_norm = max(0.005, flux_rel)
             mag = peak_mag - 2.5 * np.log10(f_norm)
             err = float(rng.uniform(0.03, 0.15))
             mags.append(float(mag))
             errs.append(err)
             bands.append(f"ZTF_{band_choices[rng.integers(0, 3)]}")
 
-        flux_native = [float(10.0 ** (-0.4 * (m - 27.5))) for m in mags]
-        flux_err = [float(0.921 * f * e) for f, e in zip(flux_native, errs)]
+        native_zp = 26.3
+        standard_zp = 27.5
+        flux_native = [float(10.0 ** (-0.4 * (m - native_zp))) for m in mags]
+        flux_err_native = [float(0.921 * f * e) for f, e in zip(flux_native, errs)]
+
+        # Occasionally add a realistic negative residual in artifact / low-SNR tail
+        if transient_class == "ARTIFACT_DIPOLE" and len(flux_native) > 2:
+            flux_native[-1] = -abs(flux_native[-1] * 0.5)
+
+        flux_pseudoflux = [float(10.0 ** (-0.4 * (m - standard_zp))) for m in mags]
+        pseudoflux_err = [float(0.921 * f * e) for f, e in zip(flux_pseudoflux, errs)]
 
         payload_to_seal = {
             "canonical_id": cid,
@@ -501,7 +560,11 @@ class ReferenceCorpusBuilder:
             discovery_time_utc="2026-01-01T00:00:00Z",
             discovery_mjd=round(times[0], 2),
             coordinates=coords,
+            coordinate_reference_system="ICRS",
+            coordinate_reference_epoch="J2000.0",
+            observation_epoch_utc="2026-01-01T00:00:00Z",
             time_standard="UTC_MJD",
+            barycentric_correction_applied=False,
             spatial_partition=partition,
             cross_match_prior=CrossMatchPrior(
                 catalog="Gaia DR3",
@@ -511,12 +574,15 @@ class ReferenceCorpusBuilder:
                 association_status="SECURE_MATCH",
             ),
             photometric_calibration=PhotometricCalibrationInfo(
+                native_survey="ZTF",
+                native_zero_point_mag=native_zp,
+                standardized_zero_point_mag=standard_zp,
                 photometric_system="AB",
-                zero_point_mag=27.5,
                 filter_profiles=["ZTF_g", "ZTF_r", "ZTF_i"],
                 ebv_mw_mag=float(rng.uniform(0.01, 0.08)),
                 a_v_mag=float(rng.uniform(0.03, 0.25)),
                 quality_flags_clean=True,
+                preserves_negative_fluxes=True,
             ),
             photometric_representation=PhotometricRepresentationInfo(
                 has_native_flux=True,
@@ -529,10 +595,14 @@ class ReferenceCorpusBuilder:
                 host_name=f"HOST-GAL-{seed:04d}",
                 redshift_z=float(round(z, 4)) if z > 0 else None,
                 redshift_type="SPECTROSCOPIC" if z > 0 else "UNKNOWN",
+                adopted_distance_mpc=float(round(z * 300000.0 / 70.0, 1)) if z > 0 else None,
+                distance_method="HUBBLE_FLOW" if z > 0 else "UNKNOWN",
                 angular_separation_arcsec=round(host_sep, 2),
                 projected_offset_kpc=round(host_sep * 0.293 * (z / 0.014), 2) if z > 0 else None,
             ),
             cryptographic_seal=seal,
+            host_leakage_cluster_id=f"HOST-CLUSTER-{seed:04d}",
+            observation_leakage_ids=[f"OBS-SIM-{seed:05d}-01"],
             transient_class=transient_class,
             dataset_origin=dataset_origin,
             epistemic_tier=tier,
@@ -540,18 +610,18 @@ class ReferenceCorpusBuilder:
             peak_mjd=round(float(t0), 2),
             num_epochs=len(times),
             cadence_median_hours=round(float(np.median(np.diff(times)) * 24.0), 1),
-            snr_median=round(float(np.median([f / max(1.0, fe) for f, fe in zip(flux_native, flux_err)])), 1),
+            snr_median=round(float(np.median([abs(f) / max(1.0, fe) for f, fe in zip(flux_native, flux_err_native)])), 1),
             times_mjd=times,
             flux_native=flux_native,
-            flux_err_native=flux_err,
+            flux_err_native=flux_err_native,
             passbands=bands,
-            optical_pseudoflux=flux_native,
-            pseudoflux_err=flux_err,
+            optical_pseudoflux=flux_pseudoflux,
+            pseudoflux_err=pseudoflux_err,
         )
 
     def build_reference_corpus_v1(
         self,
-        n_synthetic_per_class: int = 50,
+        n_synthetic_per_class: int = 35,
         base_seed: int = 42,
     ) -> List[ReferenceObjectRecord]:
         """

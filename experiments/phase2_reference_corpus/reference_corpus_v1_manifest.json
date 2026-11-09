@@ -1,23 +1,26 @@
 {
   "metadata": {
-    "title": "ASTRAEUS Astronomical Reference Corpus v1.0 Manifest",
+    "title": "ASTRAEUS Astronomical Reference Corpus v1.0 Manifest & Reconciliation",
     "version": "1.0.0",
     "phase": "Phase 2: Stage 1 (Days 91-105)",
-    "generated_utc": "2026-11-09T12:48:40.321532+00:00",
+    "generated_utc": "2026-11-09T13:09:50.476891+00:00",
     "audit_passed": true
   },
   "audit_report": {
     "passed_all_gates": true,
     "total_records_audited": 283,
-    "train_count": 190,
-    "val_count": 47,
-    "test_count": 46,
+    "eligible_entities_count": 228,
+    "train_count": 155,
+    "val_count": 37,
+    "test_count": 36,
     "quarantined_boundary_count": 55,
     "identity_leakage_count": 0,
     "alias_leakage_count": 0,
     "duplicate_canonical_ids": 0,
     "spatial_healpix_overlap_count": 0,
-    "boundary_buffer_violations": 0,
+    "host_galaxy_cross_split_leakage_count": 0,
+    "observation_cross_split_leakage_count": 0,
+    "boundary_buffer_quarantine_violations": 0,
     "temporal_leakage_count": 0,
     "origin_counts": {
       "ARCHIVAL": 3,
@@ -26,36 +29,62 @@
     },
     "origin_misclassification_count": 0,
     "cryptographic_failures": 0,
-    "class_distribution_per_split": {
-      "train": {
-        "FBOT": 25,
-        "SN_Ia": 27,
-        "TDE": 22,
-        "SN_II": 25,
-        "SN_Ibc": 21,
-        "SLSN": 22,
-        "ARTIFACT_DIPOLE": 24,
-        "VARIABLE_STAR": 24
+    "per_class_population_accounting": {
+      "ARTIFACT_DIPOLE": {
+        "total": 35,
+        "train": 19,
+        "val": 3,
+        "test": 4,
+        "quarantine": 9
       },
-      "val": {
-        "SN_Ia": 2,
-        "SN_II": 6,
-        "SN_Ibc": 8,
-        "FBOT": 8,
-        "SLSN": 6,
-        "TDE": 8,
-        "ARTIFACT_DIPOLE": 5,
-        "VARIABLE_STAR": 4
+      "FBOT": {
+        "total": 36,
+        "train": 19,
+        "val": 5,
+        "test": 2,
+        "quarantine": 10
       },
-      "test": {
-        "SN_Ia": 7,
-        "SN_II": 4,
-        "SN_Ibc": 6,
-        "FBOT": 3,
-        "SLSN": 7,
-        "TDE": 6,
-        "ARTIFACT_DIPOLE": 6,
-        "VARIABLE_STAR": 7
+      "SLSN": {
+        "total": 35,
+        "train": 20,
+        "val": 5,
+        "test": 5,
+        "quarantine": 5
+      },
+      "SN_II": {
+        "total": 35,
+        "train": 21,
+        "val": 5,
+        "test": 4,
+        "quarantine": 5
+      },
+      "SN_Ia": {
+        "total": 36,
+        "train": 23,
+        "val": 1,
+        "test": 6,
+        "quarantine": 6
+      },
+      "SN_Ibc": {
+        "total": 35,
+        "train": 17,
+        "val": 7,
+        "test": 5,
+        "quarantine": 6
+      },
+      "TDE": {
+        "total": 36,
+        "train": 16,
+        "val": 7,
+        "test": 4,
+        "quarantine": 9
+      },
+      "VARIABLE_STAR": {
+        "total": 35,
+        "train": 20,
+        "val": 4,
+        "test": 6,
+        "quarantine": 5
       }
     },
     "median_snr_per_class": {
@@ -65,8 +94,8 @@
       "SN_II": 12.2,
       "SN_Ibc": 11.8,
       "SLSN": 11.7,
-      "ARTIFACT_DIPOLE": 12.0,
-      "VARIABLE_STAR": 12.0
+      "ARTIFACT_DIPOLE": 4.8,
+      "VARIABLE_STAR": 10.1
     },
     "median_cadence_hours_per_class": {
       "FBOT": 61.349999999999994,
@@ -81,86 +110,99 @@
   },
   "frozen_evaluation_protocol": {
     "protocol_version": "1.0.0",
-    "frozen_epoch_utc": "2026-11-09T12:48:39.318968+00:00",
-    "protocol_sha256": "0db2447383abddfd3e93863d4576ca9d4630b51adbe997a16a435676835ee619",
+    "frozen_epoch_utc": "2026-11-09T13:09:49.494389+00:00",
+    "protocol_sha256": "24150b79e9bceb0dfd67bc2ce59068c5c10e6ed59fdaae302c29bdab2a0e9931",
     "tasks": [
       {
         "task_id": "task_1_temporal_reconstruction",
-        "name": "Irregular Masked Temporal Autoencoding",
-        "description": "Reconstruction of masked photometric epochs on irregular cadences.",
+        "name": "Irregular Masked Span Reconstruction & Forecasting",
+        "evaluation_mode": "HELD_OUT_OBSERVATIONS_FORECASTING",
+        "description": "Evaluates probabilistic reconstruction of contiguous masked temporal spans (simulating daytime and weather gaps) and future epoch forecasting ($t > t_{\\mathrm{cutoff}}$).",
         "primary_metric": "CRPS_Gaussian",
         "secondary_metrics": [
           "MAE_flux",
-          "NLL_uncertainty"
+          "NLL_uncertainty",
+          "Coverage_90_Conformal"
         ],
         "target_split": "test",
         "baseline_benchmarks": [
           "Interpolation_Linear",
           "ASTROMER_Base",
-          "GaussianProcess"
-        ]
+          "GaussianProcess_Matern"
+        ],
+        "transfer_directions": [],
+        "information_separation_guarantee": "Input context and evaluated target observations are strictly disjoint; target points are masked before encoder forward pass."
       },
       {
         "task_id": "task_2_cross_survey_transfer",
         "name": "Zero-Shot Cross-Survey Property Estimation",
-        "description": "Evaluation of feature representations transferred from ZTF to PS1 and DECam.",
+        "evaluation_mode": "UNSEEN_PHYSICAL_OBJECTS_AND_UNSEEN_SURVEYS",
+        "description": "Evaluates bidirectional zero-shot transfer of learned representations across ZTF, Pan-STARRS1, and DECam without fine-tuning or target-domain label exposure.",
         "primary_metric": "Macro_F1",
         "secondary_metrics": [
           "Expected_Calibration_Error",
-          "Abstention_Recall"
+          "Abstention_Recall",
+          "Covariate_Shift_Distance"
         ],
         "target_split": "test",
         "baseline_benchmarks": [
           "RandomForest_Engineered",
           "XGBoost_Passbands"
-        ]
+        ],
+        "transfer_directions": [
+          "ZTF -> Pan-STARRS1",
+          "ZTF -> DECam",
+          "Pan-STARRS1 -> ZTF",
+          "Pan-STARRS1 -> DECam",
+          "DECam -> ZTF",
+          "DECam -> Pan-STARRS1"
+        ],
+        "information_separation_guarantee": "Evaluates transfer to entirely unseen physical objects in disjoint HEALPix pixels; no counterparts of target evaluation objects exist in the training corpus."
       },
       {
         "task_id": "task_3_rare_event_triage",
         "name": "Rare Transient Discovery & Ranking",
-        "description": "Ranking anomalous rapid transients (FBOTs, SLSNe) within fixed follow-up budgets.",
+        "evaluation_mode": "FIXED_RESOURCE_BUDGET_TRIAGE",
+        "description": "Evaluates discovery prioritization of anomalous rapid transients (FBOTs, SLSNe, TDEs) against normal SNe Ia, variable stars, and subtraction dipole artifacts.",
         "primary_metric": "Precision_At_Budget_K10",
         "secondary_metrics": [
-          "Top_K_Recall_K20",
-          "Artifact_FDR"
+          "Recall_At_Budget_K10",
+          "Precision_At_Budget_K5",
+          "Precision_At_Budget_K20",
+          "PR_AUC",
+          "Artifact_Contamination_Rate",
+          "False_Positives_Per_Thousand"
         ],
         "target_split": "test",
         "baseline_benchmarks": [
-          "IsolationForest_Uncalibrated",
-          "Mahalanobis_Distance"
-        ]
+          "IsolationForest_Standardized",
+          "Mahalanobis_Distance_Empirical"
+        ],
+        "transfer_directions": [],
+        "information_separation_guarantee": "Baselines receive strictly identical input features (standardized optical_pseudoflux and native uncertainties) to isolate model architecture contribution."
       }
     ],
     "frozen_val_ids": [
       "ASTRAEUS-ARTIFACT_DIPOLE-syn-00258",
-      "ASTRAEUS-ARTIFACT_DIPOLE-syn-00260",
       "ASTRAEUS-ARTIFACT_DIPOLE-syn-00261",
       "ASTRAEUS-ARTIFACT_DIPOLE-syn-00263",
-      "ASTRAEUS-ARTIFACT_DIPOLE-syn-00275",
       "ASTRAEUS-FBOT-num-00149",
-      "ASTRAEUS-FBOT-num-00152",
-      "ASTRAEUS-FBOT-num-00154",
       "ASTRAEUS-FBOT-num-00157",
       "ASTRAEUS-FBOT-num-00162",
       "ASTRAEUS-FBOT-num-00166",
-      "ASTRAEUS-FBOT-num-00167",
       "ASTRAEUS-FBOT-num-00168",
       "ASTRAEUS-SLSN-num-00186",
       "ASTRAEUS-SLSN-num-00188",
-      "ASTRAEUS-SLSN-num-00191",
       "ASTRAEUS-SLSN-num-00193",
       "ASTRAEUS-SLSN-num-00195",
       "ASTRAEUS-SLSN-num-00207",
       "ASTRAEUS-SN_II-syn-00083",
-      "ASTRAEUS-SN_II-syn-00093",
       "ASTRAEUS-SN_II-syn-00094",
       "ASTRAEUS-SN_II-syn-00095",
       "ASTRAEUS-SN_II-syn-00106",
       "ASTRAEUS-SN_II-syn-00110",
-      "ASTRAEUS-SN_Ia-syn-00068",
       "ASTRAEUS-SN_Ia-syn-00075",
       "ASTRAEUS-SN_Ibc-syn-00121",
-      "ASTRAEUS-SN_Ibc-syn-00123",
       "ASTRAEUS-SN_Ibc-syn-00127",
       "ASTRAEUS-SN_Ibc-syn-00129",
       "ASTRAEUS-SN_Ibc-syn-00131",
@@ -169,7 +211,6 @@
       "ASTRAEUS-SN_Ibc-syn-00142",
       "ASTRAEUS-TDE-num-00220",
       "ASTRAEUS-TDE-num-00221",
-      "ASTRAEUS-TDE-num-00222",
       "ASTRAEUS-TDE-num-00223",
       "ASTRAEUS-TDE-num-00226",
       "ASTRAEUS-TDE-num-00228",
@@ -181,19 +222,14 @@
       "ASTRAEUS-VARIABLE_STAR-syn-00320"
     ],
     "frozen_test_ids": [
-      "ASTRAEUS-ARTIFACT_DIPOLE-syn-00254",
       "ASTRAEUS-ARTIFACT_DIPOLE-syn-00262",
       "ASTRAEUS-ARTIFACT_DIPOLE-syn-00264",
       "ASTRAEUS-ARTIFACT_DIPOLE-syn-00267",
-      "ASTRAEUS-ARTIFACT_DIPOLE-syn-00271",
       "ASTRAEUS-ARTIFACT_DIPOLE-syn-00282",
-      "ASTRAEUS-FBOT-num-00163",
       "ASTRAEUS-FBOT-num-00176",
       "ASTRAEUS-FBOT-num-00177",
       "ASTRAEUS-SLSN-num-00187",
       "ASTRAEUS-SLSN-num-00189",
-      "ASTRAEUS-SLSN-num-00202",
-      "ASTRAEUS-SLSN-num-00203",
       "ASTRAEUS-SLSN-num-00204",
       "ASTRAEUS-SLSN-num-00208",
       "ASTRAEUS-SLSN-num-00212",
@@ -207,32 +243,86 @@
       "ASTRAEUS-SN_Ia-syn-00058",
       "ASTRAEUS-SN_Ia-syn-00061",
       "ASTRAEUS-SN_Ia-syn-00066",
-      "ASTRAEUS-SN_Ia-syn-00072",
-      "ASTRAEUS-SN_Ibc-syn-00113",
       "ASTRAEUS-SN_Ibc-syn-00120",
       "ASTRAEUS-SN_Ibc-syn-00132",
       "ASTRAEUS-SN_Ibc-syn-00137",
       "ASTRAEUS-SN_Ibc-syn-00141",
       "ASTRAEUS-SN_Ibc-syn-00144",
       "ASTRAEUS-TDE-num-00219",
-      "ASTRAEUS-TDE-num-00225",
-      "ASTRAEUS-TDE-num-00227",
       "ASTRAEUS-TDE-num-00242",
       "ASTRAEUS-TDE-num-00246",
       "ASTRAEUS-TDE-num-00249",
       "ASTRAEUS-VARIABLE_STAR-syn-00290",
-      "ASTRAEUS-VARIABLE_STAR-syn-00295",
       "ASTRAEUS-VARIABLE_STAR-syn-00304",
       "ASTRAEUS-VARIABLE_STAR-syn-00305",
       "ASTRAEUS-VARIABLE_STAR-syn-00310",
       "ASTRAEUS-VARIABLE_STAR-syn-00312",
       "ASTRAEUS-VARIABLE_STAR-syn-00313"
     ],
+    "frozen_quarantine_ids": [
+      "ASTRAEUS-ARTIFACT_DIPOLE-syn-00252",
+      "ASTRAEUS-ARTIFACT_DIPOLE-syn-00254",
+      "ASTRAEUS-ARTIFACT_DIPOLE-syn-00256",
+      "ASTRAEUS-ARTIFACT_DIPOLE-syn-00260",
+      "ASTRAEUS-ARTIFACT_DIPOLE-syn-00271",
+      "ASTRAEUS-ARTIFACT_DIPOLE-syn-00272",
+      "ASTRAEUS-ARTIFACT_DIPOLE-syn-00275",
+      "ASTRAEUS-ARTIFACT_DIPOLE-syn-00278",
+      "ASTRAEUS-ARTIFACT_DIPOLE-syn-00281",
+      "ASTRAEUS-FBOT-num-00152",
+      "ASTRAEUS-FBOT-num-00154",
+      "ASTRAEUS-FBOT-num-00160",
+      "ASTRAEUS-FBOT-num-00163",
+      "ASTRAEUS-FBOT-num-00164",
+      "ASTRAEUS-FBOT-num-00167",
+      "ASTRAEUS-FBOT-num-00169",
+      "ASTRAEUS-FBOT-num-00170",
+      "ASTRAEUS-FBOT-num-00174",
+      "ASTRAEUS-FBOT-num-00179",
+      "ASTRAEUS-SLSN-num-00190",
+      "ASTRAEUS-SLSN-num-00191",
+      "ASTRAEUS-SLSN-num-00202",
+      "ASTRAEUS-SLSN-num-00203",
+      "ASTRAEUS-SLSN-num-00210",
+      "ASTRAEUS-SN_II-syn-00084",
+      "ASTRAEUS-SN_II-syn-00087",
+      "ASTRAEUS-SN_II-syn-00093",
+      "ASTRAEUS-SN_II-syn-00096",
+      "ASTRAEUS-SN_II-syn-00107",
+      "ASTRAEUS-SN_Ia-syn-00048",
+      "ASTRAEUS-SN_Ia-syn-00050",
+      "ASTRAEUS-SN_Ia-syn-00057",
+      "ASTRAEUS-SN_Ia-syn-00068",
+      "ASTRAEUS-SN_Ia-syn-00072",
+      "ASTRAEUS-SN_Ia-syn-00073",
+      "ASTRAEUS-SN_Ibc-syn-00113",
+      "ASTRAEUS-SN_Ibc-syn-00119",
+      "ASTRAEUS-SN_Ibc-syn-00123",
+      "ASTRAEUS-SN_Ibc-syn-00139",
+      "ASTRAEUS-SN_Ibc-syn-00140",
+      "ASTRAEUS-SN_Ibc-syn-00146",
+      "ASTRAEUS-TDE-num-00218",
+      "ASTRAEUS-TDE-num-00222",
+      "ASTRAEUS-TDE-num-00225",
+      "ASTRAEUS-TDE-num-00227",
+      "ASTRAEUS-TDE-num-00229",
+      "ASTRAEUS-TDE-num-00235",
+      "ASTRAEUS-TDE-num-00237",
+      "ASTRAEUS-TDE-num-00247",
+      "ASTRAEUS-TDE-num-00250",
+      "ASTRAEUS-VARIABLE_STAR-syn-00289",
+      "ASTRAEUS-VARIABLE_STAR-syn-00293",
+      "ASTRAEUS-VARIABLE_STAR-syn-00295",
+      "ASTRAEUS-VARIABLE_STAR-syn-00307",
+      "ASTRAEUS-VARIABLE_STAR-syn-00317"
+    ],
     "metric_definitions": {
       "CRPS_Gaussian": "Continuous Ranked Probability Score under Gaussian predictive distribution.",
-      "Macro_F1": "Unweighted mean of per-class F1 scores across standard transient classes.",
+      "Macro_F1": "Unweighted arithmetic mean of per-class F1 scores across standard transient classes.",
       "Expected_Calibration_Error": "10-bin confidence calibration error against ground-truth labels.",
-      "Precision_At_Budget_K10": "Fraction of genuine high-priority transients among top 10 ranked candidates."
+      "Precision_At_Budget_K10": "Fraction of genuine high-priority transients among top 10 ranked candidates.",
+      "Recall_At_Budget_K10": "Fraction of total test-set rare events successfully retrieved in top 10 queue.",
+      "Artifact_Contamination_Rate": "Fraction of top-ranked follow-up queue occupied by subtraction artifacts."
     }
   }
 }
