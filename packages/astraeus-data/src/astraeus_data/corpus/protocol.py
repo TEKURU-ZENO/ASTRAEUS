@@ -36,7 +36,7 @@ class FrozenEvaluationProtocol(BaseModel):
     any physical objects, counterparts, or injected/transformed derivatives in Dataset A held-out test split.
     """
     model_config = ConfigDict(frozen=True)
-    protocol_version: str = "1.0.4"
+    protocol_version: str = "1.0.5"
     frozen_epoch_utc: str
     protocol_sha256: str
     tasks: List[EvaluationTask]
@@ -49,17 +49,25 @@ class FrozenEvaluationProtocol(BaseModel):
         "IAU counterpart, cross-survey observation, host galaxy, alias, or injected/transformed derivative matching "
         "Dataset A's held-out test split (N=45 objects). All Dataset B samples require certified acyclic DAG provenance "
         "tracking via ProvenanceGraphAuditor with transitive ancestor inspection; samples lacking lineage are quarantined. "
+        "Host galaxy exclusion enforces calibrated posterior match threshold P_match >= 0.80. "
         "Spatial segregation enforces non-geodesic spherical cell-boundary distance with 2D tangent-plane anisotropic "
-        "covariance projection and conservative multi-edge corner handling (d_edge <= 5.0'' OR d_edge <= 3*sigma_perp). "
+        "covariance projection and Fréchet/Boole union upper bound corner handling (min(1.0, P1 + P2); d_edge <= 5.0'' OR d_edge <= 3*sigma_perp). "
         "Validation objects (N=47) may be used for supervised tuning and model selection, but never for self-supervised "
         "foundation pretraining."
+    )
+    external_archival_evaluation_contract: str = (
+        "Track 3 External Archival Evaluation Cohort enforces zero-shot evaluation on genuine un-trained real telescope transients "
+        "(15-20 external benchmarks including SN 1998bw, SN 2020bvc, AT2018lqh, SN 2018oh, ASASSN-14li, SN 2006gy, iPTF14hls, AT2020xnd) "
+        "strictly disjoint from Dataset A (reference corpus) and Dataset B (pretraining). "
+        "Model comparisons against baselines (Linear, GP, ASTROMER, Non-pretrained) require paired Wilcoxon signed-rank tests for continuous metrics "
+        "and paired McNemar tests with continuity correction for discrete classification. ASTROMER pretraining data overlap must be verified absent."
     )
 
     @classmethod
     def freeze(
         cls,
         records: List[ReferenceObjectRecord],
-        version: str = "1.0.4",
+        version: str = "1.0.5",
     ) -> "FrozenEvaluationProtocol":
         """Freezes evaluation tasks and held-out test/val/quarantine splits from a reference corpus."""
         val_ids = sorted([r.canonical_id for r in records if r.spatial_partition.split == "val"])
@@ -149,10 +157,19 @@ class FrozenEvaluationProtocol(BaseModel):
             "IAU counterpart, cross-survey observation, host galaxy, alias, or injected/transformed derivative matching "
             "Dataset A's held-out test split (N=45 objects). All Dataset B samples require certified acyclic DAG provenance "
             "tracking via ProvenanceGraphAuditor with transitive ancestor inspection; samples lacking lineage are quarantined. "
+            "Host galaxy exclusion enforces calibrated posterior match threshold P_match >= 0.80. "
             "Spatial segregation enforces non-geodesic spherical cell-boundary distance with 2D tangent-plane anisotropic "
-            "covariance projection and conservative multi-edge corner handling (d_edge <= 5.0'' OR d_edge <= 3*sigma_perp). "
+            "covariance projection and Fréchet/Boole union upper bound corner handling (min(1.0, P1 + P2); d_edge <= 5.0'' OR d_edge <= 3*sigma_perp). "
             "Validation objects (N=47) may be used for supervised tuning and model selection, but never for self-supervised "
             "foundation pretraining."
+        )
+
+        external_archival_contract = (
+            "Track 3 External Archival Evaluation Cohort enforces zero-shot evaluation on genuine un-trained real telescope transients "
+            "(15-20 external benchmarks including SN 1998bw, SN 2020bvc, AT2018lqh, SN 2018oh, ASASSN-14li, SN 2006gy, iPTF14hls, AT2020xnd) "
+            "strictly disjoint from Dataset A (reference corpus) and Dataset B (pretraining). "
+            "Model comparisons against baselines (Linear, GP, ASTROMER, Non-pretrained) require paired Wilcoxon signed-rank tests for continuous metrics "
+            "and paired McNemar tests with continuity correction for discrete classification. ASTROMER pretraining data overlap must be verified absent."
         )
 
         payload = {
@@ -163,6 +180,7 @@ class FrozenEvaluationProtocol(BaseModel):
             "quarantine_ids": quarantine_ids,
             "metric_definitions": metric_defs,
             "dataset_b_exclusion_contract": exclusion_contract,
+            "external_archival_evaluation_contract": external_archival_contract,
         }
         canon_json = json.dumps(payload, sort_keys=True, separators=(",", ":"))
         proto_hash = hashlib.sha256(canon_json.encode("utf-8")).hexdigest()
@@ -177,6 +195,7 @@ class FrozenEvaluationProtocol(BaseModel):
             frozen_quarantine_ids=quarantine_ids,
             metric_definitions=metric_defs,
             dataset_b_exclusion_contract=exclusion_contract,
+            external_archival_evaluation_contract=external_archival_contract,
         )
 
     def verify_no_contamination(self, train_ids: List[str]) -> bool:

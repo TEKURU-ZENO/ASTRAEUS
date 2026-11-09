@@ -270,12 +270,12 @@ class ReferenceCorpusAuditor:
                 "policy": pol,
             })
 
-        # Stage 1 v1.0.4: Empirical HEALPix boundary convergence across polar and equatorial cells
+        # Stage 1 v1.0.5: Empirical HEALPix boundary convergence across polar and equatorial cells
         convergence_diagnostics = [
             verify_healpix_boundary_convergence(pix)
             for pix in [0, 50, 500, 1049, 3201, 6000, 9500, 12287]
         ]
-        global_conv = validate_healpix_boundary_convergence_global(num_sample_pixels=32)
+        global_conv = validate_healpix_boundary_convergence_global(num_sample_pixels=128)
 
         # Origin Cohort Segregation
         archival_ids = [r.canonical_id for r in records if r.dataset_origin == "ARCHIVAL"]

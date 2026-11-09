@@ -17,8 +17,8 @@ sys.path.insert(0, str(repo_root / "packages" / "astraeus-data" / "src"))
 from astraeus_data.corpus.builder import ReferenceCorpusBuilder
 from astraeus_data.corpus.protocol import FrozenEvaluationProtocol
 
-# Authoritative SHA-256 protocol digest for Reference Corpus v1.0.4
-AUTHORITATIVE_PROTOCOL_SHA256 = "7df44b73fb80148c14718104da07393699e1ad002a4116401fba79a65b221583"
+# Authoritative SHA-256 protocol digest for Reference Corpus v1.0.5
+AUTHORITATIVE_PROTOCOL_SHA256 = "4d4aca4024be50ae1f7412201b0f42c45eb6a3efdb6edef7e95ce852385b680c"
 
 
 def verify_authoritative_protocol() -> bool:
@@ -30,8 +30,8 @@ def verify_authoritative_protocol() -> bool:
     builder = ReferenceCorpusBuilder()
     records = builder.build_reference_corpus_v1()
 
-    # 2. Freeze evaluation protocol v1.0.4
-    protocol = FrozenEvaluationProtocol.freeze(records, version="1.0.4")
+    # 2. Freeze evaluation protocol v1.0.5
+    protocol = FrozenEvaluationProtocol.freeze(records, version="1.0.5")
 
     print(f"Protocol Version:              {protocol.protocol_version}")
     print(f"Frozen Val Objects:            {len(protocol.frozen_val_ids)}")
@@ -40,6 +40,7 @@ def verify_authoritative_protocol() -> bool:
     print(f"Bound Tasks:                   {len(protocol.tasks)}")
     print(f"Bound Metrics:                 {len(protocol.metric_definitions)}")
     print(f"Exclusion Invariant:           {protocol.dataset_b_exclusion_contract[:75]}...")
+    print(f"External Archival Contract:    {protocol.external_archival_evaluation_contract[:75]}...")
 
     # 3. Independent RFC 8785 Canonical Serialization
     payload = {
@@ -50,6 +51,7 @@ def verify_authoritative_protocol() -> bool:
         "quarantine_ids": protocol.frozen_quarantine_ids,
         "metric_definitions": protocol.metric_definitions,
         "dataset_b_exclusion_contract": protocol.dataset_b_exclusion_contract,
+        "external_archival_evaluation_contract": protocol.external_archival_evaluation_contract,
     }
     canon_bytes = json.dumps(payload, sort_keys=True, separators=(",", ":")).encode("utf-8")
     recomputed_sha256 = hashlib.sha256(canon_bytes).hexdigest()

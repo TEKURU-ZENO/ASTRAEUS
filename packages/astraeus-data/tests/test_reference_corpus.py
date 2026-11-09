@@ -122,7 +122,7 @@ def test_frozen_evaluation_protocol_immutability():
 
     protocol = FrozenEvaluationProtocol.freeze(corpus)
 
-    assert protocol.protocol_version == "1.0.4"
+    assert protocol.protocol_version == "1.0.5"
     assert len(protocol.protocol_sha256) == 64
     assert len(protocol.tasks) == 3
     assert len(protocol.frozen_test_ids) > 0
@@ -448,5 +448,105 @@ def test_global_convergence_sweep():
     global_res = validate_healpix_boundary_convergence_global(num_sample_pixels=16)
     assert global_res["is_globally_converged"] is True
     assert global_res["global_max_delta_arcsec"] < 0.01
+
+
+def test_union_bound_corner_crossing_probability():
+    """Validates that multi-edge corner handling applies Fréchet/Boole union upper bound."""
+    from astropy.coordinates import SkyCoord
+    from astropy import units as u
+    from astraeus_data.corpus.geometry import evaluate_quarantine_predicate
+
+    builder = ReferenceCorpusBuilder()
+    hp = builder.hp
+    pix = 1049
+
+    # Position candidate near a corner vertex
+    corner_coords = hp.boundaries_skycoord([pix], step=1)[0]
+    test_corner = corner_coords[0]
+
+    # Evaluate predicate near the corner
+    is_quar, reason, d_edge, s_perp, p_cross = evaluate_quarantine_predicate(
+        coord=test_corner,
+        hp=hp,
+        pix=pix,
+        has_conflicting_neighbor=True,
+        uncertainty_mas={"ra": 200.0, "dec": 200.0},
+        buffer_arcsec=5.0,
+        confidence_multiplier=3.0,
+    )
+    assert d_edge <= 5.0
+    assert is_quar is True
+    assert p_cross <= 1.0
+
+
+def test_calibrated_host_match_and_sensitivity():
+    """Validates calibrated host association threshold (0.80) and sensitivity analysis."""
+    from astraeus_data.corpus.lineage import (
+        DatasetBSampleLineage,
+        LineageStatus,
+        ProvenanceGraphAuditor,
+    )
+
+    builder = ReferenceCorpusBuilder()
+    corpus = builder.build_reference_corpus_v1(n_synthetic_per_class=5, base_seed=800)
+    test_recs = [r for r in corpus if r.spatial_partition.split == "test"]
+    auditor = ProvenanceGraphAuditor(test_recs, host_match_confidence_threshold=0.80)
+
+    # Use a forbidden host from test set
+    forbidden_host = list(auditor.forbidden_host_ids)[0]
+
+    # Sample with confidence 0.70 < 0.80 -> NOT rejected under default 0.80 threshold
+    sample_sub_thresh = DatasetBSampleLineage(
+        sample_id="SAMPLE-HOST-SUB",
+        parent_physical_object_ids=["TRAIN-OBJ-1"],
+        source_observation_ids=["OBS-1"],
+        host_galaxy_id=forbidden_host,
+        host_association_confidence=0.70,
+    )
+    res_sub = auditor.audit_sample(sample_sub_thresh)
+    assert res_sub.lineage_status == LineageStatus.VERIFIED
+
+    # Sample with confidence 0.85 >= 0.80 -> REJECTED
+    sample_above_thresh = DatasetBSampleLineage(
+        sample_id="SAMPLE-HOST-ABOVE",
+        parent_physical_object_ids=["TRAIN-OBJ-2"],
+        source_observation_ids=["OBS-2"],
+        host_galaxy_id=forbidden_host,
+        host_association_confidence=0.85,
+    )
+    res_above = auditor.audit_sample(sample_above_thresh)
+    assert res_above.lineage_status == LineageStatus.TEST_OVERLAP_REJECTED
+
+    # Sensitivity analysis over multiple thresholds
+    samples = [sample_sub_thresh, sample_above_thresh]
+    sens = auditor.audit_host_sensitivity(samples, thresholds=(0.50, 0.80, 0.95))
+    assert sens["threshold_0.50"]["host_overlap_rejections"] == 2
+    assert sens["threshold_0.80"]["host_overlap_rejections"] == 1
+    assert sens["threshold_0.95"]["host_overlap_rejections"] == 0
+
+
+def test_analytical_sagitta_upper_bound_and_richardson():
+    """Validates analytical sagitta bound (0.00236") and Richardson extrapolation delta."""
+    from astraeus_data.corpus.geometry import verify_healpix_boundary_convergence
+
+    res = verify_healpix_boundary_convergence(pix=3894)
+    assert res["analytical_sagitta_bound_arcsec"] == 0.00236
+    assert "richardson_extrapolation_delta_arcsec" in res
+    assert res["richardson_extrapolation_delta_arcsec"] < 0.01
+
+
+def test_frozen_evaluation_protocol_v105_hash_and_contracts():
+    """Validates FrozenEvaluationProtocol v1.0.5 immutability and contract inclusion."""
+    from astraeus_data.corpus.protocol import FrozenEvaluationProtocol
+
+    builder = ReferenceCorpusBuilder()
+    corpus = builder.build_reference_corpus_v1(n_synthetic_per_class=5, base_seed=900)
+    protocol = FrozenEvaluationProtocol.freeze(corpus, version="1.0.5")
+
+    assert protocol.protocol_version == "1.0.5"
+    assert "0.80" in protocol.dataset_b_exclusion_contract
+    assert "Track 3 External Archival Evaluation Cohort" in protocol.external_archival_evaluation_contract
+    assert len(protocol.protocol_sha256) == 64
+
 
 

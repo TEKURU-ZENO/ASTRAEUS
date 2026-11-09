@@ -51,7 +51,12 @@ class ProvenanceGraphAuditor:
     Enforces DAG acyclicity, transitive ancestor inspection, and host association governance.
     """
 
-    def __init__(self, test_records: List[ReferenceObjectRecord]) -> None:
+    def __init__(
+        self,
+        test_records: List[ReferenceObjectRecord],
+        host_match_confidence_threshold: float = 0.80,
+    ) -> None:
+        self.host_match_confidence_threshold = host_match_confidence_threshold
         self.forbidden_object_ids: Set[str] = set()
         self.forbidden_observation_ids: Set[str] = set()
         self.forbidden_host_ids: Set[str] = set()
@@ -133,11 +138,17 @@ class ProvenanceGraphAuditor:
         self,
         sample: DatasetBSampleLineage,
         dag_edges: Optional[Dict[str, List[str]]] = None,
+        host_threshold: Optional[float] = None,
     ) -> DatasetBSampleLineage:
         """
         Audits a single Dataset B sample against the forbidden test sets,
         including direct parents, recursive transitive ancestors, and source observations.
+        Host galaxy exclusion is calibrated against host_match_confidence_threshold (default 0.80).
         """
+        effective_host_threshold = (
+            host_threshold if host_threshold is not None else self.host_match_confidence_threshold
+        )
+
         # Rule 1: Missing lineage must be quarantined
         has_parents = len(sample.parent_physical_object_ids) > 0
         has_obs = len(sample.source_observation_ids) > 0
@@ -183,8 +194,8 @@ class ProvenanceGraphAuditor:
                     "rejection_reason": f"SOURCE_OBSERVATION_IN_TEST_SET:{obs_id}",
                 })
 
-        # Rule 6: Host galaxy matching test set (governed by host association confidence)
-        if sample.host_galaxy_id and sample.host_association_confidence >= 0.5:
+        # Rule 6: Host galaxy matching test set (governed by calibrated host association confidence)
+        if sample.host_galaxy_id and sample.host_association_confidence >= effective_host_threshold:
             if sample.host_galaxy_id in self.forbidden_host_ids:
                 return sample.model_copy(update={
                     "lineage_status": LineageStatus.TEST_OVERLAP_REJECTED,
@@ -196,13 +207,38 @@ class ProvenanceGraphAuditor:
             "rejection_reason": None,
         })
 
+    def audit_host_sensitivity(
+        self,
+        samples: List[DatasetBSampleLineage],
+        thresholds: Tuple[float, ...] = (0.50, 0.80, 0.95),
+    ) -> Dict[str, Any]:
+        """
+        Evaluates sensitivity of Dataset B lineage audit host rejections across
+        posterior confidence thresholds [0.50, 0.80, 0.95].
+        """
+        results = {}
+        for th in thresholds:
+            rejections = []
+            for s in samples:
+                if s.host_galaxy_id and s.host_association_confidence >= th:
+                    if s.host_galaxy_id in self.forbidden_host_ids:
+                        rejections.append(s.sample_id)
+            results[f"threshold_{th:.2f}"] = {
+                "threshold": th,
+                "host_overlap_rejections": len(rejections),
+                "rejected_sample_ids": rejections,
+            }
+        return results
+
     def audit_batch(
         self,
         samples: List[DatasetBSampleLineage],
         dag_edges: Optional[Dict[str, List[str]]] = None,
+        host_threshold: Optional[float] = None,
     ) -> Dict[str, Any]:
         """
-        Audits a collection of Dataset B samples with global DAG cycle validation.
+        Audits a collection of Dataset B samples with global DAG cycle validation
+        and calibrated host association governance.
         """
         if dag_edges is None:
             dag_edges = {}
@@ -217,7 +253,7 @@ class ProvenanceGraphAuditor:
         quarantined = []
 
         for s in samples:
-            audited = self.audit_sample(s, dag_edges=dag_edges)
+            audited = self.audit_sample(s, dag_edges=dag_edges, host_threshold=host_threshold)
             if has_cycle and s.sample_id in cycle_path:
                 audited = audited.model_copy(update={
                     "lineage_status": LineageStatus.CYCLE_DETECTED_REJECTED,
@@ -238,6 +274,8 @@ class ProvenanceGraphAuditor:
             "quarantined_count": len(quarantined),
             "dag_has_cycles": has_cycle,
             "cycle_path": cycle_path,
+            "host_match_confidence_threshold": host_threshold if host_threshold is not None else self.host_match_confidence_threshold,
+            "host_sensitivity_analysis": self.audit_host_sensitivity(samples),
             "is_clean": len(rejected) == 0 and len(quarantined) == 0 and not has_cycle,
             "rejections": [
                 {"sample_id": r.sample_id, "reason": r.rejection_reason}

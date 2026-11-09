@@ -1,9 +1,9 @@
 {
   "metadata": {
-    "title": "ASTRAEUS Reference Corpus v1.0.4 Seven-Tier Audit Gate Evidence",
-    "version": "1.0.4",
-    "generated_utc": "2026-11-09T14:32:52.567324+00:00",
-    "authoritative_protocol_sha256": "7df44b73fb80148c14718104da07393699e1ad002a4116401fba79a65b221583"
+    "title": "ASTRAEUS Reference Corpus v1.0.5 Seven-Tier Audit Gate Evidence",
+    "version": "1.0.5",
+    "generated_utc": "2026-11-09T15:06:02.869918+00:00",
+    "authoritative_protocol_sha256": "4d4aca4024be50ae1f7412201b0f42c45eb6a3efdb6edef7e95ce852385b680c"
   },
   "gate_1_identity_evidence": {
     "total_canonical_ids": 283,
@@ -311,7 +311,8 @@
     }
   },
   "gate_3_host_galaxy_evidence": {
-    "cross_split_host_leakage_count": 0
+    "cross_split_host_leakage_count": 0,
+    "host_match_confidence_threshold": 0.8
   },
   "gate_4_observation_leakage_evidence": {
     "cross_split_observation_leakage_count": 0
@@ -320,7 +321,8 @@
     "quarantined_object_count": 1,
     "boundary_buffer_quarantine_violations": 0,
     "quarantined_object_id": "ASTRAEUS-VARIABLE_STAR-syn-00295",
-    "quarantined_distance_arcsec": 3.89
+    "quarantined_distance_arcsec": 3.89,
+    "union_crossing_bound_applied": true
   },
   "gate_6_temporal_stratification_evidence": {
     "max_training_mjd": 58293.0,
@@ -341,6 +343,24 @@
     "quarantined_count": 25,
     "dag_has_cycles": false,
     "cycle_path": [],
+    "host_match_confidence_threshold": 0.8,
+    "host_sensitivity_analysis": {
+      "threshold_0.50": {
+        "threshold": 0.5,
+        "host_overlap_rejections": 0,
+        "rejected_sample_ids": []
+      },
+      "threshold_0.80": {
+        "threshold": 0.8,
+        "host_overlap_rejections": 0,
+        "rejected_sample_ids": []
+      },
+      "threshold_0.95": {
+        "threshold": 0.95,
+        "host_overlap_rejections": 0,
+        "rejected_sample_ids": []
+      }
+    },
     "is_clean": false,
     "rejections": [
       {
