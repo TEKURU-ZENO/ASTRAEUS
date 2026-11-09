@@ -20,11 +20,12 @@ from astraeus_models.physics.shock_cooling import fit_shock_cooling, ShockCoolin
 
 
 # Reference parameter priors for ordinary SNe Ia population (mean, std)
+# Based on Bazin et al. 2009 / Kessler et al. 2009 empirical distributions
 REFERENCE_SN_PARAMETERS = {
-    "tau_rise": (15.0, 4.0),   # days
-    "tau_fall": (35.0, 10.0),  # days
-    "m_ni": (0.50, 0.15),      # solar masses
-    "tau_d": (16.0, 3.5),      # days
+    "tau_rise": (3.5, 0.8),    # days (Bazin e-folding rise time)
+    "tau_fall": (22.0, 5.5),   # days (Bazin exponential decay time)
+    "m_ni": (0.50, 0.15),      # solar masses (Arnett radioactive Nickel mass)
+    "tau_d": (16.0, 3.5),      # days (Arnett effective diffusion time)
 }
 
 

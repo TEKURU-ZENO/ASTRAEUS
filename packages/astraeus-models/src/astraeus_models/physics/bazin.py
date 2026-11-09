@@ -63,15 +63,20 @@ def fit_bazin(
     # Initial parameter heuristics
     t_peak_idx = int(np.argmax(fluxes))
     t0_init = float(times_mjd[t_peak_idx])
-    a_init = float(np.max(fluxes) - np.min(fluxes))
-    b_init = float(np.min(fluxes))
+    min_flux = float(np.min(fluxes))
+    max_flux = float(np.max(fluxes))
+    a_init = float(max(max_flux - min_flux, 1e-2))
+    
+    b_min = float(min(-10.0, min_flux - 0.5 * a_init))
+    b_max = float(max(100.0, max_flux * 1.5))
+    b_init = float(np.clip(min_flux, b_min + 1e-2, b_max - 1e-2))
     tau_rise_init = 4.0
     tau_fall_init = 20.0
 
     p0 = [t0_init, a_init, b_init, tau_rise_init, tau_fall_init]
     bounds = (
-        [times_mjd[0] - 30.0, 0.0, -10.0, 0.1, 1.0],
-        [times_mjd[-1] + 30.0, a_init * 10.0 + 100.0, 100.0, 50.0, 200.0],
+        [times_mjd[0] - 30.0, 0.0, b_min, 0.1, 1.0],
+        [times_mjd[-1] + 30.0, a_init * 20.0 + 1000.0, b_max, 50.0, 200.0],
     )
 
     try:
