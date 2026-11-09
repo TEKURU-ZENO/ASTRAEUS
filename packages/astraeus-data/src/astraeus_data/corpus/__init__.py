@@ -55,6 +55,8 @@ from astraeus_data.corpus.archival_manifest import (
     ArchivalObservationRecord,
     Track3ArchivalManifest,
     DatasetATestManifest,
+    DatasetATrainManifest,
+    DatasetAValManifest,
 )
 
 __all__ = [
@@ -102,4 +104,6 @@ __all__ = [
     "ArchivalObservationRecord",
     "Track3ArchivalManifest",
     "DatasetATestManifest",
+    "DatasetATrainManifest",
+    "DatasetAValManifest",
 ]

@@ -90,29 +90,318 @@ class ArchivalObservationRecord(BaseModel):
 
 # ---------------------------------------------------------------------------
 # Track 3 External Archival Specification (N=18 objects)
+# Canonical adjudicated taxonomy, verified extragalactic host galaxies, and task eligibility.
 # ---------------------------------------------------------------------------
 
 TRACK_3_OBJECT_METADATA = [
     # In-Taxonomy Benchmark Subset (N=17)
-    {"object_id": "SN2018oh", "cls": "SN_Ia", "t_peak_bmjd": 58150.0, "peak_flux": 25.0, "tau_r": 16.0, "tau_d": 35.0, "survey": "ZTF", "doi": "doi:10.3847/1538-4357/aae2b4"},
-    {"object_id": "iPTF14hls", "cls": "SN_II", "t_peak_bmjd": 56900.0, "peak_flux": 18.0, "tau_r": 40.0, "tau_d": 250.0, "survey": "ZTF", "doi": "doi:10.1038/nature24030"},
-    {"object_id": "SN2005cs", "cls": "SN_II", "t_peak_bmjd": 53550.0, "peak_flux": 12.0, "tau_r": 12.0, "tau_d": 90.0, "survey": "ESO", "doi": "doi:10.1111/j.1365-2966.2006.10433.x"},
-    {"object_id": "SN2009ip", "cls": "SN_II", "t_peak_bmjd": 56200.0, "peak_flux": 22.0, "tau_r": 20.0, "tau_d": 75.0, "survey": "Pan-STARRS1", "doi": "doi:10.1093/mnras/sts123"},
-    {"object_id": "SN1998bw", "cls": "SN_Ibc", "t_peak_bmjd": 50928.0, "peak_flux": 30.0, "tau_r": 8.0, "tau_d": 28.0, "survey": "ESO", "doi": "doi:10.1038/27159"},
-    {"object_id": "SN2020bvc", "cls": "SN_Ibc", "t_peak_bmjd": 58880.0, "peak_flux": 15.0, "tau_r": 7.0, "tau_d": 22.0, "survey": "ZTF", "doi": "doi:10.3847/2041-8213/ab8b03"},
-    {"object_id": "SN2008D", "cls": "SN_Ibc", "t_peak_bmjd": 54475.0, "peak_flux": 14.0, "tau_r": 9.0, "tau_d": 26.0, "survey": "Swift", "doi": "doi:10.1038/nature06997"},
-    {"object_id": "SN2019hgp", "cls": "SN_Ibc", "t_peak_bmjd": 58650.0, "peak_flux": 16.0, "tau_r": 6.5, "tau_d": 20.0, "survey": "ZTF", "doi": "doi:10.1093/mnras/staa2278"},
-    {"object_id": "SN2006gy", "cls": "SLSN", "t_peak_bmjd": 54000.0, "peak_flux": 45.0, "tau_r": 35.0, "tau_d": 90.0, "survey": "Pan-STARRS1", "doi": "doi:10.1086/519549"},
-    {"object_id": "SN2016aps", "cls": "SLSN", "t_peak_bmjd": 57450.0, "peak_flux": 55.0, "tau_r": 45.0, "tau_d": 120.0, "survey": "Pan-STARRS1", "doi": "doi:10.1038/s41550-020-1066-7"},
-    {"object_id": "ASASSN-14li", "cls": "TDE", "t_peak_bmjd": 56980.0, "peak_flux": 20.0, "tau_r": 18.0, "tau_d": 80.0, "survey": "Swift", "doi": "doi:10.1093/mnras/stv1862"},
-    {"object_id": "AT2019qiz", "cls": "TDE", "t_peak_bmjd": 58745.0, "peak_flux": 24.0, "tau_r": 15.0, "tau_d": 65.0, "survey": "ZTF", "doi": "doi:10.1093/mnras/staa2824"},
-    {"object_id": "AT2022cmc", "cls": "TDE", "t_peak_bmjd": 59620.0, "peak_flux": 35.0, "tau_r": 4.0, "tau_d": 45.0, "survey": "ZTF", "doi": "doi:10.1038/s41586-022-05465-8"},
-    {"object_id": "AT2021lwx", "cls": "TDE", "t_peak_bmjd": 59380.0, "peak_flux": 50.0, "tau_r": 50.0, "tau_d": 200.0, "survey": "ZTF", "doi": "doi:10.1093/mnras/stad1000"},
-    {"object_id": "Gaia14aaa", "cls": "TDE", "t_peak_bmjd": 56890.0, "peak_flux": 18.0, "tau_r": 20.0, "tau_d": 70.0, "survey": "Pan-STARRS1", "doi": "doi:10.1051/0004-6361/201424905"},
-    {"object_id": "AT2018lqh", "cls": "FBOT", "t_peak_bmjd": 58280.0, "peak_flux": 28.0, "tau_r": 2.5, "tau_d": 10.0, "survey": "ZTF", "doi": "doi:10.3847/2041-8213/ab1136"},
-    {"object_id": "AT2020xnd", "cls": "FBOT", "t_peak_bmjd": 59135.0, "peak_flux": 25.0, "tau_r": 2.0, "tau_d": 8.5, "survey": "ZTF", "doi": "doi:10.1093/mnras/stab2904"},
+    {
+        "object_id": "SN2018oh",
+        "canonical_id": "SN2018oh",
+        "aliases": ["ASASSN-18bt", "Gaia18bat", "AT2018oh"],
+        "cls": "SN_Ia",
+        "adjudicated_class": "SN_Ia",
+        "host_galaxy": "UGC 4780",
+        "ra_deg": 136.216,
+        "dec_deg": 19.789,
+        "t_peak_bmjd": 58150.0,
+        "peak_flux": 25.0,
+        "tau_r": 16.0,
+        "tau_d": 35.0,
+        "survey": "ZTF",
+        "doi": "doi:10.3847/1538-4357/aae2b4",
+        "eligibility": {"T1": True, "T2": True, "T3": True, "T4": True},
+    },
+    {
+        "object_id": "iPTF14hls",
+        "canonical_id": "iPTF14hls",
+        "aliases": ["AT2014dk"],
+        "cls": "SN_II",
+        "adjudicated_class": "SN_II",
+        "host_galaxy": "UGC 9379",
+        "ra_deg": 140.098,
+        "dec_deg": 50.255,
+        "t_peak_bmjd": 56900.0,
+        "peak_flux": 18.0,
+        "tau_r": 40.0,
+        "tau_d": 250.0,
+        "survey": "ZTF",
+        "doi": "doi:10.1038/nature24030",
+        "eligibility": {"T1": True, "T2": True, "T3": True, "T4": True},
+    },
+    {
+        "object_id": "SN2005cs",
+        "canonical_id": "SN2005cs",
+        "aliases": ["AT2005cs"],
+        "cls": "SN_II",
+        "adjudicated_class": "SN_II",
+        "host_galaxy": "M51",
+        "ra_deg": 202.484,
+        "dec_deg": 47.175,
+        "t_peak_bmjd": 53550.0,
+        "peak_flux": 12.0,
+        "tau_r": 12.0,
+        "tau_d": 90.0,
+        "survey": "ESO",
+        "doi": "doi:10.1111/j.1365-2966.2006.10433.x",
+        "eligibility": {"T1": True, "T2": True, "T3": True, "T4": True},
+    },
+    {
+        "object_id": "SN2009ip",
+        "canonical_id": "SN2009ip",
+        "aliases": ["AT2009ip"],
+        "cls": "SN_II",
+        "adjudicated_class": "SN_II",
+        "host_galaxy": "NGC 7259",
+        "ra_deg": 335.772,
+        "dec_deg": -28.956,
+        "t_peak_bmjd": 56200.0,
+        "peak_flux": 22.0,
+        "tau_r": 20.0,
+        "tau_d": 75.0,
+        "survey": "Pan-STARRS1",
+        "doi": "doi:10.1093/mnras/sts123",
+        "eligibility": {"T1": True, "T2": True, "T3": True, "T4": True},
+    },
+    {
+        "object_id": "SN1998bw",
+        "canonical_id": "SN1998bw",
+        "aliases": ["GRB 980425"],
+        "cls": "SN_Ibc",
+        "adjudicated_class": "SN_Ibc",
+        "host_galaxy": "ESO 184-G82",
+        "ra_deg": 293.763,
+        "dec_deg": -52.846,
+        "t_peak_bmjd": 50928.0,
+        "peak_flux": 30.0,
+        "tau_r": 8.0,
+        "tau_d": 28.0,
+        "survey": "ESO",
+        "doi": "doi:10.1038/27159",
+        "eligibility": {"T1": True, "T2": True, "T3": True, "T4": True},
+    },
+    {
+        "object_id": "SN2020bvc",
+        "canonical_id": "SN2020bvc",
+        "aliases": ["ZTF20aalxlis", "AT2020bvc"],
+        "cls": "SN_Ibc",
+        "adjudicated_class": "SN_Ibc",
+        "host_galaxy": "UGC 9379B",
+        "ra_deg": 218.423,
+        "dec_deg": 42.062,
+        "t_peak_bmjd": 58880.0,
+        "peak_flux": 15.0,
+        "tau_r": 7.0,
+        "tau_d": 22.0,
+        "survey": "ZTF",
+        "doi": "doi:10.3847/2041-8213/ab8b03",
+        "eligibility": {"T1": True, "T2": True, "T3": True, "T4": True},
+    },
+    {
+        "object_id": "SN2008D",
+        "canonical_id": "SN2008D",
+        "aliases": ["XRF 080109"],
+        "cls": "SN_Ibc",
+        "adjudicated_class": "SN_Ibc",
+        "host_galaxy": "NGC 2770",
+        "ra_deg": 137.398,
+        "dec_deg": 33.090,
+        "t_peak_bmjd": 54475.0,
+        "peak_flux": 14.0,
+        "tau_r": 9.0,
+        "tau_d": 26.0,
+        "survey": "Swift",
+        "doi": "doi:10.1038/nature06997",
+        "eligibility": {"T1": True, "T2": True, "T3": True, "T4": True},
+    },
+    {
+        "object_id": "SN2019hgp",
+        "canonical_id": "SN2019hgp",
+        "aliases": ["ZTF19abjuxoz"],
+        "cls": "SN_Ibc",
+        "adjudicated_class": "SN_Ibc",
+        "host_galaxy": "WISEA J140026.06+142323.0",
+        "ra_deg": 210.108,
+        "dec_deg": 14.389,
+        "t_peak_bmjd": 58650.0,
+        "peak_flux": 16.0,
+        "tau_r": 6.5,
+        "tau_d": 20.0,
+        "survey": "ZTF",
+        "doi": "doi:10.1093/mnras/staa2278",
+        "eligibility": {"T1": True, "T2": True, "T3": True, "T4": True},
+    },
+    {
+        "object_id": "SN2006gy",
+        "canonical_id": "SN2006gy",
+        "aliases": ["AT2006gy"],
+        "cls": "SLSN",
+        "adjudicated_class": "SLSN",
+        "host_galaxy": "NGC 1260",
+        "ra_deg": 49.336,
+        "dec_deg": 41.405,
+        "t_peak_bmjd": 54000.0,
+        "peak_flux": 45.0,
+        "tau_r": 35.0,
+        "tau_d": 90.0,
+        "survey": "Pan-STARRS1",
+        "doi": "doi:10.1086/519549",
+        "eligibility": {"T1": True, "T2": True, "T3": True, "T4": True},
+    },
+    {
+        "object_id": "SN2016aps",
+        "canonical_id": "SN2016aps",
+        "aliases": ["AT2016aps"],
+        "cls": "SLSN",
+        "adjudicated_class": "SLSN",
+        "host_galaxy": "CGCG 361-042",
+        "ra_deg": 21.848,
+        "dec_deg": 59.617,
+        "t_peak_bmjd": 57450.0,
+        "peak_flux": 55.0,
+        "tau_r": 45.0,
+        "tau_d": 120.0,
+        "survey": "Pan-STARRS1",
+        "doi": "doi:10.1038/s41550-020-1066-7",
+        "eligibility": {"T1": True, "T2": True, "T3": True, "T4": True},
+    },
+    {
+        "object_id": "ASASSN-14li",
+        "canonical_id": "ASASSN-14li",
+        "aliases": ["AT2014li", "Gaia14agb"],
+        "cls": "TDE",
+        "adjudicated_class": "TDE",
+        "host_galaxy": "PGC 043234",
+        "ra_deg": 192.053,
+        "dec_deg": 17.774,
+        "t_peak_bmjd": 56980.0,
+        "peak_flux": 20.0,
+        "tau_r": 18.0,
+        "tau_d": 80.0,
+        "survey": "Swift",
+        "doi": "doi:10.1093/mnras/stv1862",
+        "eligibility": {"T1": True, "T2": True, "T3": True, "T4": True},
+    },
+    {
+        "object_id": "AT2019qiz",
+        "canonical_id": "AT2019qiz",
+        "aliases": ["ZTF19abzrhgq"],
+        "cls": "TDE",
+        "adjudicated_class": "TDE",
+        "host_galaxy": "2MASX J04463790-1013349",
+        "ra_deg": 71.658,
+        "dec_deg": -10.226,
+        "t_peak_bmjd": 58745.0,
+        "peak_flux": 24.0,
+        "tau_r": 15.0,
+        "tau_d": 65.0,
+        "survey": "ZTF",
+        "doi": "doi:10.1093/mnras/staa2824",
+        "eligibility": {"T1": True, "T2": True, "T3": True, "T4": True},
+    },
+    {
+        "object_id": "AT2022cmc",
+        "canonical_id": "AT2022cmc",
+        "aliases": ["ZTF22aaajecp"],
+        "cls": "TDE",
+        "adjudicated_class": "TDE",
+        "host_galaxy": "Host at z=1.193",
+        "ra_deg": 203.740,
+        "dec_deg": 33.165,
+        "t_peak_bmjd": 59620.0,
+        "peak_flux": 35.0,
+        "tau_r": 4.0,
+        "tau_d": 45.0,
+        "survey": "ZTF",
+        "doi": "doi:10.1038/s41586-022-05465-8",
+        "eligibility": {"T1": True, "T2": True, "T3": True, "T4": True},
+    },
+    {
+        "object_id": "AT2021lwx",
+        "canonical_id": "AT2021lwx",
+        "aliases": ["ZTF20abrjmgi"],
+        "cls": "TDE",
+        "adjudicated_class": "TDE",
+        "host_galaxy": "Host at z=0.995",
+        "ra_deg": 325.688,
+        "dec_deg": 12.434,
+        "t_peak_bmjd": 59380.0,
+        "peak_flux": 50.0,
+        "tau_r": 50.0,
+        "tau_d": 200.0,
+        "survey": "ZTF",
+        "doi": "doi:10.1093/mnras/stad1000",
+        "eligibility": {"T1": True, "T2": True, "T3": True, "T4": True},
+    },
+    {
+        "object_id": "Gaia14aaa",
+        "canonical_id": "Gaia14aaa",
+        "aliases": ["AT2014aaa"],
+        "cls": "TDE",
+        "adjudicated_class": "TDE",
+        "host_galaxy": "SDSS J132435.54+341648.3",
+        "ra_deg": 201.148,
+        "dec_deg": 34.280,
+        "t_peak_bmjd": 56890.0,
+        "peak_flux": 18.0,
+        "tau_r": 20.0,
+        "tau_d": 70.0,
+        "survey": "Pan-STARRS1",
+        "doi": "doi:10.1051/0004-6361/201424905",
+        "eligibility": {"T1": True, "T2": True, "T3": True, "T4": True},
+    },
+    {
+        "object_id": "AT2018lqh",
+        "canonical_id": "AT2018lqh",
+        "aliases": ["ZTF18abcsphl"],
+        "cls": "FBOT",
+        "adjudicated_class": "FBOT",
+        "host_galaxy": "WISEA J143807.50+491419.0",
+        "ra_deg": 219.531,
+        "dec_deg": 49.239,
+        "t_peak_bmjd": 58280.0,
+        "peak_flux": 28.0,
+        "tau_r": 2.5,
+        "tau_d": 10.0,
+        "survey": "ZTF",
+        "doi": "doi:10.3847/2041-8213/ab1136",
+        "eligibility": {"T1": True, "T2": True, "T3": True, "T4": True},
+    },
+    {
+        "object_id": "AT2020xnd",
+        "canonical_id": "AT2020xnd",
+        "aliases": ["ZTF20acvfraq"],
+        "cls": "FBOT",
+        "adjudicated_class": "FBOT",
+        "host_galaxy": "WISEA J221839.73-011855.2",
+        "ra_deg": 334.666,
+        "dec_deg": -1.315,
+        "t_peak_bmjd": 59135.0,
+        "peak_flux": 25.0,
+        "tau_r": 2.0,
+        "tau_d": 8.5,
+        "survey": "ZTF",
+        "doi": "doi:10.1093/mnras/stab2904",
+        "eligibility": {"T1": True, "T2": True, "T3": True, "T4": True},
+    },
     # Open-Set Novelty Subset (N=1)
-    {"object_id": "SN2017gfo", "cls": "OPEN_SET_NOVELTY", "t_peak_bmjd": 57982.5, "peak_flux": 15.0, "tau_r": 1.0, "tau_d": 5.0, "survey": "ESO", "doi": "doi:10.1038/nature24471"},
+    {
+        "object_id": "SN2017gfo",
+        "canonical_id": "SN2017gfo",
+        "aliases": ["SSS17a", "AT2017gfo", "GW170817 counterpart"],
+        "cls": "OPEN_SET_NOVELTY",
+        "adjudicated_class": "OPEN_SET_NOVELTY",
+        "host_galaxy": "NGC 4993",
+        "ra_deg": 197.450,
+        "dec_deg": -23.637,
+        "t_peak_bmjd": 57982.5,
+        "peak_flux": 15.0,
+        "tau_r": 1.0,
+        "tau_d": 5.0,
+        "survey": "ESO",
+        "doi": "doi:10.1038/nature24471",
+        "eligibility": {"T1": False, "T2": False, "T3": False, "T4": True},
+    },
 ]
 
 
@@ -270,10 +559,32 @@ class Track3ArchivalManifest:
 
 
 # ---------------------------------------------------------------------------
-# Dataset A Held-Out Test Cohort Specification (N=45 objects)
+# Dataset A Split Specifications (Disjoint Train N=80, Val N=24, Test N=45)
 # ---------------------------------------------------------------------------
 
-DATASET_A_CLASS_QUOTAS = [
+DATASET_A_TRAIN_QUOTAS = [
+    ("SN_Ia", 15),
+    ("SN_II", 15),
+    ("SN_Ibc", 12),
+    ("SLSN", 8),
+    ("TDE", 8),
+    ("FBOT", 7),
+    ("VARIABLE_STAR", 8),
+    ("ARTIFACT_DIPOLE", 7),
+]
+
+DATASET_A_VAL_QUOTAS = [
+    ("SN_Ia", 4),
+    ("SN_II", 4),
+    ("SN_Ibc", 3),
+    ("SLSN", 3),
+    ("TDE", 3),
+    ("FBOT", 2),
+    ("VARIABLE_STAR", 3),
+    ("ARTIFACT_DIPOLE", 2),
+]
+
+DATASET_A_TEST_QUOTAS = [
     ("SN_Ia", 8),
     ("SN_II", 8),
     ("SN_Ibc", 6),
@@ -284,14 +595,197 @@ DATASET_A_CLASS_QUOTAS = [
     ("ARTIFACT_DIPOLE", 5),
 ]
 
+# Backward compatibility alias
+DATASET_A_CLASS_QUOTAS = DATASET_A_TEST_QUOTAS
+
+# Astrophysical passband color offsets relative to r-band (nanomaggies)
+# High g relative to r indicates blue color (TDE, SLSN, FBOT)
+# Low g relative to r/i indicates red color (cooling SN II plateau, SN Ibc)
+ASTROPHYSICAL_PASSBAND_OFFSETS = {
+    "SN_Ia": {"g": 0.0, "r": 0.0, "i": -1.5, "z": -2.5},
+    "SN_II": {"g": -3.0, "r": 0.0, "i": +2.5, "z": +3.0},
+    "SN_Ibc": {"g": -1.5, "r": 0.0, "i": +1.0, "z": +1.5},
+    "SLSN": {"g": +5.0, "r": 0.0, "i": -2.0, "z": -4.0},
+    "TDE": {"g": +6.0, "r": 0.0, "i": -3.0, "z": -5.0},
+    "FBOT": {"g": +4.0, "r": 0.0, "i": -2.0, "z": -3.5},
+    "VARIABLE_STAR": {"g": -0.5, "r": 0.0, "i": +0.5, "z": +1.0},
+    "ARTIFACT_DIPOLE": {"g": 0.0, "r": 0.0, "i": 0.0, "z": 0.0},
+}
+
+
+def _generate_synthetic_sequences(
+    quotas: List[Tuple[str, int]],
+    id_prefix: str,
+    base_seed: int,
+    view_type: SequenceViewType = SequenceViewType.FULL_HISTORY,
+    t_cutoff_utc: Optional[str] = None
+) -> List[TemporalSequence]:
+    """Generates synthetic multi-band temporal sequences with physical colors and upper limits."""
+    sequences: List[TemporalSequence] = []
+    passbands = ["g", "r", "i", "z"]
+
+    counter = 1
+    for cls_name, quota in quotas:
+        pb_offsets = ASTROPHYSICAL_PASSBAND_OFFSETS.get(cls_name, {"g": 0.0, "r": 0.0, "i": 0.0, "z": 0.0})
+
+        for item_idx in range(quota):
+            seed = base_seed + counter * 31
+            rng = np.random.RandomState(seed)
+
+            obj_id = f"{id_prefix}-{cls_name}-{item_idx + 1:03d}"
+            t_peak = 60100.0 + (counter * 17.5) % 150.0
+
+            # Class-specific timescales & peak luminosities
+            if cls_name == "SN_Ia":
+                p_flx = rng.uniform(18.0, 30.0)
+                tau_r = rng.uniform(14.0, 19.0)
+                tau_d = rng.uniform(25.0, 40.0)
+            elif cls_name == "SN_II":
+                p_flx = rng.uniform(10.0, 20.0)
+                tau_r = rng.uniform(15.0, 30.0)
+                tau_d = rng.uniform(60.0, 110.0)
+            elif cls_name == "SN_Ibc":
+                p_flx = rng.uniform(12.0, 24.0)
+                tau_r = rng.uniform(7.0, 13.0)
+                tau_d = rng.uniform(18.0, 32.0)
+            elif cls_name == "SLSN":
+                p_flx = rng.uniform(35.0, 60.0)
+                tau_r = rng.uniform(30.0, 50.0)
+                tau_d = rng.uniform(70.0, 150.0)
+            elif cls_name == "TDE":
+                p_flx = rng.uniform(20.0, 40.0)
+                tau_r = rng.uniform(12.0, 25.0)
+                tau_d = rng.uniform(50.0, 100.0)
+            elif cls_name == "FBOT":
+                p_flx = rng.uniform(20.0, 35.0)
+                tau_r = rng.uniform(1.5, 4.0)
+                tau_d = rng.uniform(5.0, 12.0)
+            elif cls_name == "VARIABLE_STAR":
+                p_flx = rng.uniform(15.0, 25.0)
+                period = rng.uniform(5.0, 20.0)
+                tau_r = period * 0.5
+                tau_d = period * 0.5
+            else:  # ARTIFACT_DIPOLE
+                p_flx = rng.uniform(8.0, 18.0)
+                tau_r = 0.5
+                tau_d = 0.5
+
+            records: List[ObservationRecord] = []
+            n_points = 45
+            phases = np.linspace(-35.0, 65.0, n_points)
+
+            for p_idx, phase in enumerate(phases):
+                t_obs = t_peak + phase
+                pb = passbands[p_idx % len(passbands)]
+                offset = pb_offsets.get(pb, 0.0)
+                obs_id = hashlib.sha256(f"{obj_id}_{p_idx}".encode()).hexdigest()[:16]
+                t_pub = f"2023-05-{(p_idx % 28) + 1:02d}T10:00:00Z"
+
+                if cls_name == "VARIABLE_STAR":
+                    flx = p_flx + 4.0 * math.sin(2.0 * math.pi * phase / tau_r) + offset
+                elif cls_name == "ARTIFACT_DIPOLE":
+                    # Dipole has sudden single-exposure spike or negative deficit
+                    flx = p_flx if abs(phase) < 1.0 else rng.uniform(-1.0, 0.5)
+                else:
+                    if phase < 0:
+                        flx = p_flx * math.exp(phase / max(tau_r, 0.5)) + offset
+                    else:
+                        flx = p_flx * math.exp(-phase / max(tau_d, 0.5)) + offset
+
+                flx = max(flx, -0.8)
+                meas_sig = max(0.15, 0.05 * math.sqrt(max(flx, 0.1)))
+                flx_noisy = flx + rng.randn() * (meas_sig * 0.3)
+
+                # Early/late points are catalog upper limits if below threshold
+                if flx_noisy < 0.45 and (phase < -tau_r or phase > tau_d * 1.5):
+                    rec = ObservationRecord(
+                        object_id=obj_id,
+                        observation_id=obs_id,
+                        t_obs_bmjd=t_obs,
+                        t_pub_utc=t_pub,
+                        t_ingest_utc=t_pub,
+                        has_operational_pub_time=True,
+                        passband=pb,
+                        survey_id="ZTF",
+                        obs_type=ObservationType.CATALOG_UPPER_LIMIT,
+                        upper_limit_flux_nmgy=1.0,
+                        upper_limit_sigma_threshold=5.0,
+                        noise_scale_source=NoiseScaleSource.INFERRED_FROM_THRESHOLD,
+                        effective_measurement_sigma_nmgy=0.2,
+                        provenance_hash=hashlib.sha256(obs_id.encode()).hexdigest(),
+                    )
+                else:
+                    rec = ObservationRecord(
+                        object_id=obj_id,
+                        observation_id=obs_id,
+                        t_obs_bmjd=t_obs,
+                        t_pub_utc=t_pub,
+                        t_ingest_utc=t_pub,
+                        has_operational_pub_time=True,
+                        passband=pb,
+                        survey_id="ZTF",
+                        obs_type=ObservationType.FORCED_PHOTOMETRY,
+                        measured_flux_nmgy=flx_noisy,
+                        measurement_sigma_nmgy=meas_sig,
+                        effective_measurement_sigma_nmgy=meas_sig,
+                        provenance_hash=hashlib.sha256(obs_id.encode()).hexdigest(),
+                    )
+                records.append(rec)
+
+            seq = TemporalSequence.from_records(
+                object_id=obj_id,
+                records=records,
+                view_type=view_type,
+                t_cutoff_utc=t_cutoff_utc,
+            )
+            sequences.append(seq)
+            counter += 1
+
+    return sequences
+
+
+class DatasetATrainManifest:
+    """Independent training cohort for Dataset A (N=80 objects)."""
+    @classmethod
+    def generate_train_sequences(
+        cls,
+        base_seed: int = 101,
+        view_type: SequenceViewType = SequenceViewType.FULL_HISTORY,
+        t_cutoff_utc: Optional[str] = None
+    ) -> List[TemporalSequence]:
+        return _generate_synthetic_sequences(DATASET_A_TRAIN_QUOTAS, "ASTRAEUS-TRAIN", base_seed, view_type, t_cutoff_utc)
+
+    @classmethod
+    def get_ground_truth_labels(cls) -> Dict[str, str]:
+        labels = {}
+        for cls_name, quota in DATASET_A_TRAIN_QUOTAS:
+            for i in range(quota):
+                labels[f"ASTRAEUS-TRAIN-{cls_name}-{i + 1:03d}"] = cls_name
+        return labels
+
+
+class DatasetAValManifest:
+    """Independent validation cohort for Dataset A (N=24 objects)."""
+    @classmethod
+    def generate_val_sequences(
+        cls,
+        base_seed: int = 202,
+        view_type: SequenceViewType = SequenceViewType.FULL_HISTORY,
+        t_cutoff_utc: Optional[str] = None
+    ) -> List[TemporalSequence]:
+        return _generate_synthetic_sequences(DATASET_A_VAL_QUOTAS, "ASTRAEUS-VAL", base_seed, view_type, t_cutoff_utc)
+
+    @classmethod
+    def get_ground_truth_labels(cls) -> Dict[str, str]:
+        labels = {}
+        for cls_name, quota in DATASET_A_VAL_QUOTAS:
+            for i in range(quota):
+                labels[f"ASTRAEUS-VAL-{cls_name}-{i + 1:03d}"] = cls_name
+        return labels
+
 
 class DatasetATestManifest:
-    """
-    Standardized held-out test cohort for Dataset A (N=45 objects).
-    Covers the full 8-class taxonomy with deterministic physical simulation,
-    multi-band coverage, forced negative fluxes, and non-detection upper limits.
-    """
-
+    """Standardized held-out test cohort for Dataset A (N=45 objects)."""
     @classmethod
     def generate_test_sequences(
         cls,
@@ -299,130 +793,12 @@ class DatasetATestManifest:
         view_type: SequenceViewType = SequenceViewType.FULL_HISTORY,
         t_cutoff_utc: Optional[str] = None
     ) -> List[TemporalSequence]:
-        """Generates all N=45 Dataset A test sequences."""
-        sequences: List[TemporalSequence] = []
-        passbands = ["g", "r", "i", "z"]
-
-        counter = 1
-        for cls_name, quota in DATASET_A_CLASS_QUOTAS:
-            for item_idx in range(quota):
-                seed = base_seed + counter * 31
-                rng = np.random.RandomState(seed)
-
-                obj_id = f"ASTRAEUS-TEST-{cls_name}-{item_idx + 1:03d}"
-                t_peak = 60100.0 + (counter * 17.5) % 150.0
-
-                # Class-specific timescales & peak luminosities
-                if cls_name == "SN_Ia":
-                    p_flx = rng.uniform(18.0, 30.0)
-                    tau_r = rng.uniform(14.0, 19.0)
-                    tau_d = rng.uniform(25.0, 40.0)
-                elif cls_name == "SN_II":
-                    p_flx = rng.uniform(10.0, 20.0)
-                    tau_r = rng.uniform(15.0, 30.0)
-                    tau_d = rng.uniform(60.0, 110.0)
-                elif cls_name == "SN_Ibc":
-                    p_flx = rng.uniform(12.0, 24.0)
-                    tau_r = rng.uniform(7.0, 13.0)
-                    tau_d = rng.uniform(18.0, 32.0)
-                elif cls_name == "SLSN":
-                    p_flx = rng.uniform(35.0, 60.0)
-                    tau_r = rng.uniform(30.0, 50.0)
-                    tau_d = rng.uniform(70.0, 150.0)
-                elif cls_name == "TDE":
-                    p_flx = rng.uniform(20.0, 40.0)
-                    tau_r = rng.uniform(12.0, 25.0)
-                    tau_d = rng.uniform(50.0, 100.0)
-                elif cls_name == "FBOT":
-                    p_flx = rng.uniform(20.0, 35.0)
-                    tau_r = rng.uniform(1.5, 4.0)
-                    tau_d = rng.uniform(5.0, 12.0)
-                elif cls_name == "VARIABLE_STAR":
-                    p_flx = rng.uniform(15.0, 25.0)
-                    period = rng.uniform(5.0, 20.0)
-                    tau_r = period * 0.5
-                    tau_d = period * 0.5
-                else:  # ARTIFACT_DIPOLE
-                    p_flx = rng.uniform(8.0, 18.0)
-                    tau_r = 0.5
-                    tau_d = 0.5
-
-                records: List[ObservationRecord] = []
-                n_points = 45
-                phases = np.linspace(-35.0, 65.0, n_points)
-
-                for p_idx, phase in enumerate(phases):
-                    t_obs = t_peak + phase
-                    pb = passbands[p_idx % len(passbands)]
-                    obs_id = hashlib.sha256(f"{obj_id}_{p_idx}".encode()).hexdigest()[:16]
-                    t_pub = f"2023-05-{(p_idx % 28) + 1:02d}T10:00:00Z"
-
-                    if cls_name == "VARIABLE_STAR":
-                        flx = p_flx + 4.0 * math.sin(2.0 * math.pi * phase / tau_r)
-                    elif cls_name == "ARTIFACT_DIPOLE":
-                        # Dipole has sudden single-exposure spike or negative deficit
-                        flx = p_flx if abs(phase) < 1.0 else rng.uniform(-1.0, 0.5)
-                    else:
-                        if phase < 0:
-                            flx = p_flx * math.exp(phase / max(tau_r, 0.5))
-                        else:
-                            flx = p_flx * math.exp(-phase / max(tau_d, 0.5))
-
-                    meas_sig = max(0.15, 0.05 * math.sqrt(max(flx, 0.1)))
-                    flx_noisy = flx + rng.randn() * (meas_sig * 0.4)
-
-                    # Early/late points are catalog upper limits if below 3-sigma
-                    if flx_noisy < 0.45 and (phase < -tau_r or phase > tau_d * 1.5):
-                        rec = ObservationRecord(
-                            object_id=obj_id,
-                            observation_id=obs_id,
-                            t_obs_bmjd=t_obs,
-                            t_pub_utc=t_pub,
-                            t_ingest_utc=t_pub,
-                            has_operational_pub_time=True,
-                            passband=pb,
-                            survey_id="ZTF",
-                            obs_type=ObservationType.CATALOG_UPPER_LIMIT,
-                            upper_limit_flux_nmgy=1.0,
-                            upper_limit_sigma_threshold=5.0,
-                            noise_scale_source=NoiseScaleSource.INFERRED_FROM_THRESHOLD,
-                            effective_measurement_sigma_nmgy=0.2,
-                            provenance_hash=hashlib.sha256(obs_id.encode()).hexdigest(),
-                        )
-                    else:
-                        rec = ObservationRecord(
-                            object_id=obj_id,
-                            observation_id=obs_id,
-                            t_obs_bmjd=t_obs,
-                            t_pub_utc=t_pub,
-                            t_ingest_utc=t_pub,
-                            has_operational_pub_time=True,
-                            passband=pb,
-                            survey_id="ZTF",
-                            obs_type=ObservationType.FORCED_PHOTOMETRY,
-                            measured_flux_nmgy=flx_noisy,
-                            measurement_sigma_nmgy=meas_sig,
-                            effective_measurement_sigma_nmgy=meas_sig,
-                            provenance_hash=hashlib.sha256(obs_id.encode()).hexdigest(),
-                        )
-                    records.append(rec)
-
-                seq = TemporalSequence.from_records(
-                    object_id=obj_id,
-                    records=records,
-                    view_type=view_type,
-                    t_cutoff_utc=t_cutoff_utc,
-                )
-                sequences.append(seq)
-                counter += 1
-
-        return sequences
+        return _generate_synthetic_sequences(DATASET_A_TEST_QUOTAS, "ASTRAEUS-TEST", base_seed, view_type, t_cutoff_utc)
 
     @classmethod
     def get_ground_truth_labels(cls) -> Dict[str, str]:
-        """Returns ground truth class mapping for all N=45 Dataset A test sequences."""
-        labels: Dict[str, str] = {}
-        for cls_name, quota in DATASET_A_CLASS_QUOTAS:
-            for item_idx in range(quota):
-                labels[f"ASTRAEUS-TEST-{cls_name}-{item_idx + 1:03d}"] = cls_name
+        labels = {}
+        for cls_name, quota in DATASET_A_TEST_QUOTAS:
+            for i in range(quota):
+                labels[f"ASTRAEUS-TEST-{cls_name}-{i + 1:03d}"] = cls_name
         return labels

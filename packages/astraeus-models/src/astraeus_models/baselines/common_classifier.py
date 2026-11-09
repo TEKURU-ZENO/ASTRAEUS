@@ -192,10 +192,24 @@ class CommonFeatureClassifier:
         val_logits = X_val_norm @ self.W_raw.T
         for c in range(self.num_classes):
             val_y_bin = (y_val == c).astype(np.float64)
-            # Logistic regression on single scalar logit
-            # Initialized to identity mapping
-            self.platt_weights[c, 0] = 1.0
-            self.platt_weights[c, 1] = 0.0
+            z_c = val_logits[:, c]
+
+            # Numerical Platt scaling via logistic loss minimization over grid
+            best_a = 1.0
+            best_b = 0.0
+            min_loss = 1e9
+            for a_cand in np.linspace(0.2, 4.0, 25):
+                for b_cand in np.linspace(-3.0, 3.0, 25):
+                    s = 1.0 / (1.0 + np.exp(-np.clip(a_cand * z_c + b_cand, -15.0, 15.0)))
+                    eps = 1e-12
+                    bce = -np.mean(val_y_bin * np.log(s + eps) + (1.0 - val_y_bin) * np.log(1.0 - s + eps))
+                    if bce < min_loss:
+                        min_loss = bce
+                        best_a = float(a_cand)
+                        best_b = float(b_cand)
+
+            self.platt_weights[c, 0] = best_a
+            self.platt_weights[c, 1] = best_b
 
         self.is_fitted = True
         return self
@@ -216,7 +230,7 @@ class CommonFeatureClassifier:
         raw_logits = X_norm @ self.W_raw.T  # shape: (N, 8)
 
         # Apply One-vs-Rest Platt scaling: sigma(a * logit + b)
-        calibrated_ovr = 1.0 / (1.0 + np.exp(-(self.platt_weights[:, 0] * raw_logits + self.platt_weights[:, 1])))
+        calibrated_ovr = 1.0 / (1.0 + np.exp(-np.clip(self.platt_weights[:, 0] * raw_logits + self.platt_weights[:, 1], -15.0, 15.0)))
 
         # Normalize onto simplex
         prob_sum = np.sum(calibrated_ovr, axis=-1, keepdims=True)

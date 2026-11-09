@@ -16,23 +16,28 @@ from pydantic import BaseModel, ConfigDict, Field
 class StatisticalContrast(BaseModel):
     """
     Standardized result for an individual primary hypothesis test.
-    The primary family is strictly bounded to m = 32 tests (C01 through C32).
+    The primary family is strictly bounded to m = 24 candidate-vs-reference hypotheses (C01-C24),
+    with 8 reference identity anchors (R01-R08) and 32-test sensitivity q-values reported.
     """
     model_config = ConfigDict(frozen=True)
 
-    contrast_id: str                      # e.g. "C01", "C12", "C32"
+    contrast_id: str                      # e.g. "C01", "C12", "R01"
     task_id: str                          # "T1", "T2", "T3", "T4"
     task_name: str                        # "Masked Reconstruction", "Multi-Horizon Forecast", etc.
     baseline_id: str                      # "B1_Akima", "B2_GP", "B3_Transformer", "B4_ASTROMER"
     cohort_id: str                        # "Cohort_1_DatasetA_Test", "Cohort_2_Track3_Archival"
-    sample_size: int                      # N = 45 or N = 17
+    sample_size: int                      # N = 45, N = 17, or N = 18
     test_type: str                        # "Two-Sided Paired Wilcoxon", "Exact Binomial McNemar"
     test_statistic: float                 # W, chi2, or discordant sum
     raw_p_value: float                    # Unadjusted p-value
-    bh_q_value: float = 1.0               # Adjusted q-value after Benjamini-Hochberg FDR
+    bh_q_value: float = 1.0               # Adjusted q-value after Benjamini-Hochberg FDR (m=24)
+    bh_q_value_32: float = 1.0            # Adjusted q-value after Benjamini-Hochberg FDR sensitivity (m=32)
     is_significant_fdr: bool = False      # True if bh_q_value <= alpha (0.05)
     mean_difference: float = 0.0          # Metric delta (baseline - candidate or pairwise)
-    effect_size: float = 0.0              # Rank-biserial correlation or odds ratio
+    effect_size: float = 0.0              # Standardized effect size (Rank-biserial r or Cohen's g)
+    effect_size_type: str = "Rank-Biserial r" # "Rank-Biserial r" or "Cohen's g"
+    odds_ratio: Optional[float] = None    # Odds ratio for McNemar test (b/c)
+    verdict: str = "Fail to Reject H0"    # "Reject H0" or "Fail to Reject H0"
     interpretation: str = ""
 
 
@@ -65,29 +70,27 @@ def compute_paired_wilcoxon(
     """
     Computes two-sided paired Wilcoxon signed-rank test on differences:
     diffs = metric_base - metric_cand (or candidate - baseline).
-    Returns: (statistic, p_value, effect_size_r).
+    Returns: (statistic, p_value, rank_biserial_r).
     """
     diff_arr = np.asarray(diffs, dtype=np.float64)
-    # Remove NaN values if any
     diff_arr = diff_arr[~np.isnan(diff_arr)]
-    n = len(diff_arr)
+    non_zeros = diff_arr[diff_arr != 0.0]
 
-    if n < 5 or np.all(diff_arr == 0.0):
-        # Degenerate case: no differences or insufficient sample size
+    if len(non_zeros) < 5:
+        # Zero differences or insufficient sample size -> exact identity / no effect
         return 0.0, 1.0, 0.0
 
     try:
-        res = stats.wilcoxon(diff_arr, alternative="two-sided", zero_method=zero_method)
+        res = stats.wilcoxon(non_zeros, alternative="two-sided", zero_method=zero_method)
         stat = float(res.statistic)
         p_val = float(res.pvalue)
 
-        # Effect size: rank-biserial correlation r = 1 - (2 * W / total_rank_sum)
-        # For Wilcoxon signed-rank: total ranks = n * (n + 1) / 2
-        total_rank = n * (n + 1) / 2.0
+        # Rank-biserial correlation r = 1 - (2 * W / total_rank_sum) on non-zero differences
+        n_nz = len(non_zeros)
+        total_rank = n_nz * (n_nz + 1) / 2.0
         effect_size = float(1.0 - (2.0 * stat / max(total_rank, 1.0)))
         return stat, p_val, effect_size
     except Exception:
-        # Fallback if ties or zero differences make exact test non-computable
         return 0.0, 1.0, 0.0
 
 
@@ -95,12 +98,12 @@ def compute_exact_mcnemar(
     y_true: np.ndarray,
     y_pred_base: np.ndarray,
     y_pred_cand: np.ndarray
-) -> Tuple[int, int, float, float]:
+) -> Tuple[int, int, float, float, float]:
     """
     Computes Exact Binomial McNemar Test on paired 0/1 correctness indicators.
     b: candidate correct, baseline incorrect
     c: candidate incorrect, baseline correct
-    Returns: (b, c, p_value, odds_ratio).
+    Returns: (b, c, p_value, cohens_g, odds_ratio).
     """
     corr_base = (np.asarray(y_pred_base) == np.asarray(y_true))
     corr_cand = (np.asarray(y_pred_cand) == np.asarray(y_true))
@@ -110,14 +113,17 @@ def compute_exact_mcnemar(
 
     n_discordant = b + c
     if n_discordant == 0:
-        return 0, 0, 1.0, 1.0
+        # Identical predictions: Cohen's g = 0.0 (zero effect), odds ratio = 1.0 (neutral odds)
+        return 0, 0, 1.0, 0.0, 1.0
 
     # Exact two-sided binomial test under H0: p = 0.5
     binom_res = stats.binomtest(min(b, c), n_discordant, 0.5, alternative="two-sided")
     p_val = float(binom_res.pvalue)
 
-    odds_ratio = float(b / max(c, 1)) if c > 0 else float(b + 1)
-    return b, c, p_val, odds_ratio
+    # Cohen's g in [-0.5, 0.5]: g = (b / n_discordant) - 0.5
+    cohens_g = float(b / n_discordant - 0.5)
+    odds_ratio = float(b / c) if c > 0 else float(b + 1)
+    return b, c, p_val, cohens_g, odds_ratio
 
 
 def apply_benjamini_hochberg(
@@ -155,10 +161,11 @@ def apply_benjamini_hochberg(
     for sort_idx, (orig_idx, c) in enumerate(indexed_contrasts):
         q_val = float(adjusted_q[sort_idx])
         is_sig = q_val <= alpha
+        verdict_str = "Reject H0" if is_sig else "Fail to Reject H0"
         interp = (
             f"Statistically significant under BH-FDR (q={q_val:.4f} <= {alpha})"
             if is_sig
-            else f"Not significant under BH-FDR (q={q_val:.4f} > {alpha})"
+            else f"Fail to reject H0 under BH-FDR (q={q_val:.4f} > {alpha})"
         )
 
         updated = StatisticalContrast(
@@ -172,9 +179,13 @@ def apply_benjamini_hochberg(
             test_statistic=c.test_statistic,
             raw_p_value=c.raw_p_value,
             bh_q_value=q_val,
+            bh_q_value_32=c.bh_q_value_32,
             is_significant_fdr=is_sig,
             mean_difference=c.mean_difference,
             effect_size=c.effect_size,
+            effect_size_type=c.effect_size_type,
+            odds_ratio=c.odds_ratio,
+            verdict=verdict_str,
             interpretation=interp,
         )
         updated_contrasts[orig_idx] = updated

@@ -32,6 +32,8 @@ from astraeus_data.corpus.sequence import (
 from astraeus_data.corpus.archival_manifest import (
     Track3ArchivalManifest,
     DatasetATestManifest,
+    DatasetATrainManifest,
+    DatasetAValManifest,
 )
 from astraeus_models.baselines.akima import AkimaBaselineModel
 from astraeus_models.baselines.gp import MultiOutputGPBaseline
@@ -105,7 +107,9 @@ class Stage2BenchmarkReport(BaseModel):
     num_significant_primary_contrasts: int
     transformer_seed_stability: Dict[str, Dict[int, Dict[str, float]]]
     t4_ablation_results: Dict[str, Dict[str, float]]
+    t4_ablation_bootstrap_ci: Dict[str, Dict[str, List[float]]] = Field(default_factory=dict)
     astromer_lineage_audit: Dict[str, Any]
+    reconciliation_day111_1_commit: str = "8014b16"
     executive_summary: str
 
 
@@ -124,14 +128,14 @@ class Stage2TemporalBenchmarkOrchestrator:
     def _train_and_calibrate_common_classifier(self):
         """
         Pre-fits and calibrates common classifier on genuine extracted 24-feature representations
-        from independent synthetic training and validation light-curve cohorts.
+        from independent synthetic training (N=80) and validation (N=24) light-curve cohorts.
         Prevents class-collapse and establishes realistic decision boundaries.
         """
-        # Independent training (base_seed=101) and validation (base_seed=202) cohorts
-        tr_seqs = DatasetATestManifest.generate_test_sequences(base_seed=101)
-        tr_labels = DatasetATestManifest.get_ground_truth_labels()
-        val_seqs = DatasetATestManifest.generate_test_sequences(base_seed=202)
-        val_labels = DatasetATestManifest.get_ground_truth_labels()
+        # Independent training (N=80) and validation (N=24) cohorts with disjoint object IDs
+        tr_seqs = DatasetATrainManifest.generate_train_sequences()
+        tr_labels = DatasetATrainManifest.get_ground_truth_labels()
+        val_seqs = DatasetAValManifest.generate_val_sequences()
+        val_labels = DatasetAValManifest.get_ground_truth_labels()
 
         X_tr = np.array([self.common_classifier.extract_features(s) for s in tr_seqs])
         y_tr = np.array([CLASSES_8.index(tr_labels[s.object_id]) for s in tr_seqs])
@@ -604,6 +608,7 @@ class Stage2TemporalBenchmarkOrchestrator:
                     raw_p_value=p_val,
                     mean_difference=float(np.mean(diffs)),
                     effect_size=eff_size,
+                    effect_size_type="Rank-Biserial r",
                 ))
                 c_idx += 1
 
@@ -628,6 +633,7 @@ class Stage2TemporalBenchmarkOrchestrator:
                     raw_p_value=p_val,
                     mean_difference=float(np.mean(diffs)),
                     effect_size=eff_size,
+                    effect_size_type="Rank-Biserial r",
                 ))
                 c_idx += 1
 
@@ -642,7 +648,7 @@ class Stage2TemporalBenchmarkOrchestrator:
                 y_corr_cand = np.array(s_cand.per_event_t3_correct)
                 y_true = np.ones(len(y_corr_base), dtype=bool)
 
-                b, c, p_val, odds = compute_exact_mcnemar(y_true, y_corr_base, y_corr_cand)
+                b, c, p_val, cohens_g, odds = compute_exact_mcnemar(y_true, y_corr_base, y_corr_cand)
                 raw_contrasts_24.append(StatisticalContrast(
                     contrast_id=cid_str,
                     task_id="T3",
@@ -654,7 +660,9 @@ class Stage2TemporalBenchmarkOrchestrator:
                     test_statistic=float(b + c),
                     raw_p_value=p_val,
                     mean_difference=float(np.mean(y_corr_cand) - np.mean(y_corr_base)),
-                    effect_size=odds,
+                    effect_size=cohens_g,
+                    effect_size_type="Cohen's g",
+                    odds_ratio=odds,
                 ))
                 c_idx += 1
 
@@ -679,12 +687,12 @@ class Stage2TemporalBenchmarkOrchestrator:
                     raw_p_value=p_val,
                     mean_difference=float(np.mean(diffs)),
                     effect_size=eff_size,
+                    effect_size_type="Rank-Biserial r",
                 ))
                 c_idx += 1
 
         # 4. Apply Benjamini-Hochberg FDR Control across the m=24 primary family
         primary_contrasts_24 = apply_benjamini_hochberg(raw_contrasts_24, alpha=0.05)
-        num_sig = sum(1 for c in primary_contrasts_24 if c.is_significant_fdr)
 
         # 5. Assemble 8 Reference Anchors (R01-R08) for full 32-cell transparency
         reference_anchors_8: List[StatisticalContrast] = []
@@ -705,13 +713,29 @@ class Stage2TemporalBenchmarkOrchestrator:
                     test_statistic=0.0,
                     raw_p_value=1.0,
                     bh_q_value=1.0,
+                    bh_q_value_32=1.0,
                     is_significant_fdr=False,
                     mean_difference=0.0,
                     effect_size=0.0,
+                    effect_size_type="Identity",
+                    verdict="Fail to Reject H0",
                     interpretation="Predeclared Reference Baseline (Self-Contrast Identity)"
                 ))
                 r_idx += 1
 
+        # Sensitivity Analysis: Compute BH-adjusted q-values across the full 32-cell grid
+        all_32_unadjusted = primary_contrasts_24 + reference_anchors_8
+        sensitivity_32 = apply_benjamini_hochberg(all_32_unadjusted, alpha=0.05)
+        q32_map = {c.contrast_id: c.bh_q_value for c in sensitivity_32}
+
+        # Update bh_q_value_32 on primary contrasts
+        reconciled_primary_24: List[StatisticalContrast] = []
+        for c in primary_contrasts_24:
+            q32 = q32_map.get(c.contrast_id, c.bh_q_value)
+            reconciled_primary_24.append(c.model_copy(update={"bh_q_value_32": q32}))
+
+        primary_contrasts_24 = reconciled_primary_24
+        num_sig = sum(1 for c in primary_contrasts_24 if c.is_significant_fdr)
         full_grid_32 = reference_anchors_8 + primary_contrasts_24
 
         # 6. Secondary Operational Sensitivity Diagnostic: Top-10 Permutation Test
@@ -795,33 +819,55 @@ class Stage2TemporalBenchmarkOrchestrator:
                 "t4_precision_at_10": ev2.t4_precision_at_10,
             }
 
-        # 8. Four-Way T4 Ablation Suite
+        # 8. Four-Way T4 Ablation Suite with repeated bootstrap confidence intervals (B=1000)
         t4_ablations: Dict[str, Dict[str, float]] = {}
+        t4_ablation_ci: Dict[str, Dict[str, List[float]]] = {}
+
+        def _calc_p10_boot(u_list: List[float], r_list: List[bool], B: int = 1000) -> Tuple[float, List[float]]:
+            u_arr = np.array(u_list)
+            r_arr = np.array(r_list)
+            obs_p10 = float(np.sum(r_arr[np.argsort(u_arr)[::-1][:10]])) / 10.0
+            rng = np.random.RandomState(42)
+            n = len(u_arr)
+            b_p10s = []
+            for _ in range(B):
+                idx = rng.choice(n, size=n, replace=True)
+                p_b = float(np.sum(r_arr[idx][np.argsort(u_arr[idx])[::-1][:10]])) / 10.0
+                b_p10s.append(p_b)
+            ci = [float(np.percentile(b_p10s, 2.5)), float(np.percentile(b_p10s, 97.5))]
+            return obs_p10, ci
+
         for c_id, seqs, labels in [
             ("Cohort_1_DatasetA_Test", cohort1_seqs, cohort1_labels),
             ("Cohort_2_Track3_Archival", cohort2_seqs_all, cohort2_labels),
         ]:
             t4_ablations[c_id] = {}
+            t4_ablation_ci[c_id] = {}
+            is_r = [labels[s.object_id] in ("SLSN", "TDE", "FBOT", "OPEN_SET_NOVELTY") for s in seqs]
+
             # Config 1: Full Transformer (Attention + Novelty)
             u_full = [self.evaluate_task4("B3_Transformer", models["B3_Transformer"], s, labels[s.object_id], 1.0, True, True)[0] for s in seqs]
-            is_r = [labels[s.object_id] in ("SLSN", "TDE", "FBOT", "OPEN_SET_NOVELTY") for s in seqs]
-            p10_full = float(np.sum(np.array(is_r)[np.argsort(u_full)[::-1][:10]])) / 10.0
+            p10_full, ci_full = _calc_p10_boot(u_full, is_r)
             t4_ablations[c_id]["1_Transformer_Full"] = p10_full
+            t4_ablation_ci[c_id]["1_Transformer_Full"] = ci_full
 
             # Config 2: Transformer without Attention (Projection Mean Pooling + Novelty)
             u_no_attn = [self.evaluate_task4("B3_Transformer", models["B3_Transformer"], s, labels[s.object_id], 1.0, False, True)[0] for s in seqs]
-            p10_no_attn = float(np.sum(np.array(is_r)[np.argsort(u_no_attn)[::-1][:10]])) / 10.0
+            p10_no_attn, ci_no_attn = _calc_p10_boot(u_no_attn, is_r)
             t4_ablations[c_id]["2_Transformer_No_Attention"] = p10_no_attn
+            t4_ablation_ci[c_id]["2_Transformer_No_Attention"] = ci_no_attn
 
             # Config 3: Transformer without Novelty Signal (Attention + S_novelty = 0)
             u_no_nov = [self.evaluate_task4("B3_Transformer", models["B3_Transformer"], s, labels[s.object_id], 0.0, True, True)[0] for s in seqs]
-            p10_no_nov = float(np.sum(np.array(is_r)[np.argsort(u_no_nov)[::-1][:10]])) / 10.0
+            p10_no_nov, ci_no_nov = _calc_p10_boot(u_no_nov, is_r)
             t4_ablations[c_id]["3_Transformer_No_Novelty"] = p10_no_nov
+            t4_ablation_ci[c_id]["3_Transformer_No_Novelty"] = ci_no_nov
 
             # Config 4: Common Classifier without Early Timescale Features
             u_no_timescales = [self.evaluate_task4("B1_Akima", None, s, labels[s.object_id], 1.0, True, False)[0] for s in seqs]
-            p10_no_timescales = float(np.sum(np.array(is_r)[np.argsort(u_no_timescales)[::-1][:10]])) / 10.0
-            t4_ablations[c_id]["4_Common_Classifier_No_Timescales"] = p10_no_timescales
+            p10_no_ts, ci_no_ts = _calc_p10_boot(u_no_timescales, is_r)
+            t4_ablations[c_id]["4_Common_Classifier_No_Timescales"] = p10_no_ts
+            t4_ablation_ci[c_id]["4_Common_Classifier_No_Timescales"] = ci_no_ts
 
         # 9. ASTROMER Lineage Audit
         astromer_lineage = AstromerAdapterBaseline.audit_astromer_lineage()
@@ -841,13 +887,14 @@ class Stage2TemporalBenchmarkOrchestrator:
             num_significant_primary_contrasts=num_sig,
             transformer_seed_stability=seed_stability,
             t4_ablation_results=t4_ablations,
+            t4_ablation_bootstrap_ci=t4_ablation_ci,
             astromer_lineage_audit=astromer_lineage,
             executive_summary=(
-                f"ASTRAEUS Phase 2 Stage 2 Day 111.1 Benchmark Reconciliation completed across 4 baselines, 4 tasks, and 2 cohorts. "
-                f"Multiplicity family reconciled to m=24 candidate-vs-reference hypotheses under Benjamini-Hochberg FDR (alpha=0.05), "
-                f"with 8 explicit reference identity anchors documented. "
-                f"Significant contrasts: {num_sig}/24. Top-10 Permutation Test confirmed exchangeability with published candidate lists. "
-                f"Track 3 denominators reconciled: N=17 for T1-T3, N=18 for T4. "
+                f"ASTRAEUS Phase 2 Stage 2 Day 111.2 Benchmark Scientific Integrity Release. "
+                f"Canonical C8 taxonomy, canonical 18-object Track 3 manifest, and genuinely disjoint training (N=80) and val (N=24) cohorts. "
+                f"Primary multiplicity family reconciled to m=24 candidate-vs-reference hypotheses (significant: {num_sig}/24), "
+                f"with 8 explicit reference identity anchors and full 32-cell sensitivity analysis. "
+                f"ASTROMER lineage updated to OVERLAP_AUDIT_INCOMPLETE with environmental qualification. "
                 f"Pretraining on Dataset B remains strictly ON HOLD."
             )
         )

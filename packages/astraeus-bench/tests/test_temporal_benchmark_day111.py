@@ -197,17 +197,18 @@ class TestStatisticalTestingFramework:
         # Cand: correct on all 10
         y_cand = np.array([0, 1, 0, 1, 0, 1, 0, 1, 0, 1])
 
-        b, c, p_val, odds = compute_exact_mcnemar(y_true, y_base, y_cand)
+        b, c, p_val, cohens_g, odds = compute_exact_mcnemar(y_true, y_base, y_cand)
         # Cand correct & base incorrect on 5 items (indices 5-9)
         assert b == 5
         assert c == 0
         # Exact binomial p-value for 0 successes out of 5 under p=0.5: 2 * (0.5)^5 = 2/32 = 0.0625
         assert p_val == pytest.approx(0.0625, rel=1e-3)
+        assert cohens_g == 0.5
         assert odds == 6.0
 
-        # Completely identical predictions: b=0, c=0 -> p=1.0
-        b0, c0, p0, _ = compute_exact_mcnemar(y_true, y_base, y_base)
-        assert b0 == 0 and c0 == 0 and p0 == 1.0
+        # Completely identical predictions: b=0, c=0 -> p=1.0, Cohen's g=0.0
+        b0, c0, p0, g0, odds0 = compute_exact_mcnemar(y_true, y_base, y_base)
+        assert b0 == 0 and c0 == 0 and p0 == 1.0 and g0 == 0.0 and odds0 == 1.0
 
     def test_benjamini_hochberg_multiplicity_monotonicity(self):
         # Generate 32 raw p-values
@@ -402,5 +403,7 @@ class TestStage2BenchmarkOrchestratorExecution:
         assert "4_Common_Classifier_No_Timescales" in c1_abl
 
         # Check ASTROMER lineage audit
-        assert report.astromer_lineage_audit["lineage_verification_status"] == "CERTIFIED_DISJOINT"
-        assert report.astromer_lineage_audit["min_angular_separation_deg"] > 18.0
+        assert report.astromer_lineage_audit["lineage_verification_status"] == "OVERLAP_AUDIT_INCOMPLETE"
+        assert report.astromer_lineage_audit["min_angular_separation_canonical_deg"] > 18.0
+        assert "sn1987a_environmental_audit" in report.astromer_lineage_audit
+        assert report.astromer_lineage_audit["sn1987a_environmental_audit"]["in_canonical_track3_manifest"] is False
