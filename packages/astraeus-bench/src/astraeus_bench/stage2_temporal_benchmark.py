@@ -108,8 +108,10 @@ class Stage2BenchmarkReport(BaseModel):
     transformer_seed_stability: Dict[str, Dict[int, Dict[str, float]]]
     t4_ablation_results: Dict[str, Dict[str, float]]
     t4_ablation_bootstrap_ci: Dict[str, Dict[str, List[float]]] = Field(default_factory=dict)
+    t4_paired_difference_ci: Dict[str, List[float]] = Field(default_factory=dict)
     astromer_lineage_audit: Dict[str, Any]
     reconciliation_day111_1_commit: str = "8014b16"
+    reconciliation_day111_2_commit: str = "d4bd2b7"
     executive_summary: str
 
 
@@ -491,6 +493,19 @@ class Stage2TemporalBenchmarkOrchestrator:
             per_class_f1 = clf_metrics.per_class_f1
             per_class_prec = clf_metrics.per_class_precision
             per_class_rec = clf_metrics.per_class_recall
+
+            # Machine-checkable assertion: verify that per-class metrics mathematically agree with confusion matrix
+            cm_arr = np.array(confusion_mat)
+            for k, cls_k in enumerate(CLASSES_8):
+                tp = cm_arr[k, k]
+                col_sum = np.sum(cm_arr[:, k])
+                row_sum = np.sum(cm_arr[k, :])
+                expected_prec = float(tp / col_sum) if col_sum > 0 else 0.0
+                expected_rec = float(tp / row_sum) if row_sum > 0 else 0.0
+                expected_f1 = float(2 * expected_prec * expected_rec / (expected_prec + expected_rec)) if (expected_prec + expected_rec) > 0 else 0.0
+                assert abs(per_class_prec[cls_k] - expected_prec) < 1e-4, f"Precision mismatch for {cls_k}"
+                assert abs(per_class_rec[cls_k] - expected_rec) < 1e-4, f"Recall mismatch for {cls_k}"
+                assert abs(per_class_f1[cls_k] - expected_f1) < 1e-4, f"F1 mismatch for {cls_k}"
         else:
             macro_f1 = 0.5
             ece = 0.1
@@ -822,6 +837,7 @@ class Stage2TemporalBenchmarkOrchestrator:
         # 8. Four-Way T4 Ablation Suite with repeated bootstrap confidence intervals (B=1000)
         t4_ablations: Dict[str, Dict[str, float]] = {}
         t4_ablation_ci: Dict[str, Dict[str, List[float]]] = {}
+        t4_paired_diff_ci: Dict[str, List[float]] = {}
 
         def _calc_p10_boot(u_list: List[float], r_list: List[bool], B: int = 1000) -> Tuple[float, List[float]]:
             u_arr = np.array(u_list)
@@ -836,6 +852,20 @@ class Stage2TemporalBenchmarkOrchestrator:
                 b_p10s.append(p_b)
             ci = [float(np.percentile(b_p10s, 2.5)), float(np.percentile(b_p10s, 97.5))]
             return obs_p10, ci
+
+        def _calc_paired_p10_diff_boot(u_a_list: List[float], u_b_list: List[float], r_list: List[bool], B: int = 1000) -> List[float]:
+            u_a_arr = np.array(u_a_list)
+            u_b_arr = np.array(u_b_list)
+            r_arr = np.array(r_list)
+            rng = np.random.RandomState(42)
+            n = len(u_a_arr)
+            diffs = []
+            for _ in range(B):
+                idx = rng.choice(n, size=n, replace=True)
+                p10_a = float(np.sum(r_arr[idx][np.argsort(u_a_arr[idx])[::-1][:10]])) / 10.0
+                p10_b = float(np.sum(r_arr[idx][np.argsort(u_b_arr[idx])[::-1][:10]])) / 10.0
+                diffs.append(p10_a - p10_b)
+            return [float(np.percentile(diffs, 2.5)), float(np.percentile(diffs, 97.5))]
 
         for c_id, seqs, labels in [
             ("Cohort_1_DatasetA_Test", cohort1_seqs, cohort1_labels),
@@ -856,6 +886,9 @@ class Stage2TemporalBenchmarkOrchestrator:
             p10_no_attn, ci_no_attn = _calc_p10_boot(u_no_attn, is_r)
             t4_ablations[c_id]["2_Transformer_No_Attention"] = p10_no_attn
             t4_ablation_ci[c_id]["2_Transformer_No_Attention"] = ci_no_attn
+
+            # Compute Paired Bootstrap Difference (Config 1 - Config 2)
+            t4_paired_diff_ci[c_id] = _calc_paired_p10_diff_boot(u_full, u_no_attn, is_r)
 
             # Config 3: Transformer without Novelty Signal (Attention + S_novelty = 0)
             u_no_nov = [self.evaluate_task4("B3_Transformer", models["B3_Transformer"], s, labels[s.object_id], 0.0, True, True)[0] for s in seqs]
@@ -888,6 +921,7 @@ class Stage2TemporalBenchmarkOrchestrator:
             transformer_seed_stability=seed_stability,
             t4_ablation_results=t4_ablations,
             t4_ablation_bootstrap_ci=t4_ablation_ci,
+            t4_paired_difference_ci=t4_paired_diff_ci,
             astromer_lineage_audit=astromer_lineage,
             executive_summary=(
                 f"ASTRAEUS Phase 2 Stage 2 Day 111.2 Benchmark Scientific Integrity Release. "

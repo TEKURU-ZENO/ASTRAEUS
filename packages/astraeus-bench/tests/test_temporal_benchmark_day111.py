@@ -204,11 +204,11 @@ class TestStatisticalTestingFramework:
         # Exact binomial p-value for 0 successes out of 5 under p=0.5: 2 * (0.5)^5 = 2/32 = 0.0625
         assert p_val == pytest.approx(0.0625, rel=1e-3)
         assert cohens_g == 0.5
-        assert odds == 6.0
+        assert odds is None  # When c=0, odds ratio is undefined/None
 
-        # Completely identical predictions: b=0, c=0 -> p=1.0, Cohen's g=0.0
+        # Completely identical predictions: b=0, c=0 -> p=1.0, Cohen's g=None, odds=None (not estimable)
         b0, c0, p0, g0, odds0 = compute_exact_mcnemar(y_true, y_base, y_base)
-        assert b0 == 0 and c0 == 0 and p0 == 1.0 and g0 == 0.0 and odds0 == 1.0
+        assert b0 == 0 and c0 == 0 and p0 == 1.0 and g0 is None and odds0 is None
 
     def test_benjamini_hochberg_multiplicity_monotonicity(self):
         # Generate 32 raw p-values
@@ -277,6 +277,24 @@ class TestTrack3AndDatasetAManifests:
         assert len(seqs) == 18
         assert len(TRACK_3_OBJECT_METADATA) == 18
 
+        # Verify uniqueness of canonical IDs (deduplication check)
+        canonical_ids = [obj["canonical_id"] for obj in TRACK_3_OBJECT_METADATA]
+        assert len(set(canonical_ids)) == 18, "Duplicate canonical ID found in Track 3 metadata!"
+
+        # Verify AT2018cow verified coordinates and regression check
+        cow = next(obj for obj in TRACK_3_OBJECT_METADATA if obj["canonical_id"] == "AT2018cow")
+        assert abs(cow["ra_deg"] - 244.000917) < 1e-4, f"AT2018cow RA mismatch: {cow['ra_deg']}"
+        assert abs(cow["dec_deg"] - 22.268031) < 1e-4, f"AT2018cow Dec mismatch: {cow['dec_deg']}"
+        assert abs(cow["ra_deg"] - 244.5971) > 0.1, "Regression: erroneous coordinate 244.5971 re-entered AT2018cow"
+        assert cow["host_galaxy"] == "CGCG 137-068"
+        assert "SN2018cow" in cow["aliases"]
+
+        # Verify AT2020xnd deduplication (The Camel / ZTF20acvhrvo)
+        camel = next(obj for obj in TRACK_3_OBJECT_METADATA if obj["canonical_id"] == "AT2020xnd")
+        assert "ZTF20acvhrvo" in camel["aliases"]
+        assert "The Camel" in camel["aliases"]
+        assert not any(obj["canonical_id"] == "ZTF20acvhrvo" for obj in TRACK_3_OBJECT_METADATA), "ZTF20acvhrvo must not be a duplicate canonical object!"
+
         # Verify in-taxonomy (N=17) vs open-set (N=1)
         in_tax_seqs = Track3ArchivalManifest.get_in_taxonomy_sequences()
         assert len(in_tax_seqs) == 17
@@ -294,7 +312,7 @@ class TestTrack3AndDatasetAManifests:
             assert len(records) >= 30
             for r in records:
                 assert r.exposure_id.startswith("EXP_")
-                assert r.survey_system in ("ZTF", "ATLAS", "Pan-STARRS1", "Swift", "ESO")
+                assert r.survey_system in ("ZTF", "PTF", "ATLAS", "Pan-STARRS1", "Swift", "ESO")
                 assert r.provenance_uri.startswith("doi:")
 
     def test_dataset_a_test_manifest_45_objects_and_taxonomy(self):
@@ -401,6 +419,11 @@ class TestStage2BenchmarkOrchestratorExecution:
         assert "2_Transformer_No_Attention" in c1_abl
         assert "3_Transformer_No_Novelty" in c1_abl
         assert "4_Common_Classifier_No_Timescales" in c1_abl
+
+        # Check paired bootstrap difference CIs
+        assert "Cohort_1_DatasetA_Test" in report.t4_paired_difference_ci
+        assert "Cohort_2_Track3_Archival" in report.t4_paired_difference_ci
+        assert len(report.t4_paired_difference_ci["Cohort_2_Track3_Archival"]) == 2
 
         # Check ASTROMER lineage audit
         assert report.astromer_lineage_audit["lineage_verification_status"] == "OVERLAP_AUDIT_INCOMPLETE"

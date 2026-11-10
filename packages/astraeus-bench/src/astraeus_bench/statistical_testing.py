@@ -34,7 +34,7 @@ class StatisticalContrast(BaseModel):
     bh_q_value_32: float = 1.0            # Adjusted q-value after Benjamini-Hochberg FDR sensitivity (m=32)
     is_significant_fdr: bool = False      # True if bh_q_value <= alpha (0.05)
     mean_difference: float = 0.0          # Metric delta (baseline - candidate or pairwise)
-    effect_size: float = 0.0              # Standardized effect size (Rank-biserial r or Cohen's g)
+    effect_size: Optional[float] = None          # Standardized effect size (Rank-biserial r or Cohen's g)
     effect_size_type: str = "Rank-Biserial r" # "Rank-Biserial r" or "Cohen's g"
     odds_ratio: Optional[float] = None    # Odds ratio for McNemar test (b/c)
     verdict: str = "Fail to Reject H0"    # "Reject H0" or "Fail to Reject H0"
@@ -98,12 +98,13 @@ def compute_exact_mcnemar(
     y_true: np.ndarray,
     y_pred_base: np.ndarray,
     y_pred_cand: np.ndarray
-) -> Tuple[int, int, float, float, float]:
+) -> Tuple[int, int, float, Optional[float], Optional[float]]:
     """
     Computes Exact Binomial McNemar Test on paired 0/1 correctness indicators.
     b: candidate correct, baseline incorrect
     c: candidate incorrect, baseline correct
     Returns: (b, c, p_value, cohens_g, odds_ratio).
+    When b + c == 0 (zero discordant pairs), Cohen's g and odds ratio are undefined (None).
     """
     corr_base = (np.asarray(y_pred_base) == np.asarray(y_true))
     corr_cand = (np.asarray(y_pred_cand) == np.asarray(y_true))
@@ -113,8 +114,8 @@ def compute_exact_mcnemar(
 
     n_discordant = b + c
     if n_discordant == 0:
-        # Identical predictions: Cohen's g = 0.0 (zero effect), odds ratio = 1.0 (neutral odds)
-        return 0, 0, 1.0, 0.0, 1.0
+        # Zero discordant pairs: Cohen's g and odds ratio are mathematically undefined / not estimable
+        return 0, 0, 1.0, None, None
 
     # Exact two-sided binomial test under H0: p = 0.5
     binom_res = stats.binomtest(min(b, c), n_discordant, 0.5, alternative="two-sided")
@@ -122,7 +123,7 @@ def compute_exact_mcnemar(
 
     # Cohen's g in [-0.5, 0.5]: g = (b / n_discordant) - 0.5
     cohens_g = float(b / n_discordant - 0.5)
-    odds_ratio = float(b / c) if c > 0 else float(b + 1)
+    odds_ratio = float(b / c) if c > 0 else None
     return b, c, p_val, cohens_g, odds_ratio
 
 

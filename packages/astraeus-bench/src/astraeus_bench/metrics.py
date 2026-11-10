@@ -124,18 +124,19 @@ def compute_classification_metrics(
     """
     Computes balanced macro-F1, per-class metrics, confusion matrix, and optional calibration.
     """
-    macro_f1 = float(f1_score(y_true, y_pred, average="macro", zero_division=0))
-    weighted_f1 = float(f1_score(y_true, y_pred, average="weighted", zero_division=0))
+    labels = list(range(len(classes)))
+    macro_f1 = float(f1_score(y_true, y_pred, labels=labels, average="macro", zero_division=0))
+    weighted_f1 = float(f1_score(y_true, y_pred, labels=labels, average="weighted", zero_division=0))
 
-    per_class_f1_vals = f1_score(y_true, y_pred, average=None, zero_division=0)
-    per_class_prec_vals = precision_score(y_true, y_pred, average=None, zero_division=0)
-    per_class_rec_vals = recall_score(y_true, y_pred, average=None, zero_division=0)
+    per_class_f1_vals = f1_score(y_true, y_pred, labels=labels, average=None, zero_division=0)
+    per_class_prec_vals = precision_score(y_true, y_pred, labels=labels, average=None, zero_division=0)
+    per_class_rec_vals = recall_score(y_true, y_pred, labels=labels, average=None, zero_division=0)
 
     f1_dict = {cls_name: float(val) for cls_name, val in zip(classes, per_class_f1_vals)}
     prec_dict = {cls_name: float(val) for cls_name, val in zip(classes, per_class_prec_vals)}
     rec_dict = {cls_name: float(val) for cls_name, val in zip(classes, per_class_rec_vals)}
 
-    cm = confusion_matrix(y_true, y_pred, labels=list(range(len(classes)))).tolist()
+    cm = confusion_matrix(y_true, y_pred, labels=labels).tolist()
 
     calibration = None
     if probabilities is not None:
