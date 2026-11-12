@@ -53,9 +53,18 @@ class CommonFeatureClassifier:
         self.val_per_class_support: Dict[str, int] = {}
         self.feature_means: Optional[np.ndarray] = None
         self.feature_stds: Optional[np.ndarray] = None
+        self.class_centroids: Optional[np.ndarray] = None
+        self.inv_pooled_cov: Optional[np.ndarray] = None
+        self.ensemble_weights: List[np.ndarray] = []
         # Post-hoc OOD abstention thresholds calibrated strictly on Dataset A Validation
         self.ood_val_threshold_95: float = 0.0
         self.ood_val_entropy_95: float = 0.0
+        self.ood_val_mahalanobis_95: float = 0.0
+        self.ood_val_disagreement_95: float = 0.0
+        self.ood_val_conformal_95: float = 0.0
+        self.val_l2_mean: float = 0.85
+        self.val_l2_std: float = 0.35
+        self.conformal_q95: float = 1.0
 
     def extract_features(self, sequence: TemporalSequence) -> np.ndarray:
         """
@@ -242,13 +251,54 @@ class CommonFeatureClassifier:
         self.global_temperature = best_temp
         self.is_fitted = True
 
-        # Calibrate post-hoc OOD abstention thresholds strictly on Dataset A Validation (target 95% ID coverage)
-        n_dims = max(X_val_norm.shape[1], 1)
-        val_z_rms = np.linalg.norm(X_val_norm, axis=1) / math.sqrt(float(n_dims))
+        # Fit class centroids & shrinkage-regularized inverse pooled covariance for Mahalanobis OOD detection
+        centroids = np.zeros((self.num_classes, 24), dtype=np.float64)
+        residuals = np.zeros_like(X_train_norm)
+        for c in range(self.num_classes):
+            mask_c = y_train == c
+            if np.any(mask_c):
+                mu_c = np.mean(X_train_norm[mask_c], axis=0)
+                centroids[c] = mu_c
+                residuals[mask_c] = X_train_norm[mask_c] - mu_c
+        self.class_centroids = centroids
+        n_tr = max(len(X_train_norm) - self.num_classes, 1)
+        emp_cov = (residuals.T @ residuals) / float(n_tr)
+        shrinkage = 0.25
+        reg_cov = (1.0 - shrinkage) * emp_cov + shrinkage * np.eye(24)
+        self.inv_pooled_cov = np.linalg.inv(reg_cov)
+
+        # Fit 20-member bootstrap Ridge ensemble for epistemic disagreement OOD scoring
+        rng_ens = np.random.default_rng(109)
+        self.ensemble_weights = []
+        reg_eye = 1.0 * np.eye(24)
+        for _ in range(20):
+            b_idx = rng_ens.integers(0, len(X_train_norm), size=len(X_train_norm))
+            Xb = X_train_norm[b_idx]
+            yb = y_train[b_idx]
+            W_b = np.zeros((self.num_classes, 24), dtype=np.float64)
+            gram_b = Xb.T @ Xb + reg_eye
+            for c in range(self.num_classes):
+                y_bin = (yb == c).astype(np.float64)
+                W_b[c] = np.linalg.solve(gram_b, Xb.T @ y_bin)
+            self.ensemble_weights.append(W_b)
+
+        # Calibrate post-hoc OOD abstention thresholds & split-conformal quantile strictly on Dataset A Validation
+        val_scores = self.compute_ood_scores(X_val)
+        val_z_rms = val_scores["feature_l2_rms"]
+        self.val_l2_mean = float(np.mean(val_z_rms))
+        self.val_l2_std = max(float(np.std(val_z_rms)), 0.15)
         self.ood_val_threshold_95 = float(np.percentile(val_z_rms, 95.0))
-        val_probs = self._softmax(val_logits / max(self.global_temperature, 1e-3))
-        val_entropy = -np.sum(val_probs * np.log(np.clip(val_probs, 1e-12, 1.0)), axis=1)
-        self.ood_val_entropy_95 = float(np.percentile(val_entropy, 95.0))
+        self.ood_val_entropy_95 = float(np.percentile(val_scores["predictive_entropy"], 95.0))
+        self.ood_val_mahalanobis_95 = float(np.percentile(val_scores["class_conditional_mahalanobis"], 95.0))
+        self.ood_val_disagreement_95 = float(np.percentile(val_scores["ensemble_disagreement"], 95.0))
+        self.ood_val_conformal_95 = float(np.percentile(val_scores["conformal_nonconformity"], 95.0))
+
+        # Finite-sample split-conformal threshold: ceil((n_val + 1)*(1 - alpha)) / n_val quantile of 1 - p_true
+        val_probs_all = self.predict_temp_scaled_proba(X_val)
+        n_v = max(len(y_val), 1)
+        val_nonconf_true = 1.0 - val_probs_all[np.arange(n_v), y_val]
+        q_level = min(1.0, math.ceil((n_v + 1) * 0.95) / float(n_v))
+        self.conformal_q95 = float(np.quantile(val_nonconf_true, q_level))
 
         return self
 
@@ -305,32 +355,101 @@ class CommonFeatureClassifier:
 
     def compute_ood_scores(self, X: np.ndarray) -> Dict[str, np.ndarray]:
         """
-        Computes standardized feature RMS L2 shift relative to training distribution
-        and predictive entropy under default temperature-scaled probabilities.
+        Computes 5 post-hoc OOD detectors relative to training/validation distributions:
+        1. feature_l2_rms: standardized feature RMS-L2 distance from training mean
+        2. predictive_entropy: Shannon entropy H(p) of temperature-scaled probabilities
+        3. class_conditional_mahalanobis: min_c sqrt((z - mu_c)^T Sigma_reg^{-1} (z - mu_c) / D)
+        4. ensemble_disagreement: 20-member bootstrap Ridge BALD mutual information H(mean_p) - mean H(p_m)
+        5. conformal_nonconformity: LAC score (1 - max_c p_c)
         """
         X_arr = np.asarray(X, dtype=np.float64)
         if X_arr.ndim == 1:
             X_arr = X_arr[None, :]
+        n = X_arr.shape[0]
         if not self.is_fitted or self.feature_means is None or self.feature_stds is None:
-            n = X_arr.shape[0]
             return {
                 "feature_l2_rms": np.zeros(n, dtype=np.float64),
                 "predictive_entropy": np.full(n, math.log(self.num_classes), dtype=np.float64),
+                "class_conditional_mahalanobis": np.zeros(n, dtype=np.float64),
+                "ensemble_disagreement": np.zeros(n, dtype=np.float64),
+                "conformal_nonconformity": np.full(n, 1.0 - 1.0 / self.num_classes, dtype=np.float64),
                 "max_prob": np.full(n, 1.0 / self.num_classes, dtype=np.float64),
                 "abstain_l2": np.zeros(n, dtype=bool),
             }
+
         X_norm = (X_arr - self.feature_means) / self.feature_stds
-        z_l2_rms = np.linalg.norm(X_norm, axis=1) / math.sqrt(float(max(X_norm.shape[1], 1)))
+        n_dims = float(max(X_norm.shape[1], 1))
+        z_l2_rms = np.linalg.norm(X_norm, axis=1) / math.sqrt(n_dims)
+
         probs = self.predict_proba(X_arr)
         entropy = -np.sum(probs * np.log(np.clip(probs, 1e-12, 1.0)), axis=1)
         max_prob = np.max(probs, axis=1)
+        conformal_nonconf = 1.0 - max_prob
+
+        # Class-conditional shrinkage Mahalanobis distance (min across classes)
+        if self.class_centroids is not None and self.inv_pooled_cov is not None:
+            per_class_dists = np.empty((n, self.num_classes), dtype=np.float64)
+            for c in range(self.num_classes):
+                diff_c = X_norm - self.class_centroids[c]
+                quad_c = np.sum((diff_c @ self.inv_pooled_cov) * diff_c, axis=1)
+                per_class_dists[:, c] = np.sqrt(np.maximum(quad_c, 0.0) / n_dims)
+            maha_min = np.min(per_class_dists, axis=1)
+        else:
+            maha_min = z_l2_rms.copy()
+
+        # Bootstrap ensemble BALD disagreement: H(mean_p) - mean_m H(p_m)
+        if self.ensemble_weights:
+            temp = max(self.global_temperature, 1e-3)
+            ens_probs = np.empty((len(self.ensemble_weights), n, self.num_classes), dtype=np.float64)
+            for m_idx, W_m in enumerate(self.ensemble_weights):
+                ens_probs[m_idx] = self._softmax((X_norm @ W_m.T) / temp)
+            mean_ens_p = np.mean(ens_probs, axis=0)
+            h_mean = -np.sum(mean_ens_p * np.log(np.clip(mean_ens_p, 1e-12, 1.0)), axis=1)
+            h_members = -np.sum(ens_probs * np.log(np.clip(ens_probs, 1e-12, 1.0)), axis=2)
+            disagreement = np.maximum(h_mean - np.mean(h_members, axis=0), 0.0)
+        else:
+            disagreement = np.zeros(n, dtype=np.float64)
+
         abstain_l2 = z_l2_rms > self.ood_val_threshold_95
         return {
             "feature_l2_rms": z_l2_rms,
             "predictive_entropy": entropy,
+            "class_conditional_mahalanobis": maha_min,
+            "ensemble_disagreement": disagreement,
+            "conformal_nonconformity": conformal_nonconf,
             "max_prob": max_prob,
             "abstain_l2": abstain_l2,
         }
+
+    def predict_blind_novelty_score(
+        self,
+        X: np.ndarray,
+        model_probs: Optional[np.ndarray] = None,
+    ) -> float:
+        """
+        Computes a strictly blind observable novelty signal in [0.0, 1.0] for T4-B open-set ranking.
+        Uses ZERO object_id or ground-truth class inspection: relies solely on causal observable
+        standardized feature anomaly (RMS-L2 relative to Dataset A Val distribution) and normalized
+        predictive entropy H(p) / ln(8).
+        """
+        X_arr = np.asarray(X, dtype=np.float64)
+        if X_arr.ndim == 1:
+            X_arr = X_arr[None, :]
+        ood = self.compute_ood_scores(X_arr)
+        l2_val = float(ood["feature_l2_rms"][0])
+        z_anom = max(0.0, (l2_val - self.val_l2_mean) / max(self.val_l2_std, 0.15))
+        s_anom = min(1.0, z_anom / 3.0)
+
+        if model_probs is not None:
+            p_arr = np.asarray(model_probs, dtype=np.float64).ravel()
+            p_arr = np.clip(p_arr, 1e-12, 1.0)
+            p_arr = p_arr / max(float(np.sum(p_arr)), 1e-12)
+            ent = -float(np.sum(p_arr * np.log(p_arr)))
+        else:
+            ent = float(ood["predictive_entropy"][0])
+        h_norm = min(1.0, max(0.0, ent / math.log(float(self.num_classes))))
+
+        return float(0.5 * s_anom + 0.5 * h_norm)
 
     @staticmethod
     def _auroc_and_fpr95(id_scores: np.ndarray, ood_scores: np.ndarray) -> Tuple[float, float]:
@@ -355,16 +474,69 @@ class CommonFeatureClassifier:
         y_ood_in_tax: Optional[np.ndarray] = None,
     ) -> Dict[str, Any]:
         """
-        Evaluates post-hoc OOD detection (ID Dataset A Test vs OOD Track 3 Archival)
-        and selective abstention coverage-accuracy at the Dataset A Val 95th-percentile threshold.
+        Evaluates 5 post-hoc OOD detectors (ID Dataset A Test vs OOD Track 3 Archival),
+        risk-versus-coverage curves (100% down to 50% coverage), and selective abstention.
+        Explicitly notes finite-sample conformal quantile step size 1/(N_val+1) and clarifies
+        that these are diagnostic OOD baselines, NOT a deployed safety gate.
         """
         id_s = self.compute_ood_scores(X_id)
         ood_s = self.compute_ood_scores(X_ood)
         id_probs = self.predict_proba(X_id)
         id_correct = (np.argmax(id_probs, axis=1) == y_id).astype(np.float64)
 
-        auroc_l2, fpr95_l2 = self._auroc_and_fpr95(id_s["feature_l2_rms"], ood_s["feature_l2_rms"])
-        auroc_ent, fpr95_ent = self._auroc_and_fpr95(id_s["predictive_entropy"], ood_s["predictive_entropy"])
+        detector_keys = [
+            "feature_l2_rms",
+            "predictive_entropy",
+            "class_conditional_mahalanobis",
+            "ensemble_disagreement",
+            "conformal_nonconformity",
+        ]
+        val_thresholds = {
+            "feature_l2_rms": self.ood_val_threshold_95,
+            "predictive_entropy": self.ood_val_entropy_95,
+            "class_conditional_mahalanobis": self.ood_val_mahalanobis_95,
+            "ensemble_disagreement": self.ood_val_disagreement_95,
+            "conformal_nonconformity": self.ood_val_conformal_95,
+        }
+
+        detectors_summary: Dict[str, Dict[str, Any]] = {}
+        risk_coverage_curves: Dict[str, List[Dict[str, Any]]] = {}
+        coverages = [1.0, 0.9, 0.8, 0.7, 0.6, 0.5]
+
+        for det in detector_keys:
+            auroc_d, fpr95_d = self._auroc_and_fpr95(id_s[det], ood_s[det])
+            thr_d = val_thresholds[det]
+            det_id_abst = float(np.mean(id_s[det] > thr_d))
+            det_ood_abst = float(np.mean(ood_s[det] > thr_d))
+            detectors_summary[det] = {
+                "auroc": auroc_d,
+                "fpr_at_95tpr": fpr95_d,
+                "val_95_threshold": round(float(thr_d), 4),
+                "id_mean": round(float(np.mean(id_s[det])), 4),
+                "ood_mean": round(float(np.mean(ood_s[det])), 4),
+                "id_abstention_rate_at_val95": round(det_id_abst, 4),
+                "ood_abstention_rate_at_val95": round(det_ood_abst, 4),
+            }
+
+            # Risk-vs-coverage curve on pooled ID+OOD detection OR ID selective classification risk (1 - accuracy)
+            order_id = np.argsort(id_s[det])  # Lowest OOD score retained first
+            n_id_tot = len(id_s[det])
+            curve_pts = []
+            for cov in coverages:
+                k_keep = max(1, int(round(cov * n_id_tot)))
+                idx_keep = order_id[:k_keep]
+                sel_acc = float(np.mean(id_correct[idx_keep]))
+                # Also fraction of OOD passing under that same quantile threshold
+                tau_cov = float(id_s[det][idx_keep[-1]])
+                ood_pass = float(np.mean(ood_s[det] <= tau_cov)) if len(ood_s[det]) > 0 else 0.0
+                curve_pts.append({
+                    "target_id_coverage": cov,
+                    "actual_id_coverage": round(k_keep / max(n_id_tot, 1), 4),
+                    "id_selective_risk": round(1.0 - sel_acc, 4),
+                    "id_selective_accuracy": round(sel_acc, 4),
+                    "ood_false_acceptance_at_tau": round(ood_pass, 4),
+                })
+            risk_coverage_curves[det] = curve_pts
 
         keep_id = ~id_s["abstain_l2"]
         keep_ood = ~ood_s["abstain_l2"]
@@ -379,11 +551,23 @@ class CommonFeatureClassifier:
             ood_correct = (np.argmax(ood_probs, axis=1) == y_ood_in_tax).astype(np.float64)
             ood_sel_acc = round(float(np.mean(ood_correct[keep_ood])), 4) if np.any(keep_ood) else None
 
+        n_val = max(self.val_size, 1)
         return {
-            "detector_method": "standardized_feature_rms_l2_and_entropy_threshold",
-            "threshold_calibration_split": "DatasetA_Val_N24_95th_percentile",
+            "detector_method": "five_detector_posthoc_ood_benchmark",
+            "detectors": detectors_summary,
+            "risk_coverage_curves": risk_coverage_curves,
+            "threshold_calibration_split": f"DatasetA_Val_N{self.val_size}_95th_percentile",
+            "finite_sample_conformal_note": (
+                f"Conformal quantile step granularity is 1/(N_val+1) = 1/{n_val + 1} "
+                f"({100.0 / (n_val + 1):.2f}%); q95 threshold = {self.conformal_q95:.4f} on 1 - p_true. "
+                "Diagnostic baseline only; NOT a certified safety gate."
+            ),
             "feature_l2_threshold_95": round(self.ood_val_threshold_95, 4),
             "entropy_threshold_95": round(self.ood_val_entropy_95, 4),
+            "mahalanobis_threshold_95": round(self.ood_val_mahalanobis_95, 4),
+            "disagreement_threshold_95": round(self.ood_val_disagreement_95, 4),
+            "conformal_nonconf_threshold_95": round(self.ood_val_conformal_95, 4),
+            "split_conformal_q95_nonconf": round(self.conformal_q95, 4),
             "id_split": "Cohort_1_DatasetA_Test",
             "ood_split": "Cohort_2_Track3_Archival",
             "n_id": int(len(X_id)),
@@ -392,10 +576,16 @@ class CommonFeatureClassifier:
             "ood_feature_l2_mean": round(float(np.mean(ood_s["feature_l2_rms"])), 4),
             "id_entropy_mean": round(float(np.mean(id_s["predictive_entropy"])), 4),
             "ood_entropy_mean": round(float(np.mean(ood_s["predictive_entropy"])), 4),
-            "auroc_feature_l2": auroc_l2,
-            "fpr_at_95tpr_feature_l2": fpr95_l2,
-            "auroc_predictive_entropy": auroc_ent,
-            "fpr_at_95tpr_predictive_entropy": fpr95_ent,
+            "auroc_feature_l2": detectors_summary["feature_l2_rms"]["auroc"],
+            "fpr_at_95tpr_feature_l2": detectors_summary["feature_l2_rms"]["fpr_at_95tpr"],
+            "auroc_predictive_entropy": detectors_summary["predictive_entropy"]["auroc"],
+            "fpr_at_95tpr_predictive_entropy": detectors_summary["predictive_entropy"]["fpr_at_95tpr"],
+            "auroc_class_conditional_mahalanobis": detectors_summary["class_conditional_mahalanobis"]["auroc"],
+            "fpr_at_95tpr_class_conditional_mahalanobis": detectors_summary["class_conditional_mahalanobis"]["fpr_at_95tpr"],
+            "auroc_ensemble_disagreement": detectors_summary["ensemble_disagreement"]["auroc"],
+            "fpr_at_95tpr_ensemble_disagreement": detectors_summary["ensemble_disagreement"]["fpr_at_95tpr"],
+            "auroc_conformal_nonconformity": detectors_summary["conformal_nonconformity"]["auroc"],
+            "fpr_at_95tpr_conformal_nonconformity": detectors_summary["conformal_nonconformity"]["fpr_at_95tpr"],
             "id_coverage_at_val95": round(id_cov, 4),
             "id_abstention_rate_at_val95": round(id_abst, 4),
             "id_overall_accuracy": round(float(np.mean(id_correct)), 4),
@@ -403,9 +593,11 @@ class CommonFeatureClassifier:
             "ood_abstention_rate_at_val95": round(ood_abst, 4),
             "ood_retained_count": int(np.sum(keep_ood)),
             "ood_selective_accuracy_retained": ood_sel_acc,
+            "is_safety_gate": False,
             "ood_calibration_disclaimer": (
                 "Global temperature scaling is an in-domain baseline only; Track 3 OOD "
-                "probabilities are distribution-shifted and MUST NOT be interpreted as calibrated."
+                "probabilities are distribution-shifted and MUST NOT be interpreted as calibrated "
+                "or treated as an operational safety gate."
             ),
         }
 
@@ -520,4 +712,112 @@ class CommonFeatureClassifier:
             "global_temp_1param": temp_summary,
             "ovr_platt_16param_legacy": platt_summary,
             "uncalibrated_softmax": uncal_summary,
+        }
+
+    def compute_temperature_stability(
+        self,
+        X_train: np.ndarray,
+        y_train: np.ndarray,
+        X_val: np.ndarray,
+        y_val: np.ndarray,
+        n_boot: int = 1000,
+        n_splits: int = 5,
+        seed: int = 42,
+    ) -> Dict[str, Any]:
+        """
+        Quantifies finite-sample sensitivity of 1-parameter global temperature scaling via:
+        1. Bootstrap resampling (B=1000) of Dataset A Validation (N=24) holding W_raw fixed.
+        2. 5-fold stratified cross-validation across pooled Dataset A Train + Val (N=104).
+        """
+        rng = np.random.default_rng(seed)
+        val_logits = self.predict_raw_logits(X_val)
+        n_val = len(y_val)
+        temp_grid = np.linspace(0.05, 5.0, 200)
+
+        # Precompute log-probs over grid once or fast vectorized check for B=1000 resamples
+        scaled_grid = val_logits[None, :, :] / temp_grid[:, None, None]  # (200, N_val, 8)
+        scaled_grid -= np.max(scaled_grid, axis=2, keepdims=True)
+        exp_grid = np.exp(scaled_grid)
+        probs_grid = exp_grid / np.maximum(np.sum(exp_grid, axis=2, keepdims=True), 1e-12)
+        nll_per_sample = -np.log(np.clip(probs_grid[:, np.arange(n_val), y_val], 1e-12, 1.0))  # (200, N_val)
+
+        boot_temps = np.empty(n_boot, dtype=np.float64)
+        for b_idx in range(n_boot):
+            idx = rng.integers(0, n_val, size=n_val)
+            mean_nll_b = np.mean(nll_per_sample[:, idx], axis=1)
+            boot_temps[b_idx] = float(temp_grid[int(np.argmin(mean_nll_b))])
+
+        # 5-fold stratified CV on pooled Train + Val
+        X_pool = np.vstack([X_train, X_val])
+        y_pool = np.concatenate([y_train, y_val])
+        fold_ids = np.zeros(len(y_pool), dtype=int)
+        for c in range(self.num_classes):
+            c_idx = np.where(y_pool == c)[0]
+            rng.shuffle(c_idx)
+            for pos, orig_i in enumerate(c_idx):
+                fold_ids[orig_i] = pos % n_splits
+
+        fold_temps: List[float] = []
+        fold_metrics: List[Dict[str, Any]] = []
+        oof_probs = np.zeros((len(y_pool), self.num_classes), dtype=np.float64)
+
+        for k in range(n_splits):
+            tr_mask = fold_ids != k
+            te_mask = fold_ids == k
+            clf_k = CommonFeatureClassifier(ebv_mw=self.ebv_mw, calibration_mode="temperature_scaled")
+            clf_k.fit(X_pool[tr_mask], y_pool[tr_mask], X_pool[te_mask], y_pool[te_mask])
+            p_k = clf_k.predict_temp_scaled_proba(X_pool[te_mask])
+            oof_probs[te_mask] = p_k
+            confs_k = np.max(p_k, axis=1)
+            corr_k = (np.argmax(p_k, axis=1) == y_pool[te_mask]).astype(np.float64)
+            nll_k = float(np.mean(-np.log(np.clip(p_k[np.arange(len(y_pool[te_mask])), y_pool[te_mask]], 1e-12, 1.0))))
+            fold_temps.append(round(clf_k.global_temperature, 4))
+            fold_metrics.append({
+                "fold": k + 1,
+                "n_train": int(np.sum(tr_mask)),
+                "n_val": int(np.sum(te_mask)),
+                "temperature_T": round(clf_k.global_temperature, 4),
+                "accuracy": round(float(np.mean(corr_k)), 4),
+                "nll": round(nll_k, 4),
+                "ece": round(self._ece_from_arrays(confs_k, corr_k, n_bins=10), 4),
+            })
+
+        oof_confs = np.max(oof_probs, axis=1)
+        oof_corr = (np.argmax(oof_probs, axis=1) == y_pool).astype(np.float64)
+        oof_one_hot = np.zeros_like(oof_probs)
+        oof_one_hot[np.arange(len(y_pool)), y_pool] = 1.0
+        oof_nll = float(np.mean(-np.log(np.clip(oof_probs[np.arange(len(y_pool)), y_pool], 1e-12, 1.0))))
+        oof_brier = float(np.mean(np.sum((oof_probs - oof_one_hot) ** 2, axis=1)))
+        oof_ece = self._ece_from_arrays(oof_confs, oof_corr, n_bins=10)
+
+        return {
+            "bootstrap_val_n24": {
+                "n_val": int(n_val),
+                "bootstrap_resamples": n_boot,
+                "fitted_T": round(float(self.global_temperature), 4),
+                "boot_mean_T": round(float(np.mean(boot_temps)), 4),
+                "boot_median_T": round(float(np.median(boot_temps)), 4),
+                "boot_std_T": round(float(np.std(boot_temps)), 4),
+                "boot_iqr_T": [
+                    round(float(np.percentile(boot_temps, 25.0)), 4),
+                    round(float(np.percentile(boot_temps, 75.0)), 4),
+                ],
+                "boot_ci_95_T": [
+                    round(float(np.percentile(boot_temps, 2.5)), 4),
+                    round(float(np.percentile(boot_temps, 97.5)), 4),
+                ],
+            },
+            "stratified_5fold_cv_pool_n104": {
+                "n_total": int(len(y_pool)),
+                "n_splits": n_splits,
+                "fold_temperatures": fold_temps,
+                "mean_T": round(float(np.mean(fold_temps)), 4),
+                "std_T": round(float(np.std(fold_temps)), 4),
+                "range_T": [round(float(min(fold_temps)), 4), round(float(max(fold_temps)), 4)],
+                "oof_accuracy": round(float(np.mean(oof_corr)), 4),
+                "oof_nll": round(oof_nll, 4),
+                "oof_brier": round(oof_brier, 4),
+                "oof_ece": round(oof_ece, 4),
+                "folds": fold_metrics,
+            },
         }

@@ -57,6 +57,7 @@ from astraeus_bench.statistical_testing import (
     apply_benjamini_hochberg,
     compute_top10_permutation_test,
 )
+from astraeus_bench.domain_shift_audit import run_seven_factor_domain_shift_audit
 
 
 class ModelTaskEvaluationSummary(BaseModel):
@@ -119,6 +120,9 @@ class Stage2BenchmarkReport(BaseModel):
     t4_ablation_queues: Dict[str, Dict[str, Dict[str, Any]]] = Field(default_factory=dict)
     t4_ablation_bootstrap_ci: Dict[str, Dict[str, List[float]]] = Field(default_factory=dict)
     t4_paired_difference_ci: Dict[str, List[float]] = Field(default_factory=dict)
+    t4_three_way_experiments: Dict[str, Any] = Field(default_factory=dict)
+    domain_shift_audit: Dict[str, Any] = Field(default_factory=dict)
+    temperature_stability_diagnostics: Dict[str, Any] = Field(default_factory=dict)
     calibration_diagnostics: Dict[str, Any] = Field(default_factory=dict)
     ood_abstention_diagnostics: Dict[str, Any] = Field(default_factory=dict)
     runtime_environment_and_latency: Dict[str, Any] = Field(default_factory=dict)
@@ -126,6 +130,7 @@ class Stage2BenchmarkReport(BaseModel):
     reconciliation_day111_1_commit: str = "8014b16"
     reconciliation_day111_2_commit: str = "037d698"
     reconciliation_day111_2_2_commit: str = "8315d68"
+    reconciliation_day111_2_3_commit: str = "74bc08e"
     executive_summary: str
 
 
@@ -374,17 +379,25 @@ class Stage2TemporalBenchmarkOrchestrator:
         true_class: str,
         novelty_weight: float = 1.0,
         use_attention: bool = True,
-        use_timescales: bool = True
+        use_timescales: bool = True,
+        novelty_mode: str = "blind",
     ) -> Tuple[float, bool]:
         """
         Evaluates Task T4: computes event-level Rare Utility:
         U = [2.0*P(FBOT) + 1.5*P(TDE) + 1.0*P(SLSN) + S_novelty] * [1 - P(ARTIFACT)].
-        Supports 4-way ablation controls.
+        novelty_mode:
+          - "blind" (default): computes S_novelty strictly from causal observables (zero object_id/label peeking).
+          - "none": sets S_novelty = 0.0 (T4-A in-taxonomy only).
+          - "oracle": diagnostic upper bound checking SN2017gfo/OPEN_SET_NOVELTY (T4-C; NEVER used in headline claims).
         """
+        if novelty_mode not in ("blind", "none", "oracle"):
+            raise ValueError(f"Unsupported novelty_mode: {novelty_mode}")
+
+        feats = self.common_classifier.extract_features(causal_sequence)
+        if not use_timescales:
+            feats[8:20] = 0.0  # Zero out rise & decline timescales for ablation
+
         if baseline_id in ("B1_Akima", "B2_GP"):
-            feats = self.common_classifier.extract_features(causal_sequence)
-            if not use_timescales:
-                feats[8:20] = 0.0  # Zero out rise & decline timescales for ablation
             probs = self.common_classifier.predict_proba(feats).squeeze(0)
         else:
             if not use_attention and baseline_id == "B3_Transformer":
@@ -410,9 +423,19 @@ class Stage2TemporalBenchmarkOrchestrator:
         p_slsn = float(probs[CLASSES_8.index("SLSN")])
         p_artifact = float(probs[CLASSES_8.index("ARTIFACT_DIPOLE")])
 
-        # Open-set novelty check for SN 2017gfo
-        is_open_set = (true_class == "OPEN_SET_NOVELTY" or causal_sequence.object_id == "SN2017gfo")
-        s_novelty = novelty_weight if is_open_set else 0.0
+        if novelty_weight == 0.0 or novelty_mode == "none":
+            s_novelty = 0.0
+        elif novelty_mode == "oracle":
+            # Diagnostic-only upper bound (T4-C); strictly separated from headline T4 evaluation
+            is_open_set = (true_class == "OPEN_SET_NOVELTY" or causal_sequence.object_id == "SN2017gfo")
+            s_novelty = novelty_weight if is_open_set else 0.0
+        else:
+            # T4-B Blind novelty: relies solely on causal observable features & model probabilities
+            raw_novelty = self.common_classifier.predict_blind_novelty_score(
+                feats,
+                model_probs=None if baseline_id in ("B1_Akima", "B2_GP") else probs,
+            )
+            s_novelty = novelty_weight * raw_novelty
 
         utility = (2.0 * p_fbot + 1.5 * p_tde + 1.0 * p_slsn + s_novelty) * (1.0 - p_artifact)
         is_rare_target = (true_class in ("SLSN", "TDE", "FBOT", "OPEN_SET_NOVELTY"))
@@ -430,6 +453,7 @@ class Stage2TemporalBenchmarkOrchestrator:
         ground_truth: Dict[str, str],
         model: Any,
         sequences_in_tax: Optional[List[TemporalSequence]] = None,
+        novelty_mode: str = "blind",
     ) -> ModelTaskEvaluationSummary:
         """
         Evaluates all 4 tasks for a model on a cohort with reconciled task denominators:
@@ -494,7 +518,9 @@ class Stage2TemporalBenchmarkOrchestrator:
             obj_id = seq.object_id
             true_cls = ground_truth.get(obj_id, "SN_Ia")
             _ts = time.perf_counter()
-            util, is_rare = self.evaluate_task4(baseline_id, model, seq, true_cls)
+            util, is_rare = self.evaluate_task4(
+                baseline_id, model, seq, true_cls, novelty_mode=novelty_mode
+            )
             t4_elapsed += time.perf_counter() - _ts
             t4_utility_list.append(util)
             t4_is_rare_list.append(is_rare)
@@ -581,7 +607,8 @@ class Stage2TemporalBenchmarkOrchestrator:
             "calibration_mode": self.common_classifier.calibration_mode if baseline_id in ("B1_Akima", "B2_GP") else "raw_softmax",
             "feature_source": "24 cutoff-visible features" if baseline_id in ("B1_Akima", "B2_GP") else "Causal multi-band token sequence",
             "scoring_formula": "U = [2.0*P(FBOT) + 1.5*P(TDE) + 1.0*P(SLSN) + S_novelty] * [1 - P(ARTIFACT_DIPOLE)]",
-            "novelty_weight": 1.0,
+            "novelty_mode": novelty_mode,
+            "novelty_weight": 1.0 if novelty_mode != "none" else 0.0,
             "population_size": len(sequences_all),
         }
 
@@ -776,44 +803,64 @@ class Stage2TemporalBenchmarkOrchestrator:
         model: Any,
         sequences: List[TemporalSequence],
         labels: Dict[str, str],
-        repetitions: int = 50,
-        warmup: int = 5,
+        repetitions: int = 1000,
+        warmup: int = 50,
+        sessions: int = 3,
     ) -> Dict[str, Any]:
         """
-        Profiles scoped single-sequence operational triage latency (batch_size=1):
+        Profiles scoped single-sequence operational triage latency (batch_size=1)
+        across `sessions` independent sessions of `warmup` + `repetitions` timed passes:
         cutoff feature/token inference + rare-event utility scoring only.
         Explicitly EXCLUDES catalog cross-matching, evidence retrieval, agent orchestration, and disk/network IO.
         """
         if not sequences:
-            return {"p50_ms_per_seq": 0.0, "p95_ms_per_seq": 0.0, "mean_ms_per_seq": 0.0}
+            return {"p50_ms_per_seq": 0.0, "p95_ms_per_seq": 0.0, "p99_ms_per_seq": 0.0, "mean_ms_per_seq": 0.0}
 
-        # Warm-up passes (excluded from statistics)
-        for _ in range(warmup):
-            for seq in sequences[:min(4, len(sequences))]:
-                self.evaluate_task4(baseline_id, model, seq, labels.get(seq.object_id, "SN_Ia"))
-
-        # Timed batch_size=1 single-sequence repetitions across cohort
-        samples_ms: List[float] = []
         n_seq = len(sequences)
-        for r in range(repetitions):
-            seq = sequences[r % n_seq]
-            lbl = labels.get(seq.object_id, "SN_Ia")
-            t0 = time.perf_counter()
-            self.evaluate_task4(baseline_id, model, seq, lbl)
-            samples_ms.append((time.perf_counter() - t0) * 1000.0)
+        pooled_samples_ms: List[float] = []
+        per_session_stats: List[Dict[str, Any]] = []
 
-        arr = np.asarray(samples_ms, dtype=np.float64)
+        for sess_idx in range(sessions):
+            # Warm-up passes excluded from session statistics
+            for _ in range(warmup):
+                for seq in sequences[:min(4, n_seq)]:
+                    self.evaluate_task4(baseline_id, model, seq, labels.get(seq.object_id, "SN_Ia"))
+
+            sess_ms: List[float] = []
+            for r in range(repetitions):
+                seq = sequences[(r + sess_idx * 7) % n_seq]
+                lbl = labels.get(seq.object_id, "SN_Ia")
+                t0 = time.perf_counter()
+                self.evaluate_task4(baseline_id, model, seq, lbl)
+                sess_ms.append((time.perf_counter() - t0) * 1000.0)
+
+            s_arr = np.asarray(sess_ms, dtype=np.float64)
+            per_session_stats.append({
+                "session": sess_idx + 1,
+                "repetitions": repetitions,
+                "p50_ms_per_seq": round(float(np.percentile(s_arr, 50.0)), 4),
+                "p95_ms_per_seq": round(float(np.percentile(s_arr, 95.0)), 4),
+                "p99_ms_per_seq": round(float(np.percentile(s_arr, 99.0)), 4),
+                "mean_ms_per_seq": round(float(np.mean(s_arr)), 4),
+            })
+            pooled_samples_ms.extend(sess_ms)
+
+        arr = np.asarray(pooled_samples_ms, dtype=np.float64)
         return {
             "batch_size": 1,
             "warmup": warmup,
             "repetitions": repetitions,
+            "sessions": sessions,
+            "total_timed_repetitions": int(len(arr)),
             "device": str(getattr(model, "device", "cpu")) if model is not None else "cpu",
             "sync_method": "host_perf_counter_cpu",
             "p50_ms_per_seq": round(float(np.percentile(arr, 50.0)), 4),
             "p95_ms_per_seq": round(float(np.percentile(arr, 95.0)), 4),
+            "p99_ms_per_seq": round(float(np.percentile(arr, 99.0)), 4),
             "mean_ms_per_seq": round(float(np.mean(arr)), 4),
             "min_ms_per_seq": round(float(np.min(arr)), 4),
             "max_ms_per_seq": round(float(np.max(arr)), 4),
+            "per_session_stats": per_session_stats,
         }
 
     # -----------------------------------------------------------------------
@@ -1240,7 +1287,72 @@ class Stage2TemporalBenchmarkOrchestrator:
                 "timescale_features": False,
             }, p10_no_ts)
 
-        # 9. Calibration & Post-Hoc OOD Abstention Diagnostics (Val vs Test vs Track 3)
+        # 8b. T4 Three-Way Experiment Separation (T4-A In-Taxonomy / T4-B Blind Open-Set / T4-C Oracle Diagnostic)
+        def _eval_t4_queue(b_id: str, mdl: Any, seqs_q: List[TemporalSequence], labels_q: Dict[str, str], n_mode: str) -> Dict[str, Any]:
+            u_vals: List[float] = []
+            c_ids_q: List[str] = []
+            c_lbls_q: List[str] = []
+            for s_q in seqs_q:
+                lbl_q = labels_q.get(s_q.object_id, "SN_Ia")
+                u_q, _ = self.evaluate_task4(b_id, mdl, s_q, lbl_q, novelty_mode=n_mode)
+                u_vals.append(u_q)
+                c_ids_q.append(s_q.object_id)
+                c_lbls_q.append(lbl_q)
+            r_metrics = self._compute_t4_ranking_metrics(u_vals, c_lbls_q, c_ids_q)
+            order = np.argsort(u_vals)[::-1]
+            top10 = [c_ids_q[i] for i in order[:min(10, len(c_ids_q))]]
+            return {
+                "novelty_mode": n_mode,
+                "n_queue": len(seqs_q),
+                "top10_candidate_ids": top10,
+                "mean_utility": round(float(np.mean(u_vals)), 6) if u_vals else 0.0,
+                "ranking_metrics": r_metrics,
+            }
+
+        t4_three_way_experiments: Dict[str, Any] = {
+            "protocol_policy": (
+                "T4-A (in-taxonomy, novelty_mode='none') and T4-B (blind open-set, novelty_mode='blind') "
+                "are headline causal evaluations. T4-C (novelty_mode='oracle') is strictly a diagnostic upper bound "
+                "excluded from primary contrasts C19-C24, secondary diagnostics, and headline discovery claims."
+            ),
+            "Cohort_1_DatasetA_Test": {},
+            "Cohort_2_Track3_Archival": {},
+        }
+        for b_id, mdl in models.items():
+            da_a = _eval_t4_queue(b_id, mdl, cohort1_seqs, cohort1_labels, "none")
+            da_b = _eval_t4_queue(b_id, mdl, cohort1_seqs, cohort1_labels, "blind")
+            t4_three_way_experiments["Cohort_1_DatasetA_Test"][b_id] = {
+                "T4_A_in_taxonomy": da_a,
+                "T4_B_blind_open_set": da_b,
+            }
+
+            t3_a = _eval_t4_queue(b_id, mdl, cohort2_in_tax, cohort2_labels, "none")
+            t3_b = _eval_t4_queue(b_id, mdl, cohort2_seqs_all, cohort2_labels, "blind")
+            t3_c = _eval_t4_queue(b_id, mdl, cohort2_seqs_all, cohort2_labels, "oracle")
+            b_full = t3_b["ranking_metrics"]["full_queue"]
+            c_full = t3_c["ranking_metrics"]["full_queue"]
+            b_sep = t3_b["ranking_metrics"]["open_set_separation"]
+            c_sep = t3_c["ranking_metrics"]["open_set_separation"]
+            t4_three_way_experiments["Cohort_2_Track3_Archival"][b_id] = {
+                "T4_A_in_taxonomy_N17": t3_a,
+                "T4_B_blind_open_set_N18": t3_b,
+                "T4_C_oracle_upper_bound_N18": {
+                    **t3_c,
+                    "diagnostic_only": True,
+                    "excluded_from_headline_claims": True,
+                    "oracle_minus_blind_p10_delta": round(c_full["precision_at_10"] - b_full["precision_at_10"], 4),
+                    "oracle_minus_blind_ap_delta": round(c_full["average_precision"] - b_full["average_precision"], 4),
+                    "oracle_minus_blind_ndcg10_delta": round(c_full["ndcg_at_10"] - b_full["ndcg_at_10"], 4),
+                    "blind_sn2017gfo_rank": b_sep.get("sn2017gfo_rank_1indexed"),
+                    "oracle_sn2017gfo_rank": c_sep.get("sn2017gfo_rank_1indexed"),
+                },
+            }
+
+        # 9. Calibration, Temperature Stability, Five-Detector OOD Abstention & 7-Factor Domain Shift Audit
+        tr_seqs_cal = DatasetATrainManifest.generate_train_sequences()
+        tr_labels_cal = DatasetATrainManifest.get_ground_truth_labels()
+        X_tr_cal = np.array([self.common_classifier.extract_features(s) for s in tr_seqs_cal])
+        y_tr_cal = np.array([CLASSES_8.index(tr_labels_cal[s.object_id]) for s in tr_seqs_cal])
         val_seqs = DatasetAValManifest.generate_val_sequences()
         val_labels = DatasetAValManifest.get_ground_truth_labels()
         X_val_cal = np.array([self.common_classifier.extract_features(s) for s in val_seqs])
@@ -1256,6 +1368,9 @@ class Stage2TemporalBenchmarkOrchestrator:
             "Cohort_1_DatasetA_Test_N45": self.common_classifier.compute_calibration_diagnostics(X_c1_cal, y_c1_cal),
             "Cohort_2_Track3_Archival_N17": self.common_classifier.compute_calibration_diagnostics(X_c2_cal, y_c2_cal),
         }
+        temperature_stability_diagnostics = self.common_classifier.compute_temperature_stability(
+            X_tr_cal, y_tr_cal, X_val_cal, y_val_cal, n_boot=1000, n_splits=5
+        )
         ood_abstention_diagnostics = {
             "ID_Test_vs_Track3_InTax_N17": self.common_classifier.evaluate_ood_abstention(
                 X_c1_cal, y_c1_cal, X_c2_cal, y_ood_in_tax=y_c2_cal
@@ -1264,6 +1379,7 @@ class Stage2TemporalBenchmarkOrchestrator:
                 X_c1_cal, y_c1_cal, X_c2_all_cal, y_ood_in_tax=None
             ),
         }
+        domain_shift_audit = run_seven_factor_domain_shift_audit(self.common_classifier)
 
         # 10. Measured Hardware, Software, & Scoped Operational Triage Latency Profile
         cpu_name = platform.processor() or "Unknown CPU"
@@ -1294,28 +1410,28 @@ class Stage2TemporalBenchmarkOrchestrator:
         gpu_vram_gb = round(torch.cuda.get_device_properties(0).total_memory / (1024 ** 3), 2) if cuda_avail else None
         exec_device = str(self.device) if self.device else "cpu"
 
-        # Profile scoped operational triage latency (batch_size=1, warmup=5, repetitions=50)
+        # Profile scoped operational triage latency (batch_size=1, warmup=50, repetitions=1000 x 3 sessions)
         scoped_triage_p50_p95: Dict[str, Any] = {}
         for b_id, mdl in models.items():
             scoped_triage_p50_p95[b_id] = {
                 "Cohort_1_DatasetA_Test": self._profile_scoped_triage_latency(
-                    b_id, mdl, cohort1_seqs, cohort1_labels, repetitions=50, warmup=5
+                    b_id, mdl, cohort1_seqs, cohort1_labels, repetitions=1000, warmup=50, sessions=3
                 ),
                 "Cohort_2_Track3_Archival": self._profile_scoped_triage_latency(
-                    b_id, mdl, cohort2_seqs_all, cohort2_labels, repetitions=50, warmup=5
+                    b_id, mdl, cohort2_seqs_all, cohort2_labels, repetitions=1000, warmup=50, sessions=3
                 ),
             }
 
-        # Explicit synchronized CUDA latency check for B3_Transformer when GPU is available
+        # Explicit synchronized CUDA latency check for B3_Transformer when GPU is available (1,000 reps)
         cuda_sync_profile: Optional[Dict[str, Any]] = None
         if cuda_avail:
             try:
                 m_cuda = NonPretrainedTransformerBaseline(seed=42, device="cuda")
                 cuda_c1_ms: List[float] = []
-                for _ in range(5):
-                    m_cuda.predict_sequence(cohort1_seqs[0])
+                for w_idx in range(50):
+                    m_cuda.predict_sequence(cohort1_seqs[w_idx % len(cohort1_seqs)])
                 torch.cuda.synchronize()
-                for r in range(50):
+                for r in range(1000):
                     seq_r = cohort1_seqs[r % len(cohort1_seqs)]
                     torch.cuda.synchronize()
                     t0 = time.perf_counter()
@@ -1329,11 +1445,12 @@ class Stage2TemporalBenchmarkOrchestrator:
                     "device": "cuda",
                     "gpu_device": gpu_name,
                     "batch_size": 1,
-                    "warmup": 5,
-                    "repetitions": 50,
+                    "warmup": 50,
+                    "repetitions": 1000,
                     "sync_method": "torch.cuda.synchronize",
                     "p50_ms_per_seq": round(float(np.percentile(c_arr, 50.0)), 4),
                     "p95_ms_per_seq": round(float(np.percentile(c_arr, 95.0)), 4),
+                    "p99_ms_per_seq": round(float(np.percentile(c_arr, 99.0)), 4),
                     "mean_ms_per_seq": round(float(np.mean(c_arr)), 4),
                 }
             except Exception as exc:
@@ -1352,9 +1469,11 @@ class Stage2TemporalBenchmarkOrchestrator:
                 "scoped_t3_t4_single_pass_track3_ms_per_seq": c2_bd.get("scoped_operational_triage_pipeline_ms_per_seq", 0.0),
                 "scoped_triage_datasetA_p50_ms": p_c1["p50_ms_per_seq"],
                 "scoped_triage_datasetA_p95_ms": p_c1["p95_ms_per_seq"],
+                "scoped_triage_datasetA_p99_ms": p_c1["p99_ms_per_seq"],
                 "scoped_triage_datasetA_mean_ms": p_c1["mean_ms_per_seq"],
                 "scoped_triage_track3_p50_ms": p_c2["p50_ms_per_seq"],
                 "scoped_triage_track3_p95_ms": p_c2["p95_ms_per_seq"],
+                "scoped_triage_track3_p99_ms": p_c2["p99_ms_per_seq"],
                 "scoped_triage_track3_mean_ms": p_c2["mean_ms_per_seq"],
                 "full_4task_benchmark_track3_ms_per_seq": round(cohort_summaries["Cohort_2_Track3_Archival"][b_id].latency_ms_per_sequence, 4),
             }
@@ -1374,7 +1493,7 @@ class Stage2TemporalBenchmarkOrchestrator:
             "benchmark_execution_device": exec_device,
             "latency_scope_definition": (
                 "scoped_operational_triage_latency measures batch_size=1 in-memory sequence triage "
-                "(feature/token inference + rare-event utility scoring; warmup=5, repetitions=50). "
+                "(feature/token inference + rare-event utility scoring; warmup=50, repetitions=1000 x 3 sessions = 3000 timed samples). "
                 "Explicitly EXCLUDES catalog cross-match, external evidence retrieval, agent orchestration, and disk/network IO."
             ),
             "data_prep_latency_ms_per_seq": {
@@ -1407,17 +1526,21 @@ class Stage2TemporalBenchmarkOrchestrator:
             t4_ablation_queues=t4_ablation_queues,
             t4_ablation_bootstrap_ci=t4_ablation_ci,
             t4_paired_difference_ci=t4_paired_diff_ci,
+            t4_three_way_experiments=t4_three_way_experiments,
+            domain_shift_audit=domain_shift_audit,
+            temperature_stability_diagnostics=temperature_stability_diagnostics,
             calibration_diagnostics=calibration_diagnostics,
             ood_abstention_diagnostics=ood_abstention_diagnostics,
             runtime_environment_and_latency=runtime_env,
             astromer_lineage_audit=astromer_lineage,
             executive_summary=(
-                f"ASTRAEUS Phase 2 Stage 2 Day 111.2.3 Evidence Closure Audit Release. "
-                f"Fixes T4 permutation/bootstrap CIs across both cohorts (subtraction_order=candidate_minus_baseline), "
-                f"adds full 18-object astrometric field-level provenance and propagated offset uncertainties (AUTOMATED_MATHEMATICAL_AND_SCHEMA_CONSISTENCY), "
-                f"retires 16-param OvR Platt default in favor of 1-param global temperature scaling + post-hoc OOD abstention, "
-                f"adds T4 Recall@5/10, AP, NDCG@10 with SN2017gfo open-set separation, and reports p50/p95 scoped triage latency. "
-                f"Primary multiplicity family remains m=24 (significant: {num_sig}/24), Track 3 generalization failure remains explicitly exposed, "
+                f"ASTRAEUS Phase 2 Stage 2 Day 111.2.4 Research-Validity & Blind-Evaluation Audit Milestone. "
+                f"Removes T4 oracle peeking from all headline metrics, C19-C24 primary contrasts, and secondary permutation diagnostics, "
+                f"separating T4-A (in-taxonomy N=17), T4-B (blind open-set N=18 headline), and T4-C (oracle diagnostic upper bound). "
+                f"Decomposes Track 3 T3 collapse across 7 domain-shift factors (exposing fixed chromatic offsets + absent controls), "
+                f"expands OOD diagnostics to 5 detectors + risk-coverage curves, quantifies temperature bootstrap/CV stability, "
+                f"adds directional covariance-aware astrometric errors + distinct catalog epochs, and scales latency profiling to 1,000 reps x 3 sessions. "
+                f"Primary multiplicity family remains m=24 (significant: {num_sig}/24), archival expansion beyond N=18 remains an open P0 blocker, "
                 f"ASTROMER lineage remains OVERLAP_AUDIT_INCOMPLETE (HOST_ENVIRONMENT_OVERLAP_QUALIFIED), and Dataset B pretraining remains strictly ON HOLD."
             )
         )

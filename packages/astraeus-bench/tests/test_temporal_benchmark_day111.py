@@ -165,11 +165,23 @@ class TestFourTaskEvaluationRunners:
         assert u_fbot >= 0.0
         assert is_rare_fbot is True
 
-        # Open-set novelty kilonova (SN 2017gfo)
+        # Blind open-set novelty evaluation: S_novelty MUST NOT depend on object_id or true_class
         seq_gw = _create_mock_sequence("SN2017gfo", 30)
-        u_gw, is_rare_gw = orchestrator.evaluate_task4("B1_Akima", None, seq_gw, true_class="OPEN_SET_NOVELTY")
-        assert u_gw > 0.5  # S_novelty bonus boosts priority
+        seq_masked = _create_mock_sequence("BLIND_CANDIDATE_01", 30)
+        u_gw_blind, is_rare_gw = orchestrator.evaluate_task4(
+            "B1_Akima", None, seq_gw, true_class="OPEN_SET_NOVELTY"
+        )
+        u_masked_blind, _ = orchestrator.evaluate_task4(
+            "B1_Akima", None, seq_masked, true_class="SN_Ia"
+        )
+        assert abs(u_gw_blind - u_masked_blind) < 1e-12
         assert is_rare_gw is True
+
+        # Diagnostic-only oracle upper bound (T4-C): explicit novelty_mode="oracle"
+        u_gw_oracle, _ = orchestrator.evaluate_task4(
+            "B1_Akima", None, seq_gw, true_class="OPEN_SET_NOVELTY", novelty_mode="oracle"
+        )
+        assert u_gw_oracle > 0.5  # Diagnostic upper-bound bonus when oracle enabled
 
 
 class TestStatisticalTestingFramework:
@@ -313,11 +325,18 @@ class TestTrack3AndDatasetAManifests:
         assert len(prov_audit["records"]) == 18
         for obj_diag in prov_audit["records"]:
             assert obj_diag["sep_err_arcsec"] >= 0.0
+            assert obj_diag["sep_err_directional_arcsec"] >= 0.0
+            assert obj_diag["sep_err_isotropic_arcsec"] >= 0.0
             assert obj_diag["projected_offset_err_kpc"] > 0.0
             assert obj_diag["coord_frame"] == "ICRS"
+            assert obj_diag["equinox"] == "J2000.0"
+            assert obj_diag["coord_epoch"]
             assert obj_diag["transient_coord_source"]
             assert obj_diag["host_coord_source"]
             assert obj_diag["distance_source"]
+            assert "peculiar_velocity_floor_kms" in obj_diag
+        # Ensure real per-catalog epochs are no longer uniform J2000.0 placeholders
+        assert len({r["coord_epoch"] for r in prov_audit["records"]}) >= 10
 
         # Verify in-taxonomy (N=17) vs open-set (N=1)
         in_tax_seqs = Track3ArchivalManifest.get_in_taxonomy_sequences()
@@ -487,16 +506,58 @@ class TestStage2BenchmarkOrchestratorExecution:
         assert "ovr_platt_16param_legacy" in cal_val
         assert "per_class_reliability" in cal_val["global_temp_1param"]
 
-        assert "ID_Test_vs_Track3_InTax_N17" in report.ood_abstention_diagnostics
-        assert "auroc_feature_l2" in report.ood_abstention_diagnostics["ID_Test_vs_Track3_InTax_N17"]
-        assert "ood_abstention_rate_at_val95" in report.ood_abstention_diagnostics["ID_Test_vs_Track3_InTax_N17"]
+        ood_n17 = report.ood_abstention_diagnostics["ID_Test_vs_Track3_InTax_N17"]
+        assert "auroc_feature_l2" in ood_n17
+        assert "ood_abstention_rate_at_val95" in ood_n17
+        assert ood_n17["is_safety_gate"] is False
+        assert len(ood_n17["detectors"]) == 5
+        for det_key in (
+            "feature_l2_rms",
+            "predictive_entropy",
+            "class_conditional_mahalanobis",
+            "ensemble_disagreement",
+            "conformal_nonconformity",
+        ):
+            assert det_key in ood_n17["detectors"]
+            assert det_key in ood_n17["risk_coverage_curves"]
+            assert len(ood_n17["risk_coverage_curves"][det_key]) == 6
 
+        # Day 111.2.4 Research-Validity & Blind-Evaluation invariants:
+        # 1) T4-A / T4-B / T4-C separation with headline matching blind T4-B (zero oracle inflation)
+        c2_t4_3way = report.t4_three_way_experiments["Cohort_2_Track3_Archival"]
+        for b_id in ("B1_Akima", "B2_GP", "B3_Transformer", "B4_ASTROMER"):
+            b_summary = report.cohort_summaries["Cohort_2_Track3_Archival"][b_id]
+            assert b_summary.t4_scorer_provenance["novelty_mode"] == "blind"
+            b_blind_p10 = c2_t4_3way[b_id]["T4_B_blind_open_set_N18"]["ranking_metrics"]["full_queue"]["precision_at_10"]
+            assert abs(b_summary.t4_precision_at_10 - b_blind_p10) < 1e-9
+            c_diag = c2_t4_3way[b_id]["T4_C_oracle_upper_bound_N18"]
+            assert c_diag["diagnostic_only"] is True
+            assert c_diag["excluded_from_headline_claims"] is True
+
+        # 2) 7-Factor Domain Shift Audit + Archival Expansion Honesty
+        ds_audit = report.domain_shift_audit
+        for f_idx in range(1, 8):
+            assert any(k.startswith(f"factor_{f_idx}_") for k in ds_audit)
+        arch_exp = ds_audit["factor_6_population_and_class_prior_mismatch"]["archival_expansion_status"]
+        assert arch_exp["has_real_variable_star_archival"] is False
+        assert arch_exp["has_real_artifact_dipole_archival"] is False
+        assert arch_exp["dataset_b_pretraining_status"] == "STRICTLY_ON_HOLD"
+
+        # 3) Calibration Temperature Stability (Bootstrap N=24 + 5-Fold Stratified CV N=104)
+        temp_stab = report.temperature_stability_diagnostics
+        assert temp_stab["bootstrap_val_n24"]["bootstrap_resamples"] == 1000
+        assert len(temp_stab["stratified_5fold_cv_pool_n104"]["fold_temperatures"]) == 5
+
+        # 4) Scoped Operational Triage Latency (1,000 reps x 3 sessions = 3,000 samples, p99 included)
         rt = report.runtime_environment_and_latency
         assert "cpu_model" in rt
         assert "scoped_operational_triage_latency_p50_p95" in rt
         p50_b1 = rt["scoped_operational_triage_latency_p50_p95"]["B1_Akima"]["Cohort_1_DatasetA_Test"]
-        assert p50_b1["repetitions"] == 50
-        assert p50_b1["warmup"] == 5
+        assert p50_b1["repetitions"] == 1000
+        assert p50_b1["sessions"] == 3
+        assert p50_b1["total_timed_repetitions"] == 3000
+        assert p50_b1["warmup"] == 50
         assert p50_b1["batch_size"] == 1
-        assert p50_b1["p95_ms_per_seq"] >= p50_b1["p50_ms_per_seq"]
+        assert p50_b1["p99_ms_per_seq"] >= p50_b1["p95_ms_per_seq"] >= p50_b1["p50_ms_per_seq"]
+        assert len(p50_b1["per_session_stats"]) == 3
         assert "OVERLAP_AUDIT_INCOMPLETE" in report.executive_summary

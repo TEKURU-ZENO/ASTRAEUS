@@ -63,7 +63,12 @@ def compute_expected_calibration_error(
     n = len(true_labels)
 
     for i in range(n_bins):
-        in_bin = (confidences > bin_boundaries[i]) & (confidences <= bin_boundaries[i + 1])
+        lo = bin_boundaries[i]
+        hi = bin_boundaries[i + 1]
+        if i == n_bins - 1:
+            in_bin = (confidences >= lo) & (confidences <= hi)
+        else:
+            in_bin = (confidences >= lo) & (confidences < hi)
         count = int(np.sum(in_bin))
         bin_counts.append(count)
 
