@@ -289,11 +289,23 @@ class TestTrack3AndDatasetAManifests:
         assert cow["host_galaxy"] == "CGCG 137-068"
         assert "SN2018cow" in cow["aliases"]
 
-        # Verify AT2020xnd deduplication (The Camel / ZTF20acvhrvo)
+        # Verify AT2020xnd deduplication and verified ZTF20acigmel alias (The Camel)
         camel = next(obj for obj in TRACK_3_OBJECT_METADATA if obj["canonical_id"] == "AT2020xnd")
-        assert "ZTF20acvhrvo" in camel["aliases"]
+        assert "ZTF20acigmel" in camel["aliases"]
         assert "The Camel" in camel["aliases"]
-        assert not any(obj["canonical_id"] == "ZTF20acvhrvo" for obj in TRACK_3_OBJECT_METADATA), "ZTF20acvhrvo must not be a duplicate canonical object!"
+        assert not any(obj["canonical_id"] == "ZTF20acvhrvo" for obj in TRACK_3_OBJECT_METADATA), "ZTF20acvhrvo must not be a canonical object!"
+        assert "ZTF20acvhrvo" not in camel["aliases"]
+
+        # Verify PTF12dam (SLSN) and AT2019dsg (TDE) replacements
+        assert "PTF12dam" in canonical_ids
+        assert "AT2019dsg" in canonical_ids
+        assert "AT2021lwx" not in canonical_ids
+        assert "Gaia14aaa" not in canonical_ids
+
+        # Verify full 18-object astrometric provenance audit
+        prov_audit = Track3ArchivalManifest.audit_astrometric_provenance()
+        assert prov_audit["passed"] is True, f"Astrometric provenance failures: {prov_audit['failures']}"
+        assert prov_audit["total_records"] == 18
 
         # Verify in-taxonomy (N=17) vs open-set (N=1)
         in_tax_seqs = Track3ArchivalManifest.get_in_taxonomy_sequences()
@@ -312,7 +324,9 @@ class TestTrack3AndDatasetAManifests:
             assert len(records) >= 30
             for r in records:
                 assert r.exposure_id.startswith("EXP_")
-                assert r.survey_system in ("ZTF", "PTF", "ATLAS", "Pan-STARRS1", "Swift", "ESO")
+                assert r.survey_system in (
+                    "ZTF", "PTF", "ATLAS", "Pan-STARRS1", "Swift", "ESO", "ROTSE-III", "ASAS-SN", "Swope"
+                )
                 assert r.provenance_uri.startswith("doi:")
 
     def test_dataset_a_test_manifest_45_objects_and_taxonomy(self):
@@ -430,3 +444,17 @@ class TestStage2BenchmarkOrchestratorExecution:
         assert report.astromer_lineage_audit["min_angular_separation_canonical_deg"] > 18.0
         assert "sn1987a_environmental_audit" in report.astromer_lineage_audit
         assert report.astromer_lineage_audit["sn1987a_environmental_audit"]["in_canonical_track3_manifest"] is False
+
+        # Check Day 111.2.2 T3 present-class Macro-F1, T4 ablation queues, calibration, and runtime telemetry
+        t3_b1 = report.cohort_summaries["Cohort_2_Track3_Archival"]["B1_Akima"]
+        assert len(t3_b1.t3_present_classes) == 6
+        assert t3_b1.t3_present_class_macro_f1 >= t3_b1.t3_macro_f1
+        for c_id in ["Cohort_1_DatasetA_Test", "Cohort_2_Track3_Archival"]:
+            for cfg_name, p10_val in report.t4_ablation_results[c_id].items():
+                q_info = report.t4_ablation_queues[c_id][cfg_name]
+                assert abs(q_info["recalculated_precision_at_10"] - p10_val) < 1e-9
+                assert len(q_info["top10_candidate_ids"]) == 10
+        assert "DatasetA_Val_N24" in report.calibration_diagnostics
+        assert "Cohort_2_Track3_Archival_N17" in report.calibration_diagnostics
+        assert "cpu_model" in report.runtime_environment_and_latency
+        assert "OVERLAP_AUDIT_INCOMPLETE" in report.executive_summary

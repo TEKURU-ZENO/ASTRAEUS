@@ -17,8 +17,12 @@ Standardized benchmark framework implementing:
 
 from typing import List, Dict, Any, Tuple, Optional
 import math
+import os
+import platform
+import sys
 import time
 import numpy as np
+import scipy
 import torch
 import torch.nn.functional as F
 from pydantic import BaseModel, ConfigDict, Field
@@ -71,6 +75,8 @@ class ModelTaskEvaluationSummary(BaseModel):
     t2_mean_crps_30d: float
     t2_mean_mae_10d: float
     t3_macro_f1: float
+    t3_present_class_macro_f1: float = 0.0
+    t3_present_classes: List[str] = Field(default_factory=list)
     t3_brier_score: float
     t3_ece: float
     t3_confusion_matrix: List[List[int]] = Field(default_factory=list)
@@ -82,7 +88,9 @@ class ModelTaskEvaluationSummary(BaseModel):
     t4_top10_candidate_ids: List[str] = Field(default_factory=list)
     t4_top10_candidate_classes: List[str] = Field(default_factory=list)
     t4_top10_candidate_scores: List[float] = Field(default_factory=list)
+    t4_scorer_provenance: Dict[str, Any] = Field(default_factory=dict)
     latency_ms_per_sequence: float
+    latency_component_breakdown_ms: Dict[str, float] = Field(default_factory=dict)
     per_event_t1_crps: List[float] = Field(default_factory=list)
     per_event_t2_crps_10d: List[float] = Field(default_factory=list)
     per_event_t3_correct: List[bool] = Field(default_factory=list)
@@ -107,11 +115,14 @@ class Stage2BenchmarkReport(BaseModel):
     num_significant_primary_contrasts: int
     transformer_seed_stability: Dict[str, Dict[int, Dict[str, float]]]
     t4_ablation_results: Dict[str, Dict[str, float]]
+    t4_ablation_queues: Dict[str, Dict[str, Dict[str, Any]]] = Field(default_factory=dict)
     t4_ablation_bootstrap_ci: Dict[str, Dict[str, List[float]]] = Field(default_factory=dict)
     t4_paired_difference_ci: Dict[str, List[float]] = Field(default_factory=dict)
+    calibration_diagnostics: Dict[str, Any] = Field(default_factory=dict)
+    runtime_environment_and_latency: Dict[str, Any] = Field(default_factory=dict)
     astromer_lineage_audit: Dict[str, Any]
     reconciliation_day111_1_commit: str = "8014b16"
-    reconciliation_day111_2_commit: str = "d4bd2b7"
+    reconciliation_day111_2_commit: str = "037d698"
     executive_summary: str
 
 
@@ -439,6 +450,10 @@ class Stage2TemporalBenchmarkOrchestrator:
         t4_cand_ids = []
 
         start_time = time.perf_counter()
+        t1_elapsed = 0.0
+        t2_elapsed = 0.0
+        t3_elapsed = 0.0
+        t4_elapsed = 0.0
 
         # 1. Evaluate Tasks T1, T2, T3 strictly on in-taxonomy sequence population
         for seq in in_tax_seqs:
@@ -446,12 +461,16 @@ class Stage2TemporalBenchmarkOrchestrator:
             true_cls = ground_truth.get(obj_id, "SN_Ia")
 
             # T1: Masked Reconstruction (FULL_HISTORY view)
+            _ts = time.perf_counter()
             c1, m1 = self.evaluate_task1(baseline_id, model, seq)
+            t1_elapsed += time.perf_counter() - _ts
             t1_crps_list.append(c1)
             t1_mae_list.append(m1)
 
             # T2: Multi-Horizon Forecasting (CAUSAL_FORECAST view)
+            _ts = time.perf_counter()
             c2_10, c2_3, c2_30, m2_10 = self.evaluate_task2(baseline_id, model, seq)
+            t2_elapsed += time.perf_counter() - _ts
             t2_crps_10d_list.append(c2_10)
             t2_crps_3d_list.append(c2_3)
             t2_crps_30d_list.append(c2_30)
@@ -459,7 +478,9 @@ class Stage2TemporalBenchmarkOrchestrator:
 
             # T3: Early Classification (strictly 8-class in-taxonomy)
             if true_cls in CLASSES_8:
+                _ts = time.perf_counter()
                 pred_cls, probs, is_corr, brier = self.evaluate_task3(baseline_id, model, seq, true_cls)
+                t3_elapsed += time.perf_counter() - _ts
                 t3_correct_list.append(is_corr)
                 t3_brier_list.append(brier)
                 t3_probs_list.append(probs)
@@ -469,19 +490,47 @@ class Stage2TemporalBenchmarkOrchestrator:
         for seq in sequences_all:
             obj_id = seq.object_id
             true_cls = ground_truth.get(obj_id, "SN_Ia")
+            _ts = time.perf_counter()
             util, is_rare = self.evaluate_task4(baseline_id, model, seq, true_cls)
+            t4_elapsed += time.perf_counter() - _ts
             t4_utility_list.append(util)
             t4_is_rare_list.append(is_rare)
             t4_cand_ids.append(obj_id)
 
+        _ts_sort = time.perf_counter()
+        ranked_indices = np.argsort(t4_utility_list)[::-1]
+        top10_idx = ranked_indices[:min(10, len(t4_utility_list))]
+        p_at_10 = float(np.sum(np.array(t4_is_rare_list)[top10_idx])) / len(top10_idx)
+
+        top10_ids = [t4_cand_ids[i] for i in top10_idx]
+        top10_classes = [ground_truth.get(t4_cand_ids[i], "UNKNOWN") for i in top10_idx]
+        top10_scores = [float(t4_utility_list[i]) for i in top10_idx]
+        sort_elapsed = time.perf_counter() - _ts_sort
+
+        # Assert P@10 strictly matches published ranked queue
+        recalc_p10 = sum(1 for c in top10_classes if c in ("SLSN", "TDE", "FBOT", "OPEN_SET_NOVELTY")) / max(len(top10_classes), 1)
+        assert abs(recalc_p10 - p_at_10) < 1e-9, f"T4 P@10 queue mismatch for {baseline_id} on {cohort_id}"
+
         total_time = time.perf_counter() - start_time
         latency_ms = (total_time / max(len(sequences_all), 1)) * 1000.0
+        n_in = max(len(in_tax_seqs), 1)
+        n_all = max(len(sequences_all), 1)
+        latency_breakdown = {
+            "t1_reconstruct_ms_per_seq": round((t1_elapsed / n_in) * 1000.0, 4),
+            "t2_forecast_ms_per_seq": round((t2_elapsed / n_in) * 1000.0, 4),
+            "t3_classify_ms_per_seq": round((t3_elapsed / n_in) * 1000.0, 4),
+            "t4_score_ms_per_seq": round((t4_elapsed / n_all) * 1000.0, 4),
+            "t4_queue_sort_ms_total": round(sort_elapsed * 1000.0, 4),
+            "operational_t3_t4_pipeline_ms_per_seq": round(((t3_elapsed / n_in) + (t4_elapsed / n_all) + (sort_elapsed / n_all)) * 1000.0, 4),
+        }
 
         # Compute T3 Classification Diagnostics
         confusion_mat = []
         per_class_f1 = {}
         per_class_prec = {}
         per_class_rec = {}
+        present_classes: List[str] = []
+        present_macro_f1 = 0.0
         if t3_probs_list:
             probs_arr = np.array(t3_probs_list)
             trues_arr = np.array(t3_trues_list)
@@ -506,18 +555,27 @@ class Stage2TemporalBenchmarkOrchestrator:
                 assert abs(per_class_prec[cls_k] - expected_prec) < 1e-4, f"Precision mismatch for {cls_k}"
                 assert abs(per_class_rec[cls_k] - expected_rec) < 1e-4, f"Recall mismatch for {cls_k}"
                 assert abs(per_class_f1[cls_k] - expected_f1) < 1e-4, f"F1 mismatch for {cls_k}"
+                if row_sum > 0:
+                    present_classes.append(cls_k)
+            present_macro_f1 = float(np.mean([per_class_f1[c] for c in present_classes])) if present_classes else macro_f1
         else:
             macro_f1 = 0.5
             ece = 0.1
 
-        # Compute T4 Precision@10 and publish ranked top-10 candidates
-        ranked_indices = np.argsort(t4_utility_list)[::-1]
-        top10_idx = ranked_indices[:min(10, len(t4_utility_list))]
-        p_at_10 = float(np.sum(np.array(t4_is_rare_list)[top10_idx])) / len(top10_idx)
-
-        top10_ids = [t4_cand_ids[i] for i in top10_idx]
-        top10_classes = [ground_truth.get(t4_cand_ids[i], "UNKNOWN") for i in top10_idx]
-        top10_scores = [float(t4_utility_list[i]) for i in top10_idx]
+        classifier_family = (
+            "CommonFeatureClassifier (24-feature Ridge + OvR Platt)"
+            if baseline_id in ("B1_Akima", "B2_GP")
+            else ("NonPretrainedTransformerBaseline (seed=42)" if baseline_id == "B3_Transformer" else "AstromerAdapterBaseline")
+        )
+        t4_provenance = {
+            "baseline_id": baseline_id,
+            "cohort_id": cohort_id,
+            "classifier_family": classifier_family,
+            "feature_source": "24 cutoff-visible features" if baseline_id in ("B1_Akima", "B2_GP") else "Causal multi-band token sequence",
+            "scoring_formula": "U = [2.0*P(FBOT) + 1.5*P(TDE) + 1.0*P(SLSN) + S_novelty] * [1 - P(ARTIFACT_DIPOLE)]",
+            "novelty_weight": 1.0,
+            "population_size": len(sequences_all),
+        }
 
         return ModelTaskEvaluationSummary(
             baseline_id=baseline_id,
@@ -532,6 +590,8 @@ class Stage2TemporalBenchmarkOrchestrator:
             t2_mean_crps_30d=float(np.mean(t2_crps_30d_list)),
             t2_mean_mae_10d=float(np.mean(t2_mae_10d_list)),
             t3_macro_f1=macro_f1,
+            t3_present_class_macro_f1=present_macro_f1,
+            t3_present_classes=present_classes,
             t3_brier_score=float(np.mean(t3_brier_list)) if t3_brier_list else 0.25,
             t3_ece=ece,
             t3_confusion_matrix=confusion_mat,
@@ -543,7 +603,9 @@ class Stage2TemporalBenchmarkOrchestrator:
             t4_top10_candidate_ids=top10_ids,
             t4_top10_candidate_classes=top10_classes,
             t4_top10_candidate_scores=top10_scores,
+            t4_scorer_provenance=t4_provenance,
             latency_ms_per_sequence=latency_ms,
+            latency_component_breakdown_ms=latency_breakdown,
             per_event_t1_crps=t1_crps_list,
             per_event_t2_crps_10d=t2_crps_10d_list,
             per_event_t3_correct=t3_correct_list,
@@ -564,13 +626,17 @@ class Stage2TemporalBenchmarkOrchestrator:
             "B4_ASTROMER": AstromerAdapterBaseline(device=self.device),
         }
 
-        # 1. Load Cohorts with strict task denominators
+        # 1. Load Cohorts with strict task denominators and measure data-prep latency
+        t_prep0 = time.perf_counter()
         cohort1_seqs = DatasetATestManifest.generate_test_sequences(base_seed=777)
         cohort1_labels = DatasetATestManifest.get_ground_truth_labels()
+        t_prep_c1_ms = ((time.perf_counter() - t_prep0) / max(len(cohort1_seqs), 1)) * 1000.0
 
+        t_prep1 = time.perf_counter()
         cohort2_seqs_all = Track3ArchivalManifest.get_sequences()
         cohort2_in_tax = Track3ArchivalManifest.get_in_taxonomy_sequences()
         cohort2_labels = Track3ArchivalManifest.get_ground_truth_labels()
+        t_prep_c2_ms = ((time.perf_counter() - t_prep1) / max(len(cohort2_seqs_all), 1)) * 1000.0
 
         cohort_summaries: Dict[str, Dict[str, ModelTaskEvaluationSummary]] = {
             "Cohort_1_DatasetA_Test": {},
@@ -867,12 +933,39 @@ class Stage2TemporalBenchmarkOrchestrator:
                 diffs.append(p10_a - p10_b)
             return [float(np.percentile(diffs, 2.5)), float(np.percentile(diffs, 97.5))]
 
+        t4_ablation_queues: Dict[str, Dict[str, Dict[str, Any]]] = {}
+
+        def _publish_ablation_queue(
+            c_id: str,
+            cfg_name: str,
+            u_list: List[float],
+            seqs_list: List[TemporalSequence],
+            labels_map: Dict[str, str],
+            provenance: Dict[str, Any],
+            expected_p10: float,
+        ) -> None:
+            ranked_idx = np.argsort(u_list)[::-1]
+            top_idx = ranked_idx[:min(10, len(u_list))]
+            top_ids = [seqs_list[i].object_id for i in top_idx]
+            top_cls = [labels_map.get(oid, "UNKNOWN") for oid in top_ids]
+            top_scores = [round(float(u_list[i]), 6) for i in top_idx]
+            recalc_p10 = sum(1 for c in top_cls if c in ("SLSN", "TDE", "FBOT", "OPEN_SET_NOVELTY")) / max(len(top_cls), 1)
+            assert abs(recalc_p10 - expected_p10) < 1e-9, f"Ablation {cfg_name} P@10 mismatch on {c_id}"
+            t4_ablation_queues[c_id][cfg_name] = {
+                "scorer_provenance": provenance,
+                "top10_candidate_ids": top_ids,
+                "top10_candidate_classes": top_cls,
+                "top10_candidate_scores": top_scores,
+                "recalculated_precision_at_10": recalc_p10,
+            }
+
         for c_id, seqs, labels in [
             ("Cohort_1_DatasetA_Test", cohort1_seqs, cohort1_labels),
             ("Cohort_2_Track3_Archival", cohort2_seqs_all, cohort2_labels),
         ]:
             t4_ablations[c_id] = {}
             t4_ablation_ci[c_id] = {}
+            t4_ablation_queues[c_id] = {}
             is_r = [labels[s.object_id] in ("SLSN", "TDE", "FBOT", "OPEN_SET_NOVELTY") for s in seqs]
 
             # Config 1: Full Transformer (Attention + Novelty)
@@ -880,12 +973,24 @@ class Stage2TemporalBenchmarkOrchestrator:
             p10_full, ci_full = _calc_p10_boot(u_full, is_r)
             t4_ablations[c_id]["1_Transformer_Full"] = p10_full
             t4_ablation_ci[c_id]["1_Transformer_Full"] = ci_full
+            _publish_ablation_queue(c_id, "1_Transformer_Full", u_full, seqs, labels, {
+                "model_id": "NonPretrainedTransformerBaseline (seed=42)",
+                "attention": True,
+                "novelty_weight": 1.0,
+                "timescale_features": "N/A (token sequence)",
+            }, p10_full)
 
             # Config 2: Transformer without Attention (Projection Mean Pooling + Novelty)
             u_no_attn = [self.evaluate_task4("B3_Transformer", models["B3_Transformer"], s, labels[s.object_id], 1.0, False, True)[0] for s in seqs]
             p10_no_attn, ci_no_attn = _calc_p10_boot(u_no_attn, is_r)
             t4_ablations[c_id]["2_Transformer_No_Attention"] = p10_no_attn
             t4_ablation_ci[c_id]["2_Transformer_No_Attention"] = ci_no_attn
+            _publish_ablation_queue(c_id, "2_Transformer_No_Attention", u_no_attn, seqs, labels, {
+                "model_id": "NonPretrainedTransformerBaseline (seed=42, mean-pool bypass)",
+                "attention": False,
+                "novelty_weight": 1.0,
+                "timescale_features": "N/A (token sequence)",
+            }, p10_no_attn)
 
             # Compute Paired Bootstrap Difference (Config 1 - Config 2)
             t4_paired_diff_ci[c_id] = _calc_paired_p10_diff_boot(u_full, u_no_attn, is_r)
@@ -895,14 +1000,105 @@ class Stage2TemporalBenchmarkOrchestrator:
             p10_no_nov, ci_no_nov = _calc_p10_boot(u_no_nov, is_r)
             t4_ablations[c_id]["3_Transformer_No_Novelty"] = p10_no_nov
             t4_ablation_ci[c_id]["3_Transformer_No_Novelty"] = ci_no_nov
+            _publish_ablation_queue(c_id, "3_Transformer_No_Novelty", u_no_nov, seqs, labels, {
+                "model_id": "NonPretrainedTransformerBaseline (seed=42)",
+                "attention": True,
+                "novelty_weight": 0.0,
+                "timescale_features": "N/A (token sequence)",
+            }, p10_no_nov)
 
             # Config 4: Common Classifier without Early Timescale Features
             u_no_timescales = [self.evaluate_task4("B1_Akima", None, s, labels[s.object_id], 1.0, True, False)[0] for s in seqs]
             p10_no_ts, ci_no_ts = _calc_p10_boot(u_no_timescales, is_r)
             t4_ablations[c_id]["4_Common_Classifier_No_Timescales"] = p10_no_ts
             t4_ablation_ci[c_id]["4_Common_Classifier_No_Timescales"] = ci_no_ts
+            _publish_ablation_queue(c_id, "4_Common_Classifier_No_Timescales", u_no_timescales, seqs, labels, {
+                "model_id": "CommonFeatureClassifier (Ridge + OvR Platt, feats[8:20]=0)",
+                "attention": False,
+                "novelty_weight": 1.0,
+                "timescale_features": False,
+            }, p10_no_ts)
 
-        # 9. ASTROMER Lineage Audit
+        # 9. Calibration Diagnostics (CommonFeatureClassifier: Validation vs Test vs Track 3)
+        val_seqs = DatasetAValManifest.generate_val_sequences()
+        val_labels = DatasetAValManifest.get_ground_truth_labels()
+        X_val_cal = np.array([self.common_classifier.extract_features(s) for s in val_seqs])
+        y_val_cal = np.array([CLASSES_8.index(val_labels[s.object_id]) for s in val_seqs])
+        X_c1_cal = np.array([self.common_classifier.extract_features(s) for s in cohort1_seqs])
+        y_c1_cal = np.array([CLASSES_8.index(cohort1_labels[s.object_id]) for s in cohort1_seqs])
+        X_c2_cal = np.array([self.common_classifier.extract_features(s) for s in cohort2_in_tax])
+        y_c2_cal = np.array([CLASSES_8.index(cohort2_labels[s.object_id]) for s in cohort2_in_tax])
+
+        calibration_diagnostics = {
+            "DatasetA_Val_N24": self.common_classifier.compute_calibration_diagnostics(X_val_cal, y_val_cal),
+            "Cohort_1_DatasetA_Test_N45": self.common_classifier.compute_calibration_diagnostics(X_c1_cal, y_c1_cal),
+            "Cohort_2_Track3_Archival_N17": self.common_classifier.compute_calibration_diagnostics(X_c2_cal, y_c2_cal),
+        }
+
+        # 10. Measured Hardware, Software, & End-to-End Operational Latency Profile
+        cpu_name = platform.processor() or "Unknown CPU"
+        ram_gb = None
+        if os.name == "nt":
+            try:
+                import winreg
+                import ctypes
+                k = winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, r"HARDWARE\DESCRIPTION\System\CentralProcessor\0")
+                cpu_name = str(winreg.QueryValueEx(k, "ProcessorNameString")[0]).strip()
+                class _MEM(ctypes.Structure):
+                    _fields_ = [
+                        ("len", ctypes.c_ulong), ("load", ctypes.c_ulong),
+                        ("phys", ctypes.c_ulonglong), ("avail_phys", ctypes.c_ulonglong),
+                        ("pf", ctypes.c_ulonglong), ("avail_pf", ctypes.c_ulonglong),
+                        ("virt", ctypes.c_ulonglong), ("avail_virt", ctypes.c_ulonglong),
+                        ("ext", ctypes.c_ulonglong),
+                    ]
+                m = _MEM()
+                m.len = ctypes.sizeof(_MEM)
+                ctypes.windll.kernel32.GlobalMemoryStatusEx(ctypes.byref(m))
+                ram_gb = round(m.phys / (1024 ** 3), 2)
+            except Exception:
+                pass
+
+        cuda_avail = bool(torch.cuda.is_available())
+        gpu_name = torch.cuda.get_device_name(0) if cuda_avail else None
+        gpu_vram_gb = round(torch.cuda.get_device_properties(0).total_memory / (1024 ** 3), 2) if cuda_avail else None
+        exec_device = str(self.device) if self.device else ("cuda" if cuda_avail else "cpu")
+
+        e2e_latency_ms = {}
+        for b_id in baselines:
+            c1_bd = cohort_summaries["Cohort_1_DatasetA_Test"][b_id].latency_component_breakdown_ms
+            c2_bd = cohort_summaries["Cohort_2_Track3_Archival"][b_id].latency_component_breakdown_ms
+            e2e_latency_ms[b_id] = {
+                "data_prep_datasetA_ms_per_seq": round(t_prep_c1_ms, 4),
+                "data_prep_track3_ms_per_seq": round(t_prep_c2_ms, 4),
+                "operational_t3_t4_datasetA_ms_per_seq": c1_bd.get("operational_t3_t4_pipeline_ms_per_seq", 0.0),
+                "operational_t3_t4_track3_ms_per_seq": c2_bd.get("operational_t3_t4_pipeline_ms_per_seq", 0.0),
+                "end_to_end_triage_datasetA_ms_per_seq": round(t_prep_c1_ms + c1_bd.get("operational_t3_t4_pipeline_ms_per_seq", 0.0), 4),
+                "end_to_end_triage_track3_ms_per_seq": round(t_prep_c2_ms + c2_bd.get("operational_t3_t4_pipeline_ms_per_seq", 0.0), 4),
+                "full_4task_benchmark_track3_ms_per_seq": round(cohort_summaries["Cohort_2_Track3_Archival"][b_id].latency_ms_per_sequence, 4),
+            }
+
+        runtime_env = {
+            "os": platform.platform(),
+            "python_version": sys.version.split()[0],
+            "numpy_version": np.__version__,
+            "scipy_version": scipy.__version__,
+            "torch_version": torch.__version__,
+            "cpu_model": cpu_name,
+            "logical_cpu_count": os.cpu_count(),
+            "ram_gb": ram_gb,
+            "cuda_available": cuda_avail,
+            "gpu_device": gpu_name,
+            "gpu_vram_gb": gpu_vram_gb,
+            "benchmark_execution_device": exec_device,
+            "data_prep_latency_ms_per_seq": {
+                "Cohort_1_DatasetA_Test": round(t_prep_c1_ms, 4),
+                "Cohort_2_Track3_Archival": round(t_prep_c2_ms, 4),
+            },
+            "end_to_end_latency_by_baseline": e2e_latency_ms,
+        }
+
+        # 11. ASTROMER Lineage Audit
         astromer_lineage = AstromerAdapterBaseline.audit_astromer_lineage()
 
         return Stage2BenchmarkReport(
@@ -920,15 +1116,19 @@ class Stage2TemporalBenchmarkOrchestrator:
             num_significant_primary_contrasts=num_sig,
             transformer_seed_stability=seed_stability,
             t4_ablation_results=t4_ablations,
+            t4_ablation_queues=t4_ablation_queues,
             t4_ablation_bootstrap_ci=t4_ablation_ci,
             t4_paired_difference_ci=t4_paired_diff_ci,
+            calibration_diagnostics=calibration_diagnostics,
+            runtime_environment_and_latency=runtime_env,
             astromer_lineage_audit=astromer_lineage,
             executive_summary=(
-                f"ASTRAEUS Phase 2 Stage 2 Day 111.2 Benchmark Scientific Integrity Release. "
-                f"Canonical C8 taxonomy, canonical 18-object Track 3 manifest, and genuinely disjoint training (N=80) and val (N=24) cohorts. "
+                f"ASTRAEUS Phase 2 Stage 2 Day 111.2.2 Canonical Astrometric & Provenance Reconciliation Release. "
+                f"Canonical C8 taxonomy, full 18-object Track 3 manifest verified against external catalogs (PTF12dam, AT2019dsg replacing AT2021lwx, Gaia14aaa; ZTF20acigmel alias), "
+                f"and genuinely disjoint training (N=80) and val (N=24) cohorts. "
                 f"Primary multiplicity family reconciled to m=24 candidate-vs-reference hypotheses (significant: {num_sig}/24), "
                 f"with 8 explicit reference identity anchors and full 32-cell sensitivity analysis. "
-                f"ASTROMER lineage updated to OVERLAP_AUDIT_INCOMPLETE with environmental qualification. "
+                f"All P0 and applicable P1 reconciliation items closed except ASTROMER lineage, which remains OVERLAP_AUDIT_INCOMPLETE (contained under HOST_ENVIRONMENT_OVERLAP_QUALIFIED pending source-level MACHO overlap verification). "
                 f"Pretraining on Dataset B remains strictly ON HOLD."
             )
         )

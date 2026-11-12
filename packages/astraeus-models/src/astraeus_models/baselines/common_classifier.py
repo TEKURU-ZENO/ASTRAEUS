@@ -43,6 +43,9 @@ class CommonFeatureClassifier:
         self.is_fitted = False
         # Calibration weights: One-vs-Rest Platt scaling parameters (slope, intercept)
         self.platt_weights: np.ndarray = np.ones((self.num_classes, 2))
+        self.global_temperature: float = 1.0
+        self.val_size: int = 0
+        self.val_per_class_support: Dict[str, int] = {}
         self.feature_means: Optional[np.ndarray] = None
         self.feature_stds: Optional[np.ndarray] = None
 
@@ -211,8 +214,51 @@ class CommonFeatureClassifier:
             self.platt_weights[c, 0] = best_a
             self.platt_weights[c, 1] = best_b
 
+        self.val_size = int(len(y_val))
+        self.val_per_class_support = {
+            CLASSES_8[c]: int(np.sum(y_val == c)) for c in range(self.num_classes)
+        }
+
+        # 1-parameter global temperature scaling baseline over validation logits
+        best_temp = 1.0
+        best_nll = 1e9
+        for temp in np.linspace(0.05, 5.0, 200):
+            scaled = val_logits / temp
+            scaled -= np.max(scaled, axis=1, keepdims=True)
+            exp_s = np.exp(scaled)
+            probs_t = exp_s / np.maximum(np.sum(exp_s, axis=1, keepdims=True), 1e-12)
+            nll = -float(np.mean(np.log(np.clip(probs_t[np.arange(len(y_val)), y_val], 1e-12, 1.0))))
+            if nll < best_nll:
+                best_nll = nll
+                best_temp = float(temp)
+        self.global_temperature = best_temp
+
         self.is_fitted = True
         return self
+
+    def predict_raw_logits(self, X: np.ndarray) -> np.ndarray:
+        """Returns uncalibrated OvR ridge decision logits of shape (N, num_classes)."""
+        if not self.is_fitted or self.feature_means is None:
+            n_samples = X.shape[0] if len(X.shape) > 1 else 1
+            return np.zeros((n_samples, self.num_classes), dtype=np.float64)
+        X_norm = (X - self.feature_means) / self.feature_stds
+        if len(X_norm.shape) == 1:
+            X_norm = X_norm[None, :]
+        return X_norm @ self.W_raw.T
+
+    @staticmethod
+    def _softmax(logits: np.ndarray) -> np.ndarray:
+        shifted = logits - np.max(logits, axis=-1, keepdims=True)
+        exps = np.exp(shifted)
+        return exps / np.maximum(np.sum(exps, axis=-1, keepdims=True), 1e-12)
+
+    def predict_uncalibrated_softmax(self, X: np.ndarray) -> np.ndarray:
+        """Uncalibrated softmax(logits) without Platt scaling or temperature scaling."""
+        return self._softmax(self.predict_raw_logits(X))
+
+    def predict_temp_scaled_proba(self, X: np.ndarray) -> np.ndarray:
+        """1-parameter global temperature-scaled softmax(logits / T)."""
+        return self._softmax(self.predict_raw_logits(X) / max(self.global_temperature, 1e-3))
 
     def predict_proba(self, X: np.ndarray) -> np.ndarray:
         """
@@ -223,11 +269,7 @@ class CommonFeatureClassifier:
             n_samples = X.shape[0] if len(X.shape) > 1 else 1
             return np.full((n_samples, self.num_classes), 1.0 / self.num_classes)
 
-        X_norm = (X - self.feature_means) / self.feature_stds
-        if len(X_norm.shape) == 1:
-            X_norm = X_norm[None, :]
-
-        raw_logits = X_norm @ self.W_raw.T  # shape: (N, 8)
+        raw_logits = self.predict_raw_logits(X)  # shape: (N, 8)
 
         # Apply One-vs-Rest Platt scaling: sigma(a * logit + b)
         calibrated_ovr = 1.0 / (1.0 + np.exp(-np.clip(self.platt_weights[:, 0] * raw_logits + self.platt_weights[:, 1], -15.0, 15.0)))
@@ -236,3 +278,56 @@ class CommonFeatureClassifier:
         prob_sum = np.sum(calibrated_ovr, axis=-1, keepdims=True)
         probs = calibrated_ovr / np.maximum(prob_sum, 1e-9)
         return probs
+
+    @staticmethod
+    def _calibration_summary(probs: np.ndarray, y_true: np.ndarray, n_bins: int = 10) -> Dict[str, Any]:
+        n = len(y_true)
+        preds = np.argmax(probs, axis=1)
+        confs = np.max(probs, axis=1)
+        correct = (preds == y_true).astype(np.float64)
+        one_hot = np.zeros_like(probs)
+        one_hot[np.arange(n), y_true] = 1.0
+        nll = -float(np.mean(np.log(np.clip(probs[np.arange(n), y_true], 1e-12, 1.0))))
+        brier = float(np.mean(np.sum((probs - one_hot) ** 2, axis=1)))
+        edges = np.linspace(0.0, 1.0, n_bins + 1)
+        ece = 0.0
+        bins = []
+        for b in range(n_bins):
+            lo, hi = float(edges[b]), float(edges[b + 1])
+            mask = (confs >= lo) & (confs <= hi if b == n_bins - 1 else confs < hi)
+            cnt = int(np.sum(mask))
+            if cnt > 0:
+                mean_conf = float(np.mean(confs[mask]))
+                emp_acc = float(np.mean(correct[mask]))
+                ece += (cnt / max(n, 1)) * abs(emp_acc - mean_conf)
+            else:
+                mean_conf = 0.0
+                emp_acc = 0.0
+            bins.append({
+                "bin_range": f"[{lo:.1f}, {hi:.1f}{']' if b == n_bins - 1 else ')'}",
+                "count": cnt,
+                "mean_confidence": round(mean_conf, 4),
+                "empirical_accuracy": round(emp_acc, 4),
+            })
+        return {
+            "accuracy": round(float(np.mean(correct)), 4),
+            "nll": round(nll, 4),
+            "brier": round(brier, 4),
+            "ece": round(float(ece), 4),
+            "reliability_bins": bins,
+        }
+
+    def compute_calibration_diagnostics(self, X: np.ndarray, y_true: np.ndarray, n_bins: int = 10) -> Dict[str, Any]:
+        """Compares 16-param OvR Platt scaling against 1-param temperature scaling and uncalibrated softmax."""
+        return {
+            "n_eval": int(len(y_true)),
+            "val_size": self.val_size,
+            "val_per_class_support": self.val_per_class_support,
+            "platt_param_count": int(self.platt_weights.size),
+            "platt_a_range": [round(float(np.min(self.platt_weights[:, 0])), 4), round(float(np.max(self.platt_weights[:, 0])), 4)],
+            "platt_b_range": [round(float(np.min(self.platt_weights[:, 1])), 4), round(float(np.max(self.platt_weights[:, 1])), 4)],
+            "global_temperature_T": round(self.global_temperature, 4),
+            "ovr_platt_16param": self._calibration_summary(self.predict_proba(X), y_true, n_bins=n_bins),
+            "global_temp_1param": self._calibration_summary(self.predict_temp_scaled_proba(X), y_true, n_bins=n_bins),
+            "uncalibrated_softmax": self._calibration_summary(self.predict_uncalibrated_softmax(X), y_true, n_bins=n_bins),
+        }
