@@ -1,7 +1,9 @@
 """
 Common Feature Classifier (Baseline 5): Level-Playing-Field Multi-Class Benchmark Layer.
 Extracts 24 standardized light-curve features strictly from cutoff-visible observations and applies
-One-vs-Rest Platt-calibrated gradient boosted classification across the 8-class taxonomy.
+1-parameter global temperature-scaled OvR Ridge classification across the 8-class taxonomy
+(with 16-parameter OvR Platt retired from default use and retained only as a legacy diagnostic),
+plus an in-domain feature-distance/entropy OOD abstention module.
 """
 
 from typing import Dict, List, Tuple, Optional, Any
@@ -37,17 +39,23 @@ class CommonFeatureClassifier:
     21-23: MW-dereddened peak colors: (g-r), (r-i), (c-o)
     24:    Early color slope d(g-r)/dt during early rise (mag/day)
     """
-    def __init__(self, ebv_mw: float = 0.02):
+    def __init__(self, ebv_mw: float = 0.02, calibration_mode: str = "temperature_scaled"):
+        if calibration_mode not in ("temperature_scaled", "ovr_platt_legacy"):
+            raise ValueError(f"Unsupported calibration_mode: {calibration_mode}")
         self.ebv_mw = ebv_mw
+        self.calibration_mode = calibration_mode
         self.num_classes = len(CLASSES_8)
         self.is_fitted = False
-        # Calibration weights: One-vs-Rest Platt scaling parameters (slope, intercept)
+        # Legacy One-vs-Rest Platt scaling parameters (slope, intercept); retired from default inference
         self.platt_weights: np.ndarray = np.ones((self.num_classes, 2))
         self.global_temperature: float = 1.0
         self.val_size: int = 0
         self.val_per_class_support: Dict[str, int] = {}
         self.feature_means: Optional[np.ndarray] = None
         self.feature_stds: Optional[np.ndarray] = None
+        # Post-hoc OOD abstention thresholds calibrated strictly on Dataset A Validation
+        self.ood_val_threshold_95: float = 0.0
+        self.ood_val_entropy_95: float = 0.0
 
     def extract_features(self, sequence: TemporalSequence) -> np.ndarray:
         """
@@ -232,8 +240,16 @@ class CommonFeatureClassifier:
                 best_nll = nll
                 best_temp = float(temp)
         self.global_temperature = best_temp
-
         self.is_fitted = True
+
+        # Calibrate post-hoc OOD abstention thresholds strictly on Dataset A Validation (target 95% ID coverage)
+        n_dims = max(X_val_norm.shape[1], 1)
+        val_z_rms = np.linalg.norm(X_val_norm, axis=1) / math.sqrt(float(n_dims))
+        self.ood_val_threshold_95 = float(np.percentile(val_z_rms, 95.0))
+        val_probs = self._softmax(val_logits / max(self.global_temperature, 1e-3))
+        val_entropy = -np.sum(val_probs * np.log(np.clip(val_probs, 1e-12, 1.0)), axis=1)
+        self.ood_val_entropy_95 = float(np.percentile(val_entropy, 95.0))
+
         return self
 
     def predict_raw_logits(self, X: np.ndarray) -> np.ndarray:
@@ -257,38 +273,176 @@ class CommonFeatureClassifier:
         return self._softmax(self.predict_raw_logits(X))
 
     def predict_temp_scaled_proba(self, X: np.ndarray) -> np.ndarray:
-        """1-parameter global temperature-scaled softmax(logits / T)."""
+        """1-parameter global temperature-scaled softmax(logits / T) (default in-domain baseline)."""
+        if not self.is_fitted or self.feature_means is None:
+            n_samples = X.shape[0] if len(X.shape) > 1 else 1
+            return np.full((n_samples, self.num_classes), 1.0 / self.num_classes)
         return self._softmax(self.predict_raw_logits(X) / max(self.global_temperature, 1e-3))
 
-    def predict_proba(self, X: np.ndarray) -> np.ndarray:
+    def predict_legacy_platt_proba(self, X: np.ndarray) -> np.ndarray:
         """
-        Returns calibrated class probabilities on the probability simplex Delta^7.
+        RETIRED legacy 16-parameter One-vs-Rest Platt scaling + simplex normalization.
+        Retained strictly for historical ablation / diagnostic comparison.
         """
         if not self.is_fitted or self.feature_means is None:
-            # Fallback uniform
             n_samples = X.shape[0] if len(X.shape) > 1 else 1
             return np.full((n_samples, self.num_classes), 1.0 / self.num_classes)
 
         raw_logits = self.predict_raw_logits(X)  # shape: (N, 8)
-
-        # Apply One-vs-Rest Platt scaling: sigma(a * logit + b)
         calibrated_ovr = 1.0 / (1.0 + np.exp(-np.clip(self.platt_weights[:, 0] * raw_logits + self.platt_weights[:, 1], -15.0, 15.0)))
-
-        # Normalize onto simplex
         prob_sum = np.sum(calibrated_ovr, axis=-1, keepdims=True)
-        probs = calibrated_ovr / np.maximum(prob_sum, 1e-9)
-        return probs
+        return calibrated_ovr / np.maximum(prob_sum, 1e-9)
+
+    def predict_proba(self, X: np.ndarray) -> np.ndarray:
+        """
+        Returns class probabilities on the probability simplex Delta^7.
+        Defaults to 1-parameter global temperature scaling (retiring 16-parameter OvR Platt);
+        explicitly NOT guaranteed calibrated on OOD / cross-survey Track 3 inputs.
+        """
+        if self.calibration_mode == "ovr_platt_legacy":
+            return self.predict_legacy_platt_proba(X)
+        return self.predict_temp_scaled_proba(X)
+
+    def compute_ood_scores(self, X: np.ndarray) -> Dict[str, np.ndarray]:
+        """
+        Computes standardized feature RMS L2 shift relative to training distribution
+        and predictive entropy under default temperature-scaled probabilities.
+        """
+        X_arr = np.asarray(X, dtype=np.float64)
+        if X_arr.ndim == 1:
+            X_arr = X_arr[None, :]
+        if not self.is_fitted or self.feature_means is None or self.feature_stds is None:
+            n = X_arr.shape[0]
+            return {
+                "feature_l2_rms": np.zeros(n, dtype=np.float64),
+                "predictive_entropy": np.full(n, math.log(self.num_classes), dtype=np.float64),
+                "max_prob": np.full(n, 1.0 / self.num_classes, dtype=np.float64),
+                "abstain_l2": np.zeros(n, dtype=bool),
+            }
+        X_norm = (X_arr - self.feature_means) / self.feature_stds
+        z_l2_rms = np.linalg.norm(X_norm, axis=1) / math.sqrt(float(max(X_norm.shape[1], 1)))
+        probs = self.predict_proba(X_arr)
+        entropy = -np.sum(probs * np.log(np.clip(probs, 1e-12, 1.0)), axis=1)
+        max_prob = np.max(probs, axis=1)
+        abstain_l2 = z_l2_rms > self.ood_val_threshold_95
+        return {
+            "feature_l2_rms": z_l2_rms,
+            "predictive_entropy": entropy,
+            "max_prob": max_prob,
+            "abstain_l2": abstain_l2,
+        }
 
     @staticmethod
-    def _calibration_summary(probs: np.ndarray, y_true: np.ndarray, n_bins: int = 10) -> Dict[str, Any]:
+    def _auroc_and_fpr95(id_scores: np.ndarray, ood_scores: np.ndarray) -> Tuple[float, float]:
+        """Computes exact rank-sum AUROC and FPR@95%TPR (higher score => OOD)."""
+        n_id = len(id_scores)
+        n_ood = len(ood_scores)
+        if n_id == 0 or n_ood == 0:
+            return 0.5, 1.0
+        # Pairwise comparison for exact AUROC with ties = 0.5
+        diff = ood_scores[:, None] - id_scores[None, :]
+        auroc = float(np.mean((diff > 0).astype(np.float64) + 0.5 * (diff == 0).astype(np.float64)))
+        # Threshold giving >=95% TPR on OOD (5th percentile of OOD scores)
+        thr_95tpr = float(np.percentile(ood_scores, 5.0))
+        fpr95 = float(np.mean(id_scores >= thr_95tpr))
+        return round(auroc, 4), round(fpr95, 4)
+
+    def evaluate_ood_abstention(
+        self,
+        X_id: np.ndarray,
+        y_id: np.ndarray,
+        X_ood: np.ndarray,
+        y_ood_in_tax: Optional[np.ndarray] = None,
+    ) -> Dict[str, Any]:
+        """
+        Evaluates post-hoc OOD detection (ID Dataset A Test vs OOD Track 3 Archival)
+        and selective abstention coverage-accuracy at the Dataset A Val 95th-percentile threshold.
+        """
+        id_s = self.compute_ood_scores(X_id)
+        ood_s = self.compute_ood_scores(X_ood)
+        id_probs = self.predict_proba(X_id)
+        id_correct = (np.argmax(id_probs, axis=1) == y_id).astype(np.float64)
+
+        auroc_l2, fpr95_l2 = self._auroc_and_fpr95(id_s["feature_l2_rms"], ood_s["feature_l2_rms"])
+        auroc_ent, fpr95_ent = self._auroc_and_fpr95(id_s["predictive_entropy"], ood_s["predictive_entropy"])
+
+        keep_id = ~id_s["abstain_l2"]
+        keep_ood = ~ood_s["abstain_l2"]
+        id_cov = float(np.mean(keep_id))
+        id_abst = float(np.mean(id_s["abstain_l2"]))
+        ood_abst = float(np.mean(ood_s["abstain_l2"]))
+        id_sel_acc = float(np.mean(id_correct[keep_id])) if np.any(keep_id) else 0.0
+
+        ood_sel_acc = None
+        if y_ood_in_tax is not None and len(y_ood_in_tax) == len(X_ood):
+            ood_probs = self.predict_proba(X_ood)
+            ood_correct = (np.argmax(ood_probs, axis=1) == y_ood_in_tax).astype(np.float64)
+            ood_sel_acc = round(float(np.mean(ood_correct[keep_ood])), 4) if np.any(keep_ood) else None
+
+        return {
+            "detector_method": "standardized_feature_rms_l2_and_entropy_threshold",
+            "threshold_calibration_split": "DatasetA_Val_N24_95th_percentile",
+            "feature_l2_threshold_95": round(self.ood_val_threshold_95, 4),
+            "entropy_threshold_95": round(self.ood_val_entropy_95, 4),
+            "id_split": "Cohort_1_DatasetA_Test",
+            "ood_split": "Cohort_2_Track3_Archival",
+            "n_id": int(len(X_id)),
+            "n_ood": int(len(X_ood)),
+            "id_feature_l2_mean": round(float(np.mean(id_s["feature_l2_rms"])), 4),
+            "ood_feature_l2_mean": round(float(np.mean(ood_s["feature_l2_rms"])), 4),
+            "id_entropy_mean": round(float(np.mean(id_s["predictive_entropy"])), 4),
+            "ood_entropy_mean": round(float(np.mean(ood_s["predictive_entropy"])), 4),
+            "auroc_feature_l2": auroc_l2,
+            "fpr_at_95tpr_feature_l2": fpr95_l2,
+            "auroc_predictive_entropy": auroc_ent,
+            "fpr_at_95tpr_predictive_entropy": fpr95_ent,
+            "id_coverage_at_val95": round(id_cov, 4),
+            "id_abstention_rate_at_val95": round(id_abst, 4),
+            "id_overall_accuracy": round(float(np.mean(id_correct)), 4),
+            "id_selective_accuracy_retained": round(id_sel_acc, 4),
+            "ood_abstention_rate_at_val95": round(ood_abst, 4),
+            "ood_retained_count": int(np.sum(keep_ood)),
+            "ood_selective_accuracy_retained": ood_sel_acc,
+            "ood_calibration_disclaimer": (
+                "Global temperature scaling is an in-domain baseline only; Track 3 OOD "
+                "probabilities are distribution-shifted and MUST NOT be interpreted as calibrated."
+            ),
+        }
+
+    @staticmethod
+    def _ece_from_arrays(confs: np.ndarray, correct: np.ndarray, n_bins: int = 10) -> float:
+        n = max(len(correct), 1)
+        edges = np.linspace(0.0, 1.0, n_bins + 1)
+        ece = 0.0
+        for b in range(n_bins):
+            lo, hi = float(edges[b]), float(edges[b + 1])
+            mask = (confs >= lo) & (confs <= hi if b == n_bins - 1 else confs < hi)
+            cnt = int(np.sum(mask))
+            if cnt > 0:
+                ece += (cnt / n) * abs(float(np.mean(correct[mask])) - float(np.mean(confs[mask])))
+        return float(ece)
+
+    @classmethod
+    def _calibration_summary(
+        cls,
+        probs: np.ndarray,
+        y_true: np.ndarray,
+        n_bins: int = 10,
+        n_boot: int = 1000,
+        seed: int = 42,
+    ) -> Dict[str, Any]:
         n = len(y_true)
         preds = np.argmax(probs, axis=1)
         confs = np.max(probs, axis=1)
         correct = (preds == y_true).astype(np.float64)
         one_hot = np.zeros_like(probs)
         one_hot[np.arange(n), y_true] = 1.0
-        nll = -float(np.mean(np.log(np.clip(probs[np.arange(n), y_true], 1e-12, 1.0))))
-        brier = float(np.mean(np.sum((probs - one_hot) ** 2, axis=1)))
+
+        per_sample_nll = -np.log(np.clip(probs[np.arange(n), y_true], 1e-12, 1.0))
+        per_sample_brier = np.sum((probs - one_hot) ** 2, axis=1)
+        nll = float(np.mean(per_sample_nll))
+        brier = float(np.mean(per_sample_brier))
+
         edges = np.linspace(0.0, 1.0, n_bins + 1)
         ece = 0.0
         bins = []
@@ -309,25 +463,61 @@ class CommonFeatureClassifier:
                 "mean_confidence": round(mean_conf, 4),
                 "empirical_accuracy": round(emp_acc, 4),
             })
+
+        # Bootstrap 95% CIs on NLL, Brier, ECE (B=1000)
+        rng = np.random.default_rng(seed)
+        boot_nll = np.empty(n_boot, dtype=np.float64)
+        boot_brier = np.empty(n_boot, dtype=np.float64)
+        boot_ece = np.empty(n_boot, dtype=np.float64)
+        for b_idx in range(n_boot):
+            idx = rng.integers(0, n, size=n)
+            boot_nll[b_idx] = float(np.mean(per_sample_nll[idx]))
+            boot_brier[b_idx] = float(np.mean(per_sample_brier[idx]))
+            boot_ece[b_idx] = cls._ece_from_arrays(confs[idx], correct[idx], n_bins=n_bins)
+
+        # Class-wise reliability breakdown
+        per_class_reliability = {}
+        for c_idx, cls_name in enumerate(CLASSES_8):
+            y_bin = (y_true == c_idx).astype(np.float64)
+            sup = int(np.sum(y_true == c_idx))
+            p_c = probs[:, c_idx]
+            per_class_reliability[cls_name] = {
+                "support": sup,
+                "mean_pred_prob": round(float(np.mean(p_c)), 4),
+                "empirical_freq": round(float(np.mean(y_bin)), 4),
+                "class_brier": round(float(np.mean((p_c - y_bin) ** 2)), 4),
+                "mean_prob_on_positives": round(float(np.mean(p_c[y_true == c_idx])), 4) if sup > 0 else None,
+            }
+
         return {
             "accuracy": round(float(np.mean(correct)), 4),
             "nll": round(nll, 4),
+            "nll_ci_95": [round(float(np.percentile(boot_nll, 2.5)), 4), round(float(np.percentile(boot_nll, 97.5)), 4)],
             "brier": round(brier, 4),
+            "brier_ci_95": [round(float(np.percentile(boot_brier, 2.5)), 4), round(float(np.percentile(boot_brier, 97.5)), 4)],
             "ece": round(float(ece), 4),
+            "ece_ci_95": [round(float(np.percentile(boot_ece, 2.5)), 4), round(float(np.percentile(boot_ece, 97.5)), 4)],
+            "bootstrap_resamples": n_boot,
             "reliability_bins": bins,
+            "per_class_reliability": per_class_reliability,
         }
 
     def compute_calibration_diagnostics(self, X: np.ndarray, y_true: np.ndarray, n_bins: int = 10) -> Dict[str, Any]:
-        """Compares 16-param OvR Platt scaling against 1-param temperature scaling and uncalibrated softmax."""
+        """Compares default 1-param global temperature scaling against retired 16-param OvR Platt and uncalibrated softmax."""
+        platt_summary = self._calibration_summary(self.predict_legacy_platt_proba(X), y_true, n_bins=n_bins)
+        temp_summary = self._calibration_summary(self.predict_temp_scaled_proba(X), y_true, n_bins=n_bins)
+        uncal_summary = self._calibration_summary(self.predict_uncalibrated_softmax(X), y_true, n_bins=n_bins)
         return {
             "n_eval": int(len(y_true)),
             "val_size": self.val_size,
             "val_per_class_support": self.val_per_class_support,
+            "default_calibration_mode": self.calibration_mode,
+            "ovr_platt_retired_from_default": True,
             "platt_param_count": int(self.platt_weights.size),
             "platt_a_range": [round(float(np.min(self.platt_weights[:, 0])), 4), round(float(np.max(self.platt_weights[:, 0])), 4)],
             "platt_b_range": [round(float(np.min(self.platt_weights[:, 1])), 4), round(float(np.max(self.platt_weights[:, 1])), 4)],
             "global_temperature_T": round(self.global_temperature, 4),
-            "ovr_platt_16param": self._calibration_summary(self.predict_proba(X), y_true, n_bins=n_bins),
-            "global_temp_1param": self._calibration_summary(self.predict_temp_scaled_proba(X), y_true, n_bins=n_bins),
-            "uncalibrated_softmax": self._calibration_summary(self.predict_uncalibrated_softmax(X), y_true, n_bins=n_bins),
+            "global_temp_1param": temp_summary,
+            "ovr_platt_16param_legacy": platt_summary,
+            "uncalibrated_softmax": uncal_summary,
         }

@@ -531,6 +531,246 @@ TRACK_3_OBJECT_METADATA = [
 ]
 
 
+# Field-level provenance separating source evidence, host-center definition,
+# distance method, and coordinate/distance 1-sigma uncertainties for each object.
+TRACK_3_FIELD_PROVENANCE: Dict[str, Dict[str, Any]] = {
+    "SN2011fe": {
+        "coord_frame": "ICRS",
+        "coord_epoch": "J2000.0",
+        "transient_coord_source": "SIMBAD / PTF11kly (Nugent et al. 2011)",
+        "transient_coord_err_arcsec": 0.05,
+        "host_coord_definition": "Optical nucleus (NED M101)",
+        "host_coord_source": "NED / NGC 5457 (builder.py aligned)",
+        "host_coord_err_arcsec": 0.25,
+        "distance_method": "CEPHEID",
+        "distance_source": "Shappee & Stanek 2011 / Riess et al. 2016 (M101)",
+        "distance_err_mpc": 0.50,
+        "offset_literature_note": "Wide outer spiral disk offset (~4.6 arcmin from M101 core).",
+    },
+    "SN1993J": {
+        "coord_frame": "ICRS",
+        "coord_epoch": "J2000.0",
+        "transient_coord_source": "VLBI/SIMBAD SN 1993J (Marcaide et al. / Bartel et al.)",
+        "transient_coord_err_arcsec": 0.05,
+        "host_coord_definition": "Optical/VLBI nucleus (NED M81)",
+        "host_coord_source": "NED / NGC 3031",
+        "host_coord_err_arcsec": 0.20,
+        "distance_method": "CEPHEID",
+        "distance_source": "Freedman et al. 1994 HST Key Project (M81)",
+        "distance_err_mpc": 0.34,
+        "offset_literature_note": "Nearby M81 disk (~2.79 arcmin); negative redshift reflects M81 peculiar velocity.",
+    },
+    "SN1998bw": {
+        "coord_frame": "ICRS",
+        "coord_epoch": "J2000.0",
+        "transient_coord_source": "SIMBAD / ESO NTT astrometry (Galama et al. 1998)",
+        "transient_coord_err_arcsec": 0.15,
+        "host_coord_definition": "Optical galaxy center (ESO 184-G82)",
+        "host_coord_source": "NED / 2MASS ESO 184-G82",
+        "host_coord_err_arcsec": 0.30,
+        "distance_method": "PLANCK18_FLAT_LCDM",
+        "distance_source": "Planck18 (H0=67.4, Om=0.315; incl. 500 km/s pec-vel floor)",
+        "distance_err_mpc": 7.46,
+        "offset_literature_note": "Low-z Hubble flow carries ~20% peculiar-velocity distance uncertainty.",
+    },
+    "SN2008D": {
+        "coord_frame": "ICRS",
+        "coord_epoch": "J2000.0",
+        "transient_coord_source": "SIMBAD / Gemini+Swift astrometry (Soderberg et al. 2008)",
+        "transient_coord_err_arcsec": 0.10,
+        "host_coord_definition": "Optical nucleus (NED NGC 2770)",
+        "host_coord_source": "NED / SDSS NGC 2770",
+        "host_coord_err_arcsec": 0.25,
+        "distance_method": "PLANCK18_FLAT_LCDM",
+        "distance_source": "Planck18 (H0=67.4, Om=0.315; incl. 500 km/s pec-vel floor)",
+        "distance_err_mpc": 7.44,
+        "offset_literature_note": "Outer spiral arm offset (~67.4 arcsec); peculiar-velocity dominates sigma_DA.",
+    },
+    "SN1994I": {
+        "coord_frame": "ICRS",
+        "coord_epoch": "J2000.0",
+        "transient_coord_source": "SIMBAD / VLA+HST SN 1994I",
+        "transient_coord_err_arcsec": 0.10,
+        "host_coord_definition": "Optical nucleus (NED M51 / NGC 5194)",
+        "host_coord_source": "NED / NGC 5194",
+        "host_coord_err_arcsec": 0.20,
+        "distance_method": "TRGB",
+        "distance_source": "McQuinn et al. 2017 HST TRGB (M51)",
+        "distance_err_mpc": 0.44,
+        "offset_literature_note": "Inner disk explosion ~18.7 arcsec SE of M51 core.",
+    },
+    "SN2006gy": {
+        "coord_frame": "ICRS",
+        "coord_epoch": "J2000.0",
+        "transient_coord_source": "SIMBAD / Lick+Keck AO (Smith et al. 2007)",
+        "transient_coord_err_arcsec": 0.10,
+        "host_coord_definition": "Optical nucleus (NED NGC 1260)",
+        "host_coord_source": "NED / 2MASS NGC 1260",
+        "host_coord_err_arcsec": 0.25,
+        "distance_method": "PLANCK18_FLAT_LCDM",
+        "distance_source": "Planck18 (H0=67.4, Om=0.315; incl. 500 km/s pec-vel floor)",
+        "distance_err_mpc": 7.60,
+        "offset_literature_note": "Off-nuclear (~2.09 arcsec vs AGN core; Smith et al. 2007 report ~1.2\"-2.0\").",
+    },
+    "SN2015bn": {
+        "coord_frame": "ICRS",
+        "coord_epoch": "J2000.0",
+        "transient_coord_source": "WISeREP / Pan-STARRS1 PS15ae (Nicholl et al. 2016)",
+        "transient_coord_err_arcsec": 0.08,
+        "host_coord_definition": "SDSS DR16 optical photocenter",
+        "host_coord_source": "SDSS J113341.53+004333.2",
+        "host_coord_err_arcsec": 0.15,
+        "distance_method": "PLANCK18_FLAT_LCDM",
+        "distance_source": "Planck18 (H0=67.4, Om=0.315; 2% + 500 km/s pec-vel)",
+        "distance_err_mpc": 11.54,
+        "offset_literature_note": "Hubble-flow SLSN host offset.",
+    },
+    "SN2016aps": {
+        "coord_frame": "ICRS",
+        "coord_epoch": "J2000.0",
+        "transient_coord_source": "WISeREP / Pan-STARRS1 PS16aqy (Nicholl et al. 2020)",
+        "transient_coord_err_arcsec": 0.03,
+        "host_coord_definition": "HST WFC3/F775W host photocenter",
+        "host_coord_source": "Nicholl et al. 2020 (Nature Astronomy; 0.15+/-0.03\" offset)",
+        "host_coord_err_arcsec": 0.03,
+        "distance_method": "PLANCK18_FLAT_LCDM",
+        "distance_source": "Planck18 (H0=67.4, Om=0.315; 2% cosmology error)",
+        "distance_err_mpc": 18.97,
+        "offset_literature_note": "5-sigma off-nuclear offset (0.15+/-0.03 arcsec) measured via HST alignment.",
+    },
+    "PTF12dam": {
+        "coord_frame": "ICRS",
+        "coord_epoch": "J2000.0",
+        "transient_coord_source": "WISeREP / PTF astrometry (Nicholl et al. 2013)",
+        "transient_coord_err_arcsec": 0.08,
+        "host_coord_definition": "SDSS DR16 dwarf photocenter",
+        "host_coord_source": "SDSS J142446.21+461348.6",
+        "host_coord_err_arcsec": 0.15,
+        "distance_method": "PLANCK18_FLAT_LCDM",
+        "distance_source": "Planck18 (H0=67.4, Om=0.315; 2% + pec-vel)",
+        "distance_err_mpc": 11.19,
+        "offset_literature_note": "Replaces contested AT2021lwx; compact starburst dwarf host.",
+    },
+    "ASASSN-14li": {
+        "coord_frame": "ICRS",
+        "coord_epoch": "J2000.0",
+        "transient_coord_source": "SIMBAD / Chandra+ASAS-SN (Holoien et al. 2016)",
+        "transient_coord_err_arcsec": 0.08,
+        "host_coord_definition": "SDSS optical photocenter (PGC 043234)",
+        "host_coord_source": "SDSS J124815.23+174626.2",
+        "host_coord_err_arcsec": 0.12,
+        "distance_method": "PLANCK18_FLAT_LCDM",
+        "distance_source": "Planck18 (H0=67.4, Om=0.315; incl. 500 km/s pec-vel floor)",
+        "distance_err_mpc": 7.63,
+        "offset_literature_note": "Nuclear TDE: 0.022\" separation well within 0.144\" combined centroid error.",
+    },
+    "AT2019qiz": {
+        "coord_frame": "ICRS",
+        "coord_epoch": "J2000.0",
+        "transient_coord_source": "TNS / ZTF19abzrhgq (Nicholl et al. 2020)",
+        "transient_coord_err_arcsec": 0.05,
+        "host_coord_definition": "Optical/IR nucleus (2MASX J04463790-1013349)",
+        "host_coord_source": "NED / PGC 980815",
+        "host_coord_err_arcsec": 0.25,
+        "distance_method": "PLANCK18_FLAT_LCDM",
+        "distance_source": "Planck18 (H0=67.4, Om=0.315; incl. 500 km/s pec-vel floor)",
+        "distance_err_mpc": 7.53,
+        "offset_literature_note": "Nuclear TDE consistent with host core within 0.25\" 2MASX uncertainty.",
+    },
+    "AT2021ehb": {
+        "coord_frame": "ICRS",
+        "coord_epoch": "J2000.0",
+        "transient_coord_source": "TNS / ZTF21aanxhjv (Yao et al. 2022)",
+        "transient_coord_err_arcsec": 0.05,
+        "host_coord_definition": "AllWISE W1/W2 photocenter",
+        "host_coord_source": "AllWISE J030747.82+401840.9",
+        "host_coord_err_arcsec": 0.25,
+        "distance_method": "PLANCK18_FLAT_LCDM",
+        "distance_source": "Planck18 (H0=67.4, Om=0.315; incl. 500 km/s pec-vel floor)",
+        "distance_err_mpc": 7.56,
+        "offset_literature_note": "Nuclear TDE consistent with WISEA centroid within 0.25\" uncertainty.",
+    },
+    "AT2019dsg": {
+        "coord_frame": "ICRS",
+        "coord_epoch": "J2000.0",
+        "transient_coord_source": "TNS / ZTF19abidfhi (Stein et al. 2021)",
+        "transient_coord_err_arcsec": 0.05,
+        "host_coord_definition": "AllWISE W1/W2 photocenter",
+        "host_coord_source": "AllWISE J205702.97+141215.9",
+        "host_coord_err_arcsec": 0.20,
+        "distance_method": "PLANCK18_FLAT_LCDM",
+        "distance_source": "Planck18 (H0=67.4, Om=0.315; incl. 500 km/s pec-vel floor)",
+        "distance_err_mpc": 8.56,
+        "offset_literature_note": "Replaces Type Ia Gaia14aaa; nuclear TDE within 0.21\" AllWISE uncertainty.",
+    },
+    "AT2018cow": {
+        "coord_frame": "ICRS",
+        "coord_epoch": "J2000.0",
+        "transient_coord_source": "TNS / ATLAS18qqn (Prentice et al. 2018)",
+        "transient_coord_err_arcsec": 0.05,
+        "host_coord_definition": "Optical galaxy center (NED / builder.py CGCG 137-068)",
+        "host_coord_source": "NED / builder.py (244.001640, +22.266720)",
+        "host_coord_err_arcsec": 0.25,
+        "distance_method": "PLANCK18_FLAT_LCDM",
+        "distance_source": "Planck18 (H0=67.4, Om=0.315; incl. 500 km/s pec-vel floor)",
+        "distance_err_mpc": 7.52,
+        "offset_literature_note": "5.299\" (1.59 kpc) from builder.py/NED coords; Prentice+18 quote ~5.9\" (~1.7 kpc) using optical nucleus centroid.",
+    },
+    "ZTF18abvkwla": {
+        "coord_frame": "ICRS",
+        "coord_epoch": "J2000.0",
+        "transient_coord_source": "TNS / ZTF18abvkwla / AT2018lug (Ho et al. 2020)",
+        "transient_coord_err_arcsec": 0.05,
+        "host_coord_definition": "DECaLS/SDSS dwarf starburst photocenter",
+        "host_coord_source": "Ho et al. 2020 / Legacy Survey DR8",
+        "host_coord_err_arcsec": 0.20,
+        "distance_method": "PLANCK18_FLAT_LCDM",
+        "distance_source": "Planck18 (H0=67.4, Om=0.315; 2% cosmology error)",
+        "distance_err_mpc": 19.22,
+        "offset_literature_note": "0.441\" (1.90 kpc) matching Ho et al. (2020) reported 1.9+/-0.9 kpc.",
+    },
+    "AT2020xnd": {
+        "coord_frame": "ICRS",
+        "coord_epoch": "J2000.0",
+        "transient_coord_source": "TNS / ZTF20acigmel (Perley et al. 2021)",
+        "transient_coord_err_arcsec": 0.05,
+        "host_coord_definition": "Legacy Survey REX faint dwarf centroid",
+        "host_coord_source": "Legacy Survey DR9 J222002.01-025025.2",
+        "host_coord_err_arcsec": 0.15,
+        "distance_method": "PLANCK18_FLAT_LCDM",
+        "distance_source": "Planck18 (H0=67.4, Om=0.315; 2% cosmology error)",
+        "distance_err_mpc": 18.00,
+        "offset_literature_note": "Deduplicated Camel entry with verified TNS alias ZTF20acigmel.",
+    },
+    "AT2020mrf": {
+        "coord_frame": "ICRS",
+        "coord_epoch": "J2000.0",
+        "transient_coord_source": "TNS / ZTF20abjbgjj (Yao et al. 2022)",
+        "transient_coord_err_arcsec": 0.05,
+        "host_coord_definition": "SDSS DR16 extended blue dwarf centroid",
+        "host_coord_source": "SDSS J154754.20+443906.9",
+        "host_coord_err_arcsec": 0.15,
+        "distance_method": "PLANCK18_FLAT_LCDM",
+        "distance_source": "Planck18 (H0=67.4, Om=0.315; 2% cosmology error)",
+        "distance_err_mpc": 12.66,
+        "offset_literature_note": "0.646\" (1.61 kpc) vs SDSS centroid (Yao+22 report ~0.50\" optical offset).",
+    },
+    "SN2017gfo": {
+        "coord_frame": "ICRS",
+        "coord_epoch": "J2000.0",
+        "transient_coord_source": "TNS / Swope optical discovery (Coulter et al. 2017)",
+        "transient_coord_err_arcsec": 0.05,
+        "host_coord_definition": "Optical nucleus (NED NGC 4993)",
+        "host_coord_source": "NED / 2MASS NGC 4993",
+        "host_coord_err_arcsec": 0.20,
+        "distance_method": "GW_HOST_SBF",
+        "distance_source": "Cantiello et al. 2018 SBF + GW170817 host (NGC 4993)",
+        "distance_err_mpc": 2.80,
+        "offset_literature_note": "10.171\" (1.97 kpc at 40 Mpc); open-set novelty T4 target only.",
+    },
+}
+
+
 class Track3ArchivalManifest:
     """
     Builds the standardized Track 3 external archival dataset (N=18).
@@ -696,11 +936,17 @@ class Track3ArchivalManifest:
 
     @classmethod
     def audit_astrometric_provenance(cls) -> Dict[str, Any]:
-        """Validates linked astrometric coordinates, host offsets, aliases, and DOIs for all 18 records."""
+        """
+        Automated mathematical & schema consistency verification across all 18 Track 3 records.
+        Distinguishes internal calculation verification (Vincenty separation & uncertainty propagation)
+        from independent external catalog certification.
+        """
         records = []
         seen_ids = set()
         seen_aliases = set()
         failures: List[str] = []
+
+        arcsec_to_rad = math.pi / (180.0 * 3600.0)
 
         for meta in TRACK_3_OBJECT_METADATA:
             oid = meta["object_id"]
@@ -712,6 +958,11 @@ class Track3ArchivalManifest:
                 if alias in seen_ids or alias in seen_aliases:
                     failures.append(f"Duplicate alias across manifest: {alias}")
                 seen_aliases.add(alias)
+
+            fp = TRACK_3_FIELD_PROVENANCE.get(oid)
+            if not fp:
+                failures.append(f"{oid}: missing field-level provenance entry")
+                continue
 
             theta = cls.spherical_separation_arcsec(
                 meta["ra_deg"], meta["dec_deg"], meta["host_ra_deg"], meta["host_dec_deg"]
@@ -726,26 +977,58 @@ class Track3ArchivalManifest:
             if not meta.get("host_galaxy") or not meta.get("catalog_source"):
                 failures.append(f"{oid}: missing host or catalog provenance")
 
+            sigma_trans = float(fp["transient_coord_err_arcsec"])
+            sigma_host = float(fp["host_coord_err_arcsec"])
+            sigma_theta_arcsec = math.sqrt(sigma_trans ** 2 + sigma_host ** 2)
+            da_mpc = float(meta["distance_mpc"])
+            sigma_da_mpc = float(fp["distance_err_mpc"])
+            computed_kpc = da_mpc * 1000.0 * (theta * arcsec_to_rad)
+            # Non-singular first-order uncertainty propagation for d_perp = D_A * theta
+            sigma_kpc = math.sqrt(
+                ((theta * arcsec_to_rad) * sigma_da_mpc * 1000.0) ** 2
+                + (da_mpc * 1000.0 * (sigma_theta_arcsec * arcsec_to_rad)) ** 2
+            )
+
+            if abs(computed_kpc - meta["projected_offset_kpc"]) > 0.05:
+                failures.append(
+                    f"{oid}: computed offset {computed_kpc:.2f} kpc != recorded {meta['projected_offset_kpc']:.2f} kpc"
+                )
+
             records.append(
                 {
                     "object_id": oid,
                     "adjudicated_class": meta["adjudicated_class"],
+                    "coord_frame": fp["coord_frame"],
+                    "coord_epoch": fp["coord_epoch"],
                     "ra_deg": meta["ra_deg"],
                     "dec_deg": meta["dec_deg"],
+                    "transient_coord_source": fp["transient_coord_source"],
+                    "transient_coord_err_arcsec": sigma_trans,
                     "host_galaxy": meta["host_galaxy"],
+                    "host_coord_definition": fp["host_coord_definition"],
+                    "host_coord_source": fp["host_coord_source"],
                     "host_ra_deg": meta["host_ra_deg"],
                     "host_dec_deg": meta["host_dec_deg"],
+                    "host_coord_err_arcsec": sigma_host,
                     "redshift": meta["redshift"],
-                    "distance_mpc": meta["distance_mpc"],
+                    "distance_mpc": da_mpc,
+                    "distance_err_mpc": sigma_da_mpc,
+                    "distance_method": fp["distance_method"],
+                    "distance_source": fp["distance_source"],
                     "computed_sep_arcsec": round(theta, 3),
                     "recorded_sep_arcsec": meta["angular_offset_arcsec"],
+                    "sep_err_arcsec": round(sigma_theta_arcsec, 3),
+                    "computed_offset_kpc": round(computed_kpc, 3),
                     "projected_offset_kpc": meta["projected_offset_kpc"],
+                    "projected_offset_err_kpc": round(sigma_kpc, 3),
+                    "offset_literature_note": fp["offset_literature_note"],
                     "doi": meta["doi"],
                     "catalog_source": meta["catalog_source"],
                 }
             )
 
         return {
+            "check_scope": "AUTOMATED_MATHEMATICAL_AND_SCHEMA_CONSISTENCY",
             "total_records": len(TRACK_3_OBJECT_METADATA),
             "unique_canonical_ids": len(seen_ids),
             "passed": len(failures) == 0 and len(TRACK_3_OBJECT_METADATA) == 18,

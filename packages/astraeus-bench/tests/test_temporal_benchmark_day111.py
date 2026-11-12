@@ -263,10 +263,13 @@ class TestStatisticalTestingFramework:
         )
 
         assert diag.num_permutations == 2000
+        assert diag.subtraction_order == "candidate_minus_baseline"
+        assert diag.ci_method == "paired_object_bootstrap_2000"
         assert diag.observed_p_at_10_candidate > diag.observed_p_at_10_baseline
         assert diag.delta_p_at_10 > 0.0
         assert 0.0 <= diag.empirical_p_value <= 1.0
-        assert diag.ci_lower_95 <= diag.ci_upper_95
+        assert diag.ci_lower_95 <= diag.delta_p_at_10 <= diag.ci_upper_95
+        assert diag.null_ci_lower_95 <= 0.0 <= diag.null_ci_upper_95
 
 
 class TestTrack3AndDatasetAManifests:
@@ -302,10 +305,19 @@ class TestTrack3AndDatasetAManifests:
         assert "AT2021lwx" not in canonical_ids
         assert "Gaia14aaa" not in canonical_ids
 
-        # Verify full 18-object astrometric provenance audit
+        # Verify full 18-object astrometric provenance & uncertainty propagation audit
         prov_audit = Track3ArchivalManifest.audit_astrometric_provenance()
         assert prov_audit["passed"] is True, f"Astrometric provenance failures: {prov_audit['failures']}"
         assert prov_audit["total_records"] == 18
+        assert prov_audit["check_scope"] == "AUTOMATED_MATHEMATICAL_AND_SCHEMA_CONSISTENCY"
+        assert len(prov_audit["records"]) == 18
+        for obj_diag in prov_audit["records"]:
+            assert obj_diag["sep_err_arcsec"] >= 0.0
+            assert obj_diag["projected_offset_err_kpc"] > 0.0
+            assert obj_diag["coord_frame"] == "ICRS"
+            assert obj_diag["transient_coord_source"]
+            assert obj_diag["host_coord_source"]
+            assert obj_diag["distance_source"]
 
         # Verify in-taxonomy (N=17) vs open-set (N=1)
         in_tax_seqs = Track3ArchivalManifest.get_in_taxonomy_sequences()
@@ -410,11 +422,15 @@ class TestStage2BenchmarkOrchestratorExecution:
             assert 0.0 <= c.bh_q_value <= 1.0
             assert c.bh_q_value >= c.raw_p_value - 1e-9
 
-        # Check secondary diagnostics with published candidate IDs
-        assert len(report.secondary_top10_diagnostics) >= 2
+        # Check secondary diagnostics with published candidate IDs & corrected bootstrap CIs across both cohorts
+        assert len(report.secondary_top10_diagnostics) == 4
+        diag_keys = {(d.cohort_id, d.baseline_id, d.candidate_id) for d in report.secondary_top10_diagnostics}
+        assert ("Cohort_2_Track3_Archival", "B1_Akima", "B3_Transformer") in diag_keys
         for diag in report.secondary_top10_diagnostics:
             assert diag.num_permutations == 10000
+            assert diag.subtraction_order == "candidate_minus_baseline"
             assert 0.0 <= diag.empirical_p_value <= 1.0
+            assert diag.ci_lower_95 <= diag.delta_p_at_10 <= diag.ci_upper_95
             assert len(diag.top10_baseline_ids) == 10
             assert len(diag.top10_candidate_ids) == 10
 
@@ -445,16 +461,42 @@ class TestStage2BenchmarkOrchestratorExecution:
         assert "sn1987a_environmental_audit" in report.astromer_lineage_audit
         assert report.astromer_lineage_audit["sn1987a_environmental_audit"]["in_canonical_track3_manifest"] is False
 
-        # Check Day 111.2.2 T3 present-class Macro-F1, T4 ablation queues, calibration, and runtime telemetry
+        # Check Day 111.2.3 Evidence Closure invariants: T3 present-class Macro-F1, T4 class/open-set ranking,
+        # retired OvR Platt default, post-hoc OOD abstention, and scoped p50/p95 operational triage latency
         t3_b1 = report.cohort_summaries["Cohort_2_Track3_Archival"]["B1_Akima"]
         assert len(t3_b1.t3_present_classes) == 6
         assert t3_b1.t3_present_class_macro_f1 >= t3_b1.t3_macro_f1
+        assert t3_b1.t4_ranking_metrics["open_set_separation"]["contains_open_set_sn2017gfo"] is True
+        assert t3_b1.t4_ranking_metrics["in_taxonomy_only"]["n_queue"] == 17
+        assert t3_b1.t4_ranking_metrics["full_queue"]["n_queue"] == 18
+        for req_metric in ("recall_at_5", "recall_at_10", "average_precision", "ndcg_at_10"):
+            assert req_metric in t3_b1.t4_ranking_metrics["full_queue"]
+            assert f"{req_metric}_ci_95" in t3_b1.t4_ranking_metrics["full_queue"]
+
         for c_id in ["Cohort_1_DatasetA_Test", "Cohort_2_Track3_Archival"]:
             for cfg_name, p10_val in report.t4_ablation_results[c_id].items():
                 q_info = report.t4_ablation_queues[c_id][cfg_name]
                 assert abs(q_info["recalculated_precision_at_10"] - p10_val) < 1e-9
                 assert len(q_info["top10_candidate_ids"]) == 10
+
         assert "DatasetA_Val_N24" in report.calibration_diagnostics
         assert "Cohort_2_Track3_Archival_N17" in report.calibration_diagnostics
-        assert "cpu_model" in report.runtime_environment_and_latency
+        cal_val = report.calibration_diagnostics["DatasetA_Val_N24"]
+        assert cal_val["default_calibration_mode"] == "temperature_scaled"
+        assert cal_val["ovr_platt_retired_from_default"] is True
+        assert "ovr_platt_16param_legacy" in cal_val
+        assert "per_class_reliability" in cal_val["global_temp_1param"]
+
+        assert "ID_Test_vs_Track3_InTax_N17" in report.ood_abstention_diagnostics
+        assert "auroc_feature_l2" in report.ood_abstention_diagnostics["ID_Test_vs_Track3_InTax_N17"]
+        assert "ood_abstention_rate_at_val95" in report.ood_abstention_diagnostics["ID_Test_vs_Track3_InTax_N17"]
+
+        rt = report.runtime_environment_and_latency
+        assert "cpu_model" in rt
+        assert "scoped_operational_triage_latency_p50_p95" in rt
+        p50_b1 = rt["scoped_operational_triage_latency_p50_p95"]["B1_Akima"]["Cohort_1_DatasetA_Test"]
+        assert p50_b1["repetitions"] == 50
+        assert p50_b1["warmup"] == 5
+        assert p50_b1["batch_size"] == 1
+        assert p50_b1["p95_ms_per_seq"] >= p50_b1["p50_ms_per_seq"]
         assert "OVERLAP_AUDIT_INCOMPLETE" in report.executive_summary

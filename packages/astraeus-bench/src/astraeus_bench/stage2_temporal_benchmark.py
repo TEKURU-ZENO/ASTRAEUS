@@ -1,18 +1,18 @@
 """
-ASTRAEUS Stage 2 AstroTemporal Benchmark Engine (Day 111.1 Reconciliation Release).
+ASTRAEUS Stage 2 AstroTemporal Benchmark Engine (Day 111.2.3 Evidence Closure Release).
 Standardized benchmark framework implementing:
 1. Dual sequence views: FULL_HISTORY (T1) vs CAUSAL_FORECAST (T2, T3, T4).
 2. Four rigorous astrophysical tasks with reconciled cohort denominators:
    - T1: Masked Reconstruction (10-30 day contiguous span masking) -> CRPS, MAE (N=45 Dataset A; N=17 Track 3)
    - T2: Multi-Horizon Forecasting (+3d, +10d, +30d causal horizons) -> Forecast CRPS, MAE (N=45 Dataset A; N=17 Track 3)
    - T3: Early Classification (8-class taxonomy on cutoff-visible history) -> Macro-F1, Brier, ECE (N=45 Dataset A; N=17 Track 3)
-   - T4: Follow-Up Prioritization (Rare transient utility ranking) -> Precision@10, Mean Rare Utility (N=45 Dataset A; N=18 Track 3 with SN 2017gfo open-set)
+   - T4: Follow-Up Prioritization (Rare transient utility ranking) -> Precision@10, Recall@5/10, AP, NDCG@10 (N=45 Dataset A; N=18 Track 3 with SN 2017gfo open-set, plus N=17 in-taxonomy separation)
 3. Reconciled 24-Hypothesis Primary Multiplicity Family (C01-C24) under Benjamini-Hochberg FDR (alpha = 0.05),
    with explicit 8 Reference Anchors (R01-R08) preserved for full 32-cell transparency.
-4. Harmonized Secondary Top-10 Permutation Diagnostic (B = 10,000) with physical candidate labels and published ranked queues.
-5. Transformer 5-seed stability evaluated over full cohorts [42, 137, 1024, 2048, 4096].
-6. Four-way T4 Ablation Suite isolating attention representations from novelty signals.
-7. Comprehensive ASTROMER pretraining provenance and lineage audit.
+4. Harmonized Secondary Top-10 Permutation Diagnostic (B = 10,000) across both cohorts (B1 vs B2 and B1 vs B3)
+   with explicit candidate-minus-baseline subtraction sign and paired object-level bootstrap 95% CIs (B = 2,000).
+5. Post-hoc OOD / abstention diagnostics + retired 16-param OvR Platt default in favor of 1-param global temperature scaling.
+6. Scoped operational triage latency (p50/p95/mean, warmup=5, repetitions=50, batch_size=1, CUDA sync when applicable).
 """
 
 from typing import List, Dict, Any, Tuple, Optional
@@ -88,6 +88,7 @@ class ModelTaskEvaluationSummary(BaseModel):
     t4_top10_candidate_ids: List[str] = Field(default_factory=list)
     t4_top10_candidate_classes: List[str] = Field(default_factory=list)
     t4_top10_candidate_scores: List[float] = Field(default_factory=list)
+    t4_ranking_metrics: Dict[str, Any] = Field(default_factory=dict)
     t4_scorer_provenance: Dict[str, Any] = Field(default_factory=dict)
     latency_ms_per_sequence: float
     latency_component_breakdown_ms: Dict[str, float] = Field(default_factory=dict)
@@ -119,10 +120,12 @@ class Stage2BenchmarkReport(BaseModel):
     t4_ablation_bootstrap_ci: Dict[str, Dict[str, List[float]]] = Field(default_factory=dict)
     t4_paired_difference_ci: Dict[str, List[float]] = Field(default_factory=dict)
     calibration_diagnostics: Dict[str, Any] = Field(default_factory=dict)
+    ood_abstention_diagnostics: Dict[str, Any] = Field(default_factory=dict)
     runtime_environment_and_latency: Dict[str, Any] = Field(default_factory=dict)
     astromer_lineage_audit: Dict[str, Any]
     reconciliation_day111_1_commit: str = "8014b16"
     reconciliation_day111_2_commit: str = "037d698"
+    reconciliation_day111_2_2_commit: str = "8315d68"
     executive_summary: str
 
 
@@ -511,17 +514,21 @@ class Stage2TemporalBenchmarkOrchestrator:
         recalc_p10 = sum(1 for c in top10_classes if c in ("SLSN", "TDE", "FBOT", "OPEN_SET_NOVELTY")) / max(len(top10_classes), 1)
         assert abs(recalc_p10 - p_at_10) < 1e-9, f"T4 P@10 queue mismatch for {baseline_id} on {cohort_id}"
 
+        t4_labels_all = [ground_truth.get(oid, "UNKNOWN") for oid in t4_cand_ids]
+        t4_ranking_metrics = self._compute_t4_ranking_metrics(t4_utility_list, t4_labels_all, t4_cand_ids)
+
         total_time = time.perf_counter() - start_time
         latency_ms = (total_time / max(len(sequences_all), 1)) * 1000.0
         n_in = max(len(in_tax_seqs), 1)
         n_all = max(len(sequences_all), 1)
+        scoped_triage_mean_ms = ((t3_elapsed / n_in) + (t4_elapsed / n_all) + (sort_elapsed / n_all)) * 1000.0
         latency_breakdown = {
             "t1_reconstruct_ms_per_seq": round((t1_elapsed / n_in) * 1000.0, 4),
             "t2_forecast_ms_per_seq": round((t2_elapsed / n_in) * 1000.0, 4),
             "t3_classify_ms_per_seq": round((t3_elapsed / n_in) * 1000.0, 4),
             "t4_score_ms_per_seq": round((t4_elapsed / n_all) * 1000.0, 4),
             "t4_queue_sort_ms_total": round(sort_elapsed * 1000.0, 4),
-            "operational_t3_t4_pipeline_ms_per_seq": round(((t3_elapsed / n_in) + (t4_elapsed / n_all) + (sort_elapsed / n_all)) * 1000.0, 4),
+            "scoped_operational_triage_pipeline_ms_per_seq": round(scoped_triage_mean_ms, 4),
         }
 
         # Compute T3 Classification Diagnostics
@@ -563,7 +570,7 @@ class Stage2TemporalBenchmarkOrchestrator:
             ece = 0.1
 
         classifier_family = (
-            "CommonFeatureClassifier (24-feature Ridge + OvR Platt)"
+            "CommonFeatureClassifier (24-feature Ridge + 1-param Global Temp; OvR Platt retired)"
             if baseline_id in ("B1_Akima", "B2_GP")
             else ("NonPretrainedTransformerBaseline (seed=42)" if baseline_id == "B3_Transformer" else "AstromerAdapterBaseline")
         )
@@ -571,6 +578,7 @@ class Stage2TemporalBenchmarkOrchestrator:
             "baseline_id": baseline_id,
             "cohort_id": cohort_id,
             "classifier_family": classifier_family,
+            "calibration_mode": self.common_classifier.calibration_mode if baseline_id in ("B1_Akima", "B2_GP") else "raw_softmax",
             "feature_source": "24 cutoff-visible features" if baseline_id in ("B1_Akima", "B2_GP") else "Causal multi-band token sequence",
             "scoring_formula": "U = [2.0*P(FBOT) + 1.5*P(TDE) + 1.0*P(SLSN) + S_novelty] * [1 - P(ARTIFACT_DIPOLE)]",
             "novelty_weight": 1.0,
@@ -603,6 +611,7 @@ class Stage2TemporalBenchmarkOrchestrator:
             t4_top10_candidate_ids=top10_ids,
             t4_top10_candidate_classes=top10_classes,
             t4_top10_candidate_scores=top10_scores,
+            t4_ranking_metrics=t4_ranking_metrics,
             t4_scorer_provenance=t4_provenance,
             latency_ms_per_sequence=latency_ms,
             latency_component_breakdown_ms=latency_breakdown,
@@ -611,6 +620,201 @@ class Stage2TemporalBenchmarkOrchestrator:
             per_event_t3_correct=t3_correct_list,
             per_event_t4_utility=t4_utility_list,
         )
+
+    @staticmethod
+    def _ranking_metrics_from_arrays(
+        scores: np.ndarray,
+        labels: List[str],
+        candidate_ids: List[str],
+        n_boot: int = 1000,
+        seed: int = 42,
+    ) -> Dict[str, Any]:
+        """Computes Precision@10, Recall@5/10, AP, NDCG@10 with bootstrap 95% CIs and class breakdown."""
+        rare_set = ("SLSN", "TDE", "FBOT", "OPEN_SET_NOVELTY")
+        is_rare = np.array([lbl in rare_set for lbl in labels], dtype=bool)
+        n = len(scores)
+        n_rare = int(np.sum(is_rare))
+
+        def _single_pass(sc: np.ndarray, rel: np.ndarray) -> Tuple[float, float, float, float, float]:
+            order_local = np.argsort(sc)[::-1]
+            rel_ord = rel[order_local].astype(np.float64)
+            nr = int(np.sum(rel_ord))
+            p10 = float(np.sum(rel_ord[:min(10, len(rel_ord))])) / float(min(10, max(len(rel_ord), 1)))
+            if nr == 0:
+                return 0.0, 0.0, p10, 0.0, 0.0
+            r5 = float(np.sum(rel_ord[:min(5, len(rel_ord))])) / float(nr)
+            r10 = float(np.sum(rel_ord[:min(10, len(rel_ord))])) / float(nr)
+            cum_hits = np.cumsum(rel_ord)
+            ranks_1idx = np.arange(1, len(rel_ord) + 1, dtype=np.float64)
+            ap = float(np.sum((cum_hits / ranks_1idx) * rel_ord) / float(nr))
+            k10 = min(10, len(rel_ord))
+            discounts = 1.0 / np.log2(np.arange(2, k10 + 2, dtype=np.float64))
+            dcg10 = float(np.sum(rel_ord[:k10] * discounts))
+            ideal_k = min(nr, k10)
+            idcg10 = float(np.sum(discounts[:ideal_k]))
+            ndcg10 = dcg10 / idcg10 if idcg10 > 0 else 0.0
+            return r5, r10, p10, ap, ndcg10
+
+        r5, r10, p10, ap, ndcg10 = _single_pass(scores, is_rare)
+        rng = np.random.default_rng(seed)
+        b_r5: List[float] = []
+        b_r10: List[float] = []
+        b_ap: List[float] = []
+        b_ndcg10: List[float] = []
+        for _ in range(n_boot):
+            idx = rng.integers(0, n, size=n)
+            m_r5, m_r10, _, m_ap, m_ndcg = _single_pass(scores[idx], is_rare[idx])
+            b_r5.append(m_r5)
+            b_r10.append(m_r10)
+            b_ap.append(m_ap)
+            b_ndcg10.append(m_ndcg)
+
+        def _ci(arr: List[float]) -> List[float]:
+            return [round(float(np.percentile(arr, 2.5)), 4), round(float(np.percentile(arr, 97.5)), 4)]
+
+        order = np.argsort(scores)[::-1]
+        per_class_ranking: Dict[str, Any] = {}
+        for cls_name in rare_set:
+            cls_mask = np.array([lbl == cls_name for lbl in labels], dtype=bool)
+            sup = int(np.sum(cls_mask))
+            if sup == 0:
+                continue
+            cls_r5, cls_r10, _, cls_ap, _ = _single_pass(scores, cls_mask)
+            cls_ranks = [int(pos + 1) for pos, idx in enumerate(order) if cls_mask[idx]]
+            cls_ids = [candidate_ids[idx] for idx in order if cls_mask[idx]]
+            per_class_ranking[cls_name] = {
+                "support": sup,
+                "recall_at_5": round(cls_r5, 4),
+                "recall_at_10": round(cls_r10, 4),
+                "average_precision": round(cls_ap, 4),
+                "ranks_1indexed": cls_ranks,
+                "object_ids_ordered": cls_ids,
+            }
+
+        return {
+            "n_queue": n,
+            "n_rare": n_rare,
+            "precision_at_10": round(p10, 4),
+            "recall_at_5": round(r5, 4),
+            "recall_at_5_ci_95": _ci(b_r5),
+            "recall_at_10": round(r10, 4),
+            "recall_at_10_ci_95": _ci(b_r10),
+            "average_precision": round(ap, 4),
+            "average_precision_ci_95": _ci(b_ap),
+            "ndcg_at_10": round(ndcg10, 4),
+            "ndcg_at_10_ci_95": _ci(b_ndcg10),
+            "bootstrap_resamples": n_boot,
+            "per_class_ranking": per_class_ranking,
+        }
+
+    @classmethod
+    def _compute_t4_ranking_metrics(
+        cls,
+        utility_list: List[float],
+        labels_all: List[str],
+        candidate_ids: List[str],
+        n_boot: int = 1000,
+        seed: int = 42,
+    ) -> Dict[str, Any]:
+        """Computes T4 ranking metrics on the full queue and separates open-set SN2017gfo."""
+        scores = np.asarray(utility_list, dtype=np.float64)
+        full_q = cls._ranking_metrics_from_arrays(scores, labels_all, candidate_ids, n_boot=n_boot, seed=seed)
+
+        in_tax_mask = [lbl != "OPEN_SET_NOVELTY" and oid != "SN2017gfo" for lbl, oid in zip(labels_all, candidate_ids)]
+        in_tax_idx = [i for i, keep in enumerate(in_tax_mask) if keep]
+        has_open_set = len(in_tax_idx) < len(candidate_ids)
+
+        if has_open_set and len(in_tax_idx) > 0:
+            scores_in = scores[in_tax_idx]
+            labels_in = [labels_all[i] for i in in_tax_idx]
+            ids_in = [candidate_ids[i] for i in in_tax_idx]
+            in_tax_q = cls._ranking_metrics_from_arrays(scores_in, labels_in, ids_in, n_boot=n_boot, seed=seed)
+
+            order = np.argsort(scores)[::-1]
+            open_pos = [
+                int(pos + 1)
+                for pos, idx in enumerate(order)
+                if (labels_all[idx] == "OPEN_SET_NOVELTY" or candidate_ids[idx] == "SN2017gfo")
+            ]
+            open_scores = [
+                round(float(scores[idx]), 6)
+                for idx in order
+                if (labels_all[idx] == "OPEN_SET_NOVELTY" or candidate_ids[idx] == "SN2017gfo")
+            ]
+            in_tax_rare_scores = [
+                float(scores[i])
+                for i in in_tax_idx
+                if labels_all[i] in ("SLSN", "TDE", "FBOT")
+            ]
+            open_set_sep = {
+                "contains_open_set_sn2017gfo": True,
+                "sn2017gfo_rank_1indexed": open_pos[0] if open_pos else None,
+                "sn2017gfo_score": open_scores[0] if open_scores else None,
+                "sn2017gfo_in_top10": bool(open_pos and open_pos[0] <= 10),
+                "max_in_taxonomy_rare_score": round(max(in_tax_rare_scores), 6) if in_tax_rare_scores else None,
+                "delta_p_at_10_with_minus_without_sn2017gfo": round(full_q["precision_at_10"] - in_tax_q["precision_at_10"], 4),
+                "delta_ap_with_minus_without_sn2017gfo": round(full_q["average_precision"] - in_tax_q["average_precision"], 4),
+            }
+        else:
+            in_tax_q = full_q
+            open_set_sep = {
+                "contains_open_set_sn2017gfo": False,
+                "sn2017gfo_rank_1indexed": None,
+                "sn2017gfo_score": None,
+                "sn2017gfo_in_top10": False,
+            }
+
+        return {
+            "full_queue": full_q,
+            "in_taxonomy_only": in_tax_q,
+            "open_set_separation": open_set_sep,
+        }
+
+    def _profile_scoped_triage_latency(
+        self,
+        baseline_id: str,
+        model: Any,
+        sequences: List[TemporalSequence],
+        labels: Dict[str, str],
+        repetitions: int = 50,
+        warmup: int = 5,
+    ) -> Dict[str, Any]:
+        """
+        Profiles scoped single-sequence operational triage latency (batch_size=1):
+        cutoff feature/token inference + rare-event utility scoring only.
+        Explicitly EXCLUDES catalog cross-matching, evidence retrieval, agent orchestration, and disk/network IO.
+        """
+        if not sequences:
+            return {"p50_ms_per_seq": 0.0, "p95_ms_per_seq": 0.0, "mean_ms_per_seq": 0.0}
+
+        # Warm-up passes (excluded from statistics)
+        for _ in range(warmup):
+            for seq in sequences[:min(4, len(sequences))]:
+                self.evaluate_task4(baseline_id, model, seq, labels.get(seq.object_id, "SN_Ia"))
+
+        # Timed batch_size=1 single-sequence repetitions across cohort
+        samples_ms: List[float] = []
+        n_seq = len(sequences)
+        for r in range(repetitions):
+            seq = sequences[r % n_seq]
+            lbl = labels.get(seq.object_id, "SN_Ia")
+            t0 = time.perf_counter()
+            self.evaluate_task4(baseline_id, model, seq, lbl)
+            samples_ms.append((time.perf_counter() - t0) * 1000.0)
+
+        arr = np.asarray(samples_ms, dtype=np.float64)
+        return {
+            "batch_size": 1,
+            "warmup": warmup,
+            "repetitions": repetitions,
+            "device": str(getattr(model, "device", "cpu")) if model is not None else "cpu",
+            "sync_method": "host_perf_counter_cpu",
+            "p50_ms_per_seq": round(float(np.percentile(arr, 50.0)), 4),
+            "p95_ms_per_seq": round(float(np.percentile(arr, 95.0)), 4),
+            "mean_ms_per_seq": round(float(np.mean(arr)), 4),
+            "min_ms_per_seq": round(float(np.min(arr)), 4),
+            "max_ms_per_seq": round(float(np.max(arr)), 4),
+        }
 
     # -----------------------------------------------------------------------
     # Run Full Reconciled Benchmark Suite
@@ -869,6 +1073,20 @@ class Stage2TemporalBenchmarkOrchestrator:
         )
         secondary_top10.append(diag3)
 
+        # Diagnostic 4: Track 3 Archival (Akima vs Transformer)
+        diag4 = compute_top10_permutation_test(
+            scores_baseline=np.array(cohort_summaries["Cohort_2_Track3_Archival"]["B1_Akima"].per_event_t4_utility),
+            scores_candidate=np.array(cohort_summaries["Cohort_2_Track3_Archival"]["B3_Transformer"].per_event_t4_utility),
+            is_rare_target=is_rare_c2,
+            candidate_ids=c2_ids,
+            baseline_id="B1_Akima",
+            candidate_id="B3_Transformer",
+            cohort_id="Cohort_2_Track3_Archival",
+            num_permutations=10000,
+            seed=42
+        )
+        secondary_top10.append(diag4)
+
         # 7. Profile Transformer Seed Stability across [42, 137, 1024, 2048, 4096] on FULL cohorts
         seed_stability: Dict[str, Dict[int, Dict[str, float]]] = {
             "Cohort_1_DatasetA_Test": {},
@@ -949,6 +1167,8 @@ class Stage2TemporalBenchmarkOrchestrator:
             top_ids = [seqs_list[i].object_id for i in top_idx]
             top_cls = [labels_map.get(oid, "UNKNOWN") for oid in top_ids]
             top_scores = [round(float(u_list[i]), 6) for i in top_idx]
+            all_ids = [s.object_id for s in seqs_list]
+            all_cls = [labels_map.get(oid, "UNKNOWN") for oid in all_ids]
             recalc_p10 = sum(1 for c in top_cls if c in ("SLSN", "TDE", "FBOT", "OPEN_SET_NOVELTY")) / max(len(top_cls), 1)
             assert abs(recalc_p10 - expected_p10) < 1e-9, f"Ablation {cfg_name} P@10 mismatch on {c_id}"
             t4_ablation_queues[c_id][cfg_name] = {
@@ -957,6 +1177,7 @@ class Stage2TemporalBenchmarkOrchestrator:
                 "top10_candidate_classes": top_cls,
                 "top10_candidate_scores": top_scores,
                 "recalculated_precision_at_10": recalc_p10,
+                "ranking_metrics": self._compute_t4_ranking_metrics(u_list, all_cls, all_ids),
             }
 
         for c_id, seqs, labels in [
@@ -1013,13 +1234,13 @@ class Stage2TemporalBenchmarkOrchestrator:
             t4_ablations[c_id]["4_Common_Classifier_No_Timescales"] = p10_no_ts
             t4_ablation_ci[c_id]["4_Common_Classifier_No_Timescales"] = ci_no_ts
             _publish_ablation_queue(c_id, "4_Common_Classifier_No_Timescales", u_no_timescales, seqs, labels, {
-                "model_id": "CommonFeatureClassifier (Ridge + OvR Platt, feats[8:20]=0)",
+                "model_id": "CommonFeatureClassifier (Ridge + 1-param Global Temp; OvR Platt retired, feats[8:20]=0)",
                 "attention": False,
                 "novelty_weight": 1.0,
                 "timescale_features": False,
             }, p10_no_ts)
 
-        # 9. Calibration Diagnostics (CommonFeatureClassifier: Validation vs Test vs Track 3)
+        # 9. Calibration & Post-Hoc OOD Abstention Diagnostics (Val vs Test vs Track 3)
         val_seqs = DatasetAValManifest.generate_val_sequences()
         val_labels = DatasetAValManifest.get_ground_truth_labels()
         X_val_cal = np.array([self.common_classifier.extract_features(s) for s in val_seqs])
@@ -1028,14 +1249,23 @@ class Stage2TemporalBenchmarkOrchestrator:
         y_c1_cal = np.array([CLASSES_8.index(cohort1_labels[s.object_id]) for s in cohort1_seqs])
         X_c2_cal = np.array([self.common_classifier.extract_features(s) for s in cohort2_in_tax])
         y_c2_cal = np.array([CLASSES_8.index(cohort2_labels[s.object_id]) for s in cohort2_in_tax])
+        X_c2_all_cal = np.array([self.common_classifier.extract_features(s) for s in cohort2_seqs_all])
 
         calibration_diagnostics = {
             "DatasetA_Val_N24": self.common_classifier.compute_calibration_diagnostics(X_val_cal, y_val_cal),
             "Cohort_1_DatasetA_Test_N45": self.common_classifier.compute_calibration_diagnostics(X_c1_cal, y_c1_cal),
             "Cohort_2_Track3_Archival_N17": self.common_classifier.compute_calibration_diagnostics(X_c2_cal, y_c2_cal),
         }
+        ood_abstention_diagnostics = {
+            "ID_Test_vs_Track3_InTax_N17": self.common_classifier.evaluate_ood_abstention(
+                X_c1_cal, y_c1_cal, X_c2_cal, y_ood_in_tax=y_c2_cal
+            ),
+            "ID_Test_vs_Track3_All_N18": self.common_classifier.evaluate_ood_abstention(
+                X_c1_cal, y_c1_cal, X_c2_all_cal, y_ood_in_tax=None
+            ),
+        }
 
-        # 10. Measured Hardware, Software, & End-to-End Operational Latency Profile
+        # 10. Measured Hardware, Software, & Scoped Operational Triage Latency Profile
         cpu_name = platform.processor() or "Unknown CPU"
         ram_gb = None
         if os.name == "nt":
@@ -1062,19 +1292,70 @@ class Stage2TemporalBenchmarkOrchestrator:
         cuda_avail = bool(torch.cuda.is_available())
         gpu_name = torch.cuda.get_device_name(0) if cuda_avail else None
         gpu_vram_gb = round(torch.cuda.get_device_properties(0).total_memory / (1024 ** 3), 2) if cuda_avail else None
-        exec_device = str(self.device) if self.device else ("cuda" if cuda_avail else "cpu")
+        exec_device = str(self.device) if self.device else "cpu"
 
-        e2e_latency_ms = {}
+        # Profile scoped operational triage latency (batch_size=1, warmup=5, repetitions=50)
+        scoped_triage_p50_p95: Dict[str, Any] = {}
+        for b_id, mdl in models.items():
+            scoped_triage_p50_p95[b_id] = {
+                "Cohort_1_DatasetA_Test": self._profile_scoped_triage_latency(
+                    b_id, mdl, cohort1_seqs, cohort1_labels, repetitions=50, warmup=5
+                ),
+                "Cohort_2_Track3_Archival": self._profile_scoped_triage_latency(
+                    b_id, mdl, cohort2_seqs_all, cohort2_labels, repetitions=50, warmup=5
+                ),
+            }
+
+        # Explicit synchronized CUDA latency check for B3_Transformer when GPU is available
+        cuda_sync_profile: Optional[Dict[str, Any]] = None
+        if cuda_avail:
+            try:
+                m_cuda = NonPretrainedTransformerBaseline(seed=42, device="cuda")
+                cuda_c1_ms: List[float] = []
+                for _ in range(5):
+                    m_cuda.predict_sequence(cohort1_seqs[0])
+                torch.cuda.synchronize()
+                for r in range(50):
+                    seq_r = cohort1_seqs[r % len(cohort1_seqs)]
+                    torch.cuda.synchronize()
+                    t0 = time.perf_counter()
+                    m_cuda.predict_sequence(seq_r)
+                    torch.cuda.synchronize()
+                    cuda_c1_ms.append((time.perf_counter() - t0) * 1000.0)
+                c_arr = np.asarray(cuda_c1_ms, dtype=np.float64)
+                cuda_sync_profile = {
+                    "baseline_id": "B3_Transformer",
+                    "cohort_id": "Cohort_1_DatasetA_Test",
+                    "device": "cuda",
+                    "gpu_device": gpu_name,
+                    "batch_size": 1,
+                    "warmup": 5,
+                    "repetitions": 50,
+                    "sync_method": "torch.cuda.synchronize",
+                    "p50_ms_per_seq": round(float(np.percentile(c_arr, 50.0)), 4),
+                    "p95_ms_per_seq": round(float(np.percentile(c_arr, 95.0)), 4),
+                    "mean_ms_per_seq": round(float(np.mean(c_arr)), 4),
+                }
+            except Exception as exc:
+                cuda_sync_profile = {"error": str(exc)}
+
+        scoped_latency_ms = {}
         for b_id in baselines:
             c1_bd = cohort_summaries["Cohort_1_DatasetA_Test"][b_id].latency_component_breakdown_ms
             c2_bd = cohort_summaries["Cohort_2_Track3_Archival"][b_id].latency_component_breakdown_ms
-            e2e_latency_ms[b_id] = {
+            p_c1 = scoped_triage_p50_p95[b_id]["Cohort_1_DatasetA_Test"]
+            p_c2 = scoped_triage_p50_p95[b_id]["Cohort_2_Track3_Archival"]
+            scoped_latency_ms[b_id] = {
                 "data_prep_datasetA_ms_per_seq": round(t_prep_c1_ms, 4),
                 "data_prep_track3_ms_per_seq": round(t_prep_c2_ms, 4),
-                "operational_t3_t4_datasetA_ms_per_seq": c1_bd.get("operational_t3_t4_pipeline_ms_per_seq", 0.0),
-                "operational_t3_t4_track3_ms_per_seq": c2_bd.get("operational_t3_t4_pipeline_ms_per_seq", 0.0),
-                "end_to_end_triage_datasetA_ms_per_seq": round(t_prep_c1_ms + c1_bd.get("operational_t3_t4_pipeline_ms_per_seq", 0.0), 4),
-                "end_to_end_triage_track3_ms_per_seq": round(t_prep_c2_ms + c2_bd.get("operational_t3_t4_pipeline_ms_per_seq", 0.0), 4),
+                "scoped_t3_t4_single_pass_datasetA_ms_per_seq": c1_bd.get("scoped_operational_triage_pipeline_ms_per_seq", 0.0),
+                "scoped_t3_t4_single_pass_track3_ms_per_seq": c2_bd.get("scoped_operational_triage_pipeline_ms_per_seq", 0.0),
+                "scoped_triage_datasetA_p50_ms": p_c1["p50_ms_per_seq"],
+                "scoped_triage_datasetA_p95_ms": p_c1["p95_ms_per_seq"],
+                "scoped_triage_datasetA_mean_ms": p_c1["mean_ms_per_seq"],
+                "scoped_triage_track3_p50_ms": p_c2["p50_ms_per_seq"],
+                "scoped_triage_track3_p95_ms": p_c2["p95_ms_per_seq"],
+                "scoped_triage_track3_mean_ms": p_c2["mean_ms_per_seq"],
                 "full_4task_benchmark_track3_ms_per_seq": round(cohort_summaries["Cohort_2_Track3_Archival"][b_id].latency_ms_per_sequence, 4),
             }
 
@@ -1091,11 +1372,18 @@ class Stage2TemporalBenchmarkOrchestrator:
             "gpu_device": gpu_name,
             "gpu_vram_gb": gpu_vram_gb,
             "benchmark_execution_device": exec_device,
+            "latency_scope_definition": (
+                "scoped_operational_triage_latency measures batch_size=1 in-memory sequence triage "
+                "(feature/token inference + rare-event utility scoring; warmup=5, repetitions=50). "
+                "Explicitly EXCLUDES catalog cross-match, external evidence retrieval, agent orchestration, and disk/network IO."
+            ),
             "data_prep_latency_ms_per_seq": {
                 "Cohort_1_DatasetA_Test": round(t_prep_c1_ms, 4),
                 "Cohort_2_Track3_Archival": round(t_prep_c2_ms, 4),
             },
-            "end_to_end_latency_by_baseline": e2e_latency_ms,
+            "scoped_operational_triage_latency_p50_p95": scoped_triage_p50_p95,
+            "scoped_operational_triage_latency_by_baseline": scoped_latency_ms,
+            "cuda_synchronized_profile": cuda_sync_profile,
         }
 
         # 11. ASTROMER Lineage Audit
@@ -1120,15 +1408,16 @@ class Stage2TemporalBenchmarkOrchestrator:
             t4_ablation_bootstrap_ci=t4_ablation_ci,
             t4_paired_difference_ci=t4_paired_diff_ci,
             calibration_diagnostics=calibration_diagnostics,
+            ood_abstention_diagnostics=ood_abstention_diagnostics,
             runtime_environment_and_latency=runtime_env,
             astromer_lineage_audit=astromer_lineage,
             executive_summary=(
-                f"ASTRAEUS Phase 2 Stage 2 Day 111.2.2 Canonical Astrometric & Provenance Reconciliation Release. "
-                f"Canonical C8 taxonomy, full 18-object Track 3 manifest verified against external catalogs (PTF12dam, AT2019dsg replacing AT2021lwx, Gaia14aaa; ZTF20acigmel alias), "
-                f"and genuinely disjoint training (N=80) and val (N=24) cohorts. "
-                f"Primary multiplicity family reconciled to m=24 candidate-vs-reference hypotheses (significant: {num_sig}/24), "
-                f"with 8 explicit reference identity anchors and full 32-cell sensitivity analysis. "
-                f"All P0 and applicable P1 reconciliation items closed except ASTROMER lineage, which remains OVERLAP_AUDIT_INCOMPLETE (contained under HOST_ENVIRONMENT_OVERLAP_QUALIFIED pending source-level MACHO overlap verification). "
-                f"Pretraining on Dataset B remains strictly ON HOLD."
+                f"ASTRAEUS Phase 2 Stage 2 Day 111.2.3 Evidence Closure Audit Release. "
+                f"Fixes T4 permutation/bootstrap CIs across both cohorts (subtraction_order=candidate_minus_baseline), "
+                f"adds full 18-object astrometric field-level provenance and propagated offset uncertainties (AUTOMATED_MATHEMATICAL_AND_SCHEMA_CONSISTENCY), "
+                f"retires 16-param OvR Platt default in favor of 1-param global temperature scaling + post-hoc OOD abstention, "
+                f"adds T4 Recall@5/10, AP, NDCG@10 with SN2017gfo open-set separation, and reports p50/p95 scoped triage latency. "
+                f"Primary multiplicity family remains m=24 (significant: {num_sig}/24), Track 3 generalization failure remains explicitly exposed, "
+                f"ASTROMER lineage remains OVERLAP_AUDIT_INCOMPLETE (HOST_ENVIRONMENT_OVERLAP_QUALIFIED), and Dataset B pretraining remains strictly ON HOLD."
             )
         )

@@ -51,13 +51,17 @@ class Top10PermutationDiagnostic(BaseModel):
     baseline_id: str
     candidate_id: str = "candidate"
     cohort_id: str = "cohort"
+    subtraction_order: str = "candidate_minus_baseline"
     observed_p_at_10_baseline: float
     observed_p_at_10_candidate: float
     delta_p_at_10: float                  # candidate - baseline
     num_permutations: int = 10000
     empirical_p_value: float
+    ci_method: str = "paired_object_bootstrap_2000"
     ci_lower_95: float
     ci_upper_95: float
+    null_ci_lower_95: float = 0.0
+    null_ci_upper_95: float = 0.0
     is_exchangeable: bool                 # True if p > 0.05
     top10_baseline_ids: List[str] = Field(default_factory=list)
     top10_candidate_ids: List[str] = Field(default_factory=list)
@@ -239,24 +243,43 @@ def compute_top10_permutation_test(
         perm_p_cand = float(np.sum(is_rare_target[perm_top_cand])) / k
         null_deltas[b] = perm_p_cand - perm_p_base
 
-    # Empirical two-sided p-value
+    # Empirical two-sided p-value under permutation exchangeability null
     emp_p = float((1 + np.sum(np.abs(null_deltas) >= np.abs(delta_obs))) / (num_permutations + 1))
 
-    # Bootstrap 95% confidence interval of delta
-    ci_low = float(np.percentile(null_deltas, 2.5))
-    ci_high = float(np.percentile(null_deltas, 97.5))
+    # 2.5th-97.5th percentiles of the permutation NULL distribution (centered near 0)
+    null_ci_low = float(np.percentile(null_deltas, 2.5))
+    null_ci_high = float(np.percentile(null_deltas, 97.5))
+
+    # Paired object-level bootstrap 95% confidence interval for the OBSERVED effect delta_obs = cand - base
+    n_boot = 2000
+    boot_deltas = np.zeros(n_boot, dtype=np.float64)
+    for b in range(n_boot):
+        idx = rng.choice(n, size=n, replace=True)
+        b_base = scores_baseline[idx]
+        b_cand = scores_candidate[idx]
+        b_rare = is_rare_target[idx]
+        p_b_base = float(np.sum(b_rare[np.argsort(b_base)[::-1][:k]])) / k
+        p_b_cand = float(np.sum(b_rare[np.argsort(b_cand)[::-1][:k]])) / k
+        boot_deltas[b] = p_b_cand - p_b_base
+
+    ci_low = float(np.percentile(boot_deltas, 2.5))
+    ci_high = float(np.percentile(boot_deltas, 97.5))
 
     return Top10PermutationDiagnostic(
         baseline_id=baseline_id,
         candidate_id=candidate_id,
         cohort_id=cohort_id,
+        subtraction_order="candidate_minus_baseline",
         observed_p_at_10_baseline=p10_base,
         observed_p_at_10_candidate=p10_cand,
         delta_p_at_10=delta_obs,
         num_permutations=num_permutations,
         empirical_p_value=emp_p,
+        ci_method=f"paired_object_bootstrap_{n_boot}",
         ci_lower_95=ci_low,
         ci_upper_95=ci_high,
+        null_ci_lower_95=null_ci_low,
+        null_ci_upper_95=null_ci_high,
         is_exchangeable=(emp_p > 0.05),
         top10_baseline_ids=top_base_ids,
         top10_candidate_ids=top_cand_ids,
