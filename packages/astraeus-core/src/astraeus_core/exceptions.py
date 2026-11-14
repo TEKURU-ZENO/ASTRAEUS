@@ -35,3 +35,18 @@ class CoordinateValidationError(AstraeusError):
     Raised when celestial coordinates fall outside physical bounds or lack valid reference frames.
     """
     pass
+
+
+class LiveBackendUnavailableError(AstraeusError):
+    """
+    Raised in LIVE_BACKEND_REQUIRED mode when a live database server
+    (PostgreSQL, Neo4j, Qdrant, MinIO) cannot be reached, preventing silent fallback.
+    """
+    pass
+
+
+class DistributedTransactionError(AstraeusError):
+    """
+    Raised when a partial failure occurs during a multi-store persistence operation.
+    """
+    pass

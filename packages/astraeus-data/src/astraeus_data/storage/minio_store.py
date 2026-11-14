@@ -13,6 +13,9 @@ import json
 from typing import Optional, Dict, Any, List
 from pathlib import Path
 
+from astraeus_core.exceptions import LiveBackendUnavailableError
+from astraeus_data.storage import BackendMode
+
 
 class AstraeusObjectStore:
     """
@@ -26,14 +29,20 @@ class AstraeusObjectStore:
         secret_key: Optional[str] = None,
         secure: bool = False,
         local_root: str = "data/storage/minio_objects",
+        backend_mode: BackendMode = BackendMode.LOCAL_EMBEDDED,
     ):
         self.endpoint = endpoint
         self.local_root = Path(local_root)
         self.local_root.mkdir(parents=True, exist_ok=True)
         self._minio_client = None
-        self.mode = "local"
+        self.backend_mode = backend_mode
 
-        if endpoint:
+        if backend_mode == BackendMode.STRICT_LIVE:
+            if not endpoint:
+                raise LiveBackendUnavailableError(
+                    "MinIO endpoint must be explicitly supplied in STRICT_LIVE mode. "
+                    "Silent fallback is prohibited."
+                )
             try:
                 from minio import Minio
                 self._minio_client = Minio(
@@ -42,13 +51,23 @@ class AstraeusObjectStore:
                     secret_key=secret_key or "minioadmin",
                     secure=secure,
                 )
-                # Check connection
+                # Verify live connectivity
                 self._minio_client.list_buckets()
                 self.mode = "minio_live"
-            except Exception:
-                # Fall back to local object storage mode
-                self._minio_client = None
-                self.mode = "local"
+            except Exception as exc:
+                raise LiveBackendUnavailableError(
+                    f"STRICT_LIVE mode: Failed to connect to live MinIO server at '{endpoint}': {exc}. "
+                    "Silent fallback is strictly prohibited."
+                ) from exc
+        else:
+            # Explicitly declared local/embedded storage
+            self.mode = "local"
+            self._minio_client = None
+
+    @property
+    def is_live_backend(self) -> bool:
+        """Returns True if connected to an actual remote/live MinIO instance."""
+        return self.mode == "minio_live"
 
     def put_object(
         self,
@@ -102,6 +121,7 @@ class AstraeusObjectStore:
             "sha256": computed_sha256,
             "size_bytes": byte_size,
             "storage_mode": self.mode,
+            "is_live_backend": self.is_live_backend,
         }
 
     def get_object(

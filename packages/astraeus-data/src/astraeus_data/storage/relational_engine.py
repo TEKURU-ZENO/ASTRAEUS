@@ -7,11 +7,13 @@ and ACID transaction boundaries for PostgreSQL and SQLite.
 from __future__ import annotations
 
 import contextlib
-from typing import Iterator, Generator
+from typing import Iterator, Generator, Optional
 from sqlalchemy import create_engine, Engine, event, text
 from sqlalchemy.orm import sessionmaker, Session
 from sqlalchemy.schema import CreateTable, CreateIndex
 
+from astraeus_core.exceptions import LiveBackendUnavailableError
+from astraeus_data.storage import BackendMode
 from astraeus_data.storage.schema import Base
 
 
@@ -22,18 +24,46 @@ def _enable_sqlite_foreign_keys(dbapi_connection, connection_record):
     cursor.close()
 
 
-def create_database_engine(url: str = "sqlite:///:memory:", echo: bool = False) -> Engine:
+def create_database_engine(
+    url: str = "sqlite:///:memory:",
+    echo: bool = False,
+    backend_mode: BackendMode = BackendMode.LOCAL_EMBEDDED,
+) -> Engine:
     """
     Creates and configures a SQLAlchemy database engine.
     Supports PostgreSQL (production) and SQLite (testing/local in-memory).
+    Prohibits silent fallback when BackendMode.STRICT_LIVE is enabled.
     """
+    if backend_mode == BackendMode.STRICT_LIVE:
+        if not url.startswith("postgresql"):
+            raise LiveBackendUnavailableError(
+                f"STRICT_LIVE mode requires a production PostgreSQL URL (e.g. 'postgresql+psycopg2://...'), "
+                f"got '{url}'. SQLite and silent fallback are strictly prohibited."
+            )
+        try:
+            engine = create_engine(
+                url,
+                echo=echo,
+                pool_size=10,
+                max_overflow=20,
+                pool_pre_ping=True,
+            )
+            # Test connection
+            with engine.connect() as conn:
+                conn.execute(text("SELECT 1"))
+            return engine
+        except Exception as exc:
+            raise LiveBackendUnavailableError(
+                f"STRICT_LIVE mode: Failed to connect to PostgreSQL server at '{url}': {exc}. "
+                "Silent fallback is prohibited."
+            ) from exc
+
     connect_args = {}
     if url.startswith("sqlite"):
         connect_args["check_same_thread"] = False
         engine = create_engine(url, echo=echo, connect_args=connect_args)
         event.listen(engine, "connect", _enable_sqlite_foreign_keys)
     else:
-        # PostgreSQL / other production backends
         engine = create_engine(
             url,
             echo=echo,
@@ -85,7 +115,6 @@ def generate_postgresql_ddl() -> str:
     from sqlalchemy.dialects import postgresql
     ddl_statements = []
     
-    # Tables in dependency order
     tables = [
         Base.metadata.tables["persistent_sky_loci"],
         Base.metadata.tables["physical_transient_episodes"],

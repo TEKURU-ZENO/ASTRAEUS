@@ -1,9 +1,12 @@
 """
-Tests for ASTRAEUS Relational Storage, Schemas, Constraints, and Batch Import.
+Tests for ASTRAEUS Relational Storage, Schemas, Constraints, Batch Import,
+Multi-Table Atomicity, and Strict Live Mode Enforcement.
 """
 
 import pytest
 from sqlalchemy import select, func
+from astraeus_core.exceptions import LiveBackendUnavailableError
+from astraeus_data.storage import BackendMode
 from astraeus_data.storage.relational_engine import (
     create_database_engine,
     init_schema,
@@ -26,15 +29,23 @@ from astraeus_data.storage.importer import CohortBatchImporter
 @pytest.fixture
 def db_engine():
     """Provides an isolated in-memory relational database engine with foreign keys enabled."""
-    engine = create_database_engine("sqlite:///:memory:")
+    engine = create_database_engine("sqlite:///:memory:", backend_mode=BackendMode.LOCAL_EMBEDDED)
     init_schema(engine)
     yield engine
     drop_schema(engine)
 
 
+def test_strict_live_mode_prohibits_silent_fallback():
+    """Verifies that requesting STRICT_LIVE with SQLite or unreachable Postgres raises LiveBackendUnavailableError."""
+    with pytest.raises(LiveBackendUnavailableError, match="STRICT_LIVE mode requires a production PostgreSQL URL"):
+        create_database_engine("sqlite:///:memory:", backend_mode=BackendMode.STRICT_LIVE)
+
+    with pytest.raises(LiveBackendUnavailableError, match="Failed to connect to PostgreSQL"):
+        create_database_engine("postgresql+psycopg2://user:pass@127.0.0.1:54321/nonexistent", backend_mode=BackendMode.STRICT_LIVE)
+
+
 def test_schema_constraints_and_foreign_keys(db_engine):
     """Verifies table creation, check constraints, and foreign key cascade behavior."""
-    # 1. Test locus creation with valid coordinates
     with transactional_session(db_engine) as session:
         locus = PersistentSkyLoci(
             sky_locus_id="LOC_TEST_001",
@@ -46,12 +57,12 @@ def test_schema_constraints_and_foreign_keys(db_engine):
         )
         session.add(locus)
 
-    # 2. Test check constraint on negative episode count or invalid RA
+    # Check constraint violation
     with pytest.raises(Exception):
         with transactional_session(db_engine) as session:
             bad_locus = PersistentSkyLoci(
                 sky_locus_id="LOC_BAD",
-                ra_deg=400.0,  # Invalid RA
+                ra_deg=400.0,
                 dec_deg=0.0,
                 healpix_nside32=100,
                 assigned_base_split="train",
@@ -59,7 +70,7 @@ def test_schema_constraints_and_foreign_keys(db_engine):
             )
             session.add(bad_locus)
 
-    # 3. Test foreign key cascade delete
+    # Foreign key cascade delete
     with transactional_session(db_engine) as session:
         ep = PhysicalTransientEpisodes(
             physical_event_id="EP_TEST_001",
@@ -73,7 +84,7 @@ def test_schema_constraints_and_foreign_keys(db_engine):
             temporal_split="archival_observation_date_holdout",
             coarse_class="SN_Ia",
             fine_class="SN_Ia",
-            evidence_tier="L1_TRACEABLE_SPECTROSCOPIC",
+            evidence_tier="L1",
             taxonomy_version="1.0",
         )
         session.add(ep)
@@ -82,7 +93,6 @@ def test_schema_constraints_and_foreign_keys(db_engine):
         ep_count = session.scalar(select(func.count(PhysicalTransientEpisodes.physical_event_id)))
         assert ep_count == 1
 
-    # Delete locus -> cascade should delete episode
     with transactional_session(db_engine) as session:
         loc = session.get(PersistentSkyLoci, "LOC_TEST_001")
         session.delete(loc)
@@ -109,10 +119,10 @@ def test_postgresql_ddl_export():
 def test_cohort_10k_batch_ingestion_and_counts(db_engine):
     """
     Ingests the real 10,000-candidate cohort, 4 entities, snapshots, and photometry.
-    Verifies exact row counts against the ingestion manifests.
+    Verifies exact row counts and multi-table atomic transaction.
     """
     importer = CohortBatchImporter(db_engine)
-    metrics = importer.import_cohort()
+    metrics = importer.import_cohort(atomic=True)
 
     counts = importer.get_row_counts()
     assert counts["persistent_sky_loci"] == 9928
@@ -121,27 +131,35 @@ def test_cohort_10k_batch_ingestion_and_counts(db_engine):
     assert counts["host_counterparts"] == 1061
     assert counts["candidates_10k"] == 10000
     assert counts["raw_snapshots"] == 33
-    assert counts["photometry_records"] > 0
+    assert counts["photometry_records"] == 101077
 
-    assert metrics["throughput_rows_per_sec"] > 100.0
+    # Accounting reconciliation
+    assert metrics["manifest_entity_rows"] == 35469
+    assert metrics["photometry_observation_rows"] == 101077
+    assert metrics["total_rows_imported"] == 136546
+    assert metrics["is_single_atomic_transaction"] is True
+    assert metrics["throughput_rows_per_sec"] > 10000.0
 
 
-def test_idempotency_and_duplicate_prevention(db_engine):
-    """Confirms duplicate insertions are rejected."""
+def test_true_idempotent_upsert_replay(db_engine):
+    """Confirms true idempotent replay (running upsert twice leaves row counts unchanged)."""
     importer = CohortBatchImporter(db_engine)
-    importer.import_cohort()
+    importer.import_cohort(atomic=True)
 
-    res = importer.test_idempotent_reingestion()
+    # Replay upsert
+    res = importer.upsert_cohort()
     assert res["status"] == "PASS"
-    assert res["duplicate_prevented"] is True
+    assert res["idempotent_replay_success"] is True
+    assert res["new_loci_inserted"] == 0
+
+    counts = importer.get_row_counts()
+    assert counts["persistent_sky_loci"] == 9928
 
 
-def test_transaction_rollback_on_injected_failure(db_engine):
-    """Verifies that an injected integrity failure mid-transaction cleanly rolls back."""
+def test_multi_table_atomic_rollback(db_engine):
+    """Verifies that an injected failure during multi-table import rolls back cleanly across all tables."""
     importer = CohortBatchImporter(db_engine)
-    importer.import_cohort()
-
-    res = importer.test_rollback_on_injected_failure()
+    res = importer.test_multi_table_atomic_rollback()
     assert res["status"] == "PASS"
-    assert res["rollback_verified"] is True
-    assert res["leaked_rows"] == 0
+    assert res["atomic_rollback_verified"] is True
+    assert res["final_counts"]["persistent_sky_loci"] == 0

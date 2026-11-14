@@ -1,5 +1,5 @@
 """
-Tests for ASTRAEUS MinIO / S3 Object Store and Cryptographic Integrity.
+Tests for ASTRAEUS MinIO / S3 Object Store, Strict Mode, and Cryptographic Integrity.
 """
 
 import pytest
@@ -7,14 +7,25 @@ import tempfile
 import json
 import os
 from pathlib import Path
+from astraeus_core.exceptions import LiveBackendUnavailableError
+from astraeus_data.storage import BackendMode
 from astraeus_data.storage.minio_store import AstraeusObjectStore
 
 
 @pytest.fixture
 def object_store():
     with tempfile.TemporaryDirectory() as tmp_dir:
-        store = AstraeusObjectStore(local_root=tmp_dir)
+        store = AstraeusObjectStore(local_root=tmp_dir, backend_mode=BackendMode.LOCAL_EMBEDDED)
         yield store
+
+
+def test_strict_live_mode_prohibits_silent_fallback():
+    """Verifies that requesting STRICT_LIVE with missing or unreachable endpoint raises LiveBackendUnavailableError."""
+    with pytest.raises(LiveBackendUnavailableError, match="MinIO endpoint must be explicitly supplied"):
+        AstraeusObjectStore(endpoint=None, backend_mode=BackendMode.STRICT_LIVE)
+
+    with pytest.raises(LiveBackendUnavailableError, match="Failed to connect to live MinIO server"):
+        AstraeusObjectStore(endpoint="127.0.0.1:54321", backend_mode=BackendMode.STRICT_LIVE)
 
 
 def test_object_persistence_and_checksum_verification(object_store):
@@ -26,12 +37,11 @@ def test_object_persistence_and_checksum_verification(object_store):
     put_res = object_store.put_object(bucket, key, test_data)
     assert put_res["size_bytes"] == len(test_data)
     assert "sha256" in put_res
+    assert put_res["is_live_backend"] is False
 
-    # Retrieve with correct hash
     retrieved = object_store.get_object(bucket, key, expected_sha256=put_res["sha256"])
     assert retrieved == test_data
 
-    # Retrieve with invalid hash -> raises ValueError
     with pytest.raises(ValueError, match="Cryptographic hash mismatch"):
         object_store.get_object(bucket, key, expected_sha256="0000000000000000000000000000000000000000000000000000000000000000")
 
@@ -65,7 +75,6 @@ def test_object_store_manifest_snapshots_persistence(object_store):
             put_res = object_store.put_object(bucket, key, content)
             assert put_res["sha256"] == entry["sha256"], f"Hash mismatch for {rel_path}"
 
-            # Read back and re-verify
             verified_bytes = object_store.get_object(bucket, key, expected_sha256=entry["sha256"])
             assert len(verified_bytes) == entry["size_bytes"]
             persisted_count += 1

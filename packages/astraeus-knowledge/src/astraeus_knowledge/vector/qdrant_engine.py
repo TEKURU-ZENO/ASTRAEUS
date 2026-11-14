@@ -7,7 +7,7 @@ metadata filtering, and vector lifecycle operations.
 from __future__ import annotations
 
 import time
-import hashlib
+import math
 from typing import Dict, Any, List, Optional
 import numpy as np
 import pandas as pd
@@ -21,11 +21,15 @@ from qdrant_client.models import (
     MatchValue,
 )
 
+from astraeus_core.exceptions import LiveBackendUnavailableError
+from astraeus_data.storage import BackendMode
+
 
 class AstraeusVectorEngine:
     """
     Qdrant vector engine for astronomical transient embeddings.
-    Supports in-memory high-speed execution or live distributed Qdrant instances.
+    Supports strict remote Qdrant cluster execution or embedded in-memory execution.
+    Prohibits silent backend fallback in STRICT_LIVE mode.
     """
     def __init__(
         self,
@@ -34,16 +38,39 @@ class AstraeusVectorEngine:
         api_key: Optional[str] = None,
         collection_name: str = "astraeus_candidates_v1",
         vector_dim: int = 24,
+        backend_mode: BackendMode = BackendMode.LOCAL_EMBEDDED,
     ):
         self.collection_name = collection_name
         self.vector_dim = vector_dim
-        
-        if url:
-            self.client = QdrantClient(url=url, api_key=api_key)
+        self.backend_mode = backend_mode
+        self.url = url
+
+        if backend_mode == BackendMode.STRICT_LIVE:
+            if not url:
+                raise LiveBackendUnavailableError(
+                    "Qdrant remote URL must be explicitly supplied in STRICT_LIVE mode. "
+                    "Silent fallback is prohibited."
+                )
+            try:
+                self.client = QdrantClient(url=url, api_key=api_key, timeout=5.0)
+                # Verify live connectivity
+                self.client.get_collections()
+                self.mode = "qdrant_live"
+            except Exception as exc:
+                raise LiveBackendUnavailableError(
+                    f"STRICT_LIVE mode: Failed to connect to live Qdrant server at '{url}': {exc}. "
+                    "Silent fallback is strictly prohibited."
+                ) from exc
         else:
+            self.mode = "in_memory"
             self.client = QdrantClient(location)
 
         self._init_collection()
+
+    @property
+    def is_live_backend(self) -> bool:
+        """Returns True if connected to an actual remote Qdrant service."""
+        return self.mode == "qdrant_live"
 
     def _init_collection(self) -> None:
         """Initializes or resets the target collection."""
@@ -53,13 +80,94 @@ class AstraeusVectorEngine:
                 vectors_config=VectorParams(size=self.vector_dim, distance=Distance.COSINE),
             )
 
+    @staticmethod
+    def extract_astronomical_features_24d(row: pd.Series | Dict[str, Any]) -> List[float]:
+        """
+        Derives a normalized 24-dimensional physical vector embedding from candidate attributes
+        reflecting celestial geometry, observational cadence, baseline duration, and astrophysical classification.
+        """
+        ra_rad = math.radians(float(row.get("ra_deg", 0.0)))
+        dec_rad = math.radians(float(row.get("dec_deg", 0.0)))
+
+        # 1-3: Cartesian celestial unit vector
+        cx = math.cos(dec_rad) * math.cos(ra_rad)
+        cy = math.cos(dec_rad) * math.sin(ra_rad)
+        cz = math.sin(dec_rad)
+
+        # 4-5: Galactic coordinate projection proxy
+        # Standard IAU J2000 Galactic North Pole: ra=192.85948 deg, dec=27.12825 deg
+        glon_proxy = math.cos(dec_rad) * math.cos(ra_rad - math.radians(192.86))
+        glat_proxy = math.sin(dec_rad) * 0.456 + math.cos(dec_rad) * 0.890 * math.cos(ra_rad)
+
+        # 6-8: Observational cadence
+        n_det = float(row.get("n_alerce_det", 0))
+        n_ul = float(row.get("n_alerce_ul", 0))
+        n_dr24 = float(row.get("n_dr24_clean", 0))
+        log_ndet = math.log10(max(0.0, n_det) + 1.0) / 4.0
+        log_nul = math.log10(max(0.0, n_ul) + 1.0) / 4.0
+        log_ndr24 = math.log10(max(0.0, n_dr24) + 1.0) / 5.0
+
+        # 9-10: Baseline duration
+        first_mjd = float(row.get("first_mjd", 58000.0)) if pd.notna(row.get("first_mjd")) else 58000.0
+        last_mjd = float(row.get("last_mjd", 58000.0)) if pd.notna(row.get("last_mjd")) else 58000.0
+        dt_days = max(0.0, last_mjd - first_mjd)
+        norm_dt = min(dt_days, 3650.0) / 3650.0
+        log_dt = math.log10(dt_days + 0.1) / 4.0
+
+        # 11-12: Survey coverage flags
+        has_msip = 1.0 if row.get("has_msip_alert") else 0.0
+        has_dr24 = 1.0 if row.get("has_dr24_lc") else 0.0
+        has_tns = 1.0 if row.get("has_independent_tns") else 0.0
+        survey_density = (has_msip + has_dr24 + has_tns) / 3.0
+        forced_flag = 1.0 if row.get("has_forced_photometry") else 0.0
+
+        # 13-16: Physical Coarse Class Embedding (One-Hot Style + Astrometric Weight)
+        coarse = str(row.get("coarse_class", "UNCLASSIFIED")).upper()
+        is_sn = 1.0 if ("SN" in coarse or "SUPERNOVA" in coarse) else 0.0
+        is_agn = 1.0 if ("AGN" in coarse or "QSO" in coarse) else 0.0
+        is_var = 1.0 if ("VAR" in coarse or "STAR" in coarse or "ECL" in coarse) else 0.0
+        is_nuclear = 1.0 if ("TDE" in coarse or "NUCLEAR" in coarse) else 0.0
+
+        # 17-18: Evidence Tier Level & Quarantine Penalty
+        tier = str(row.get("evidence_tier", "L5"))
+        tier_map = {"L1": 1.0, "L2": 0.8, "L3": 0.6, "L4": 0.4, "L5": 0.2}
+        tier_val = tier_map.get(tier, 0.2)
+        quarantine_val = -1.0 if row.get("is_quarantined") else 1.0
+
+        # 19-20: Host Proximity & Redshift
+        has_cp = 1.0 if pd.notna(row.get("host_counterpart_id")) else 0.0
+        cp_proxy = 0.5 if has_cp > 0 else -0.5
+        redshift = float(row.get("host_redshift", 0.0)) if pd.notna(row.get("host_redshift")) else 0.0
+        norm_z = min(redshift, 4.0) / 4.0
+
+        # 21-24: Photometric Statistics Proxy
+        det_ratio = n_det / max(1.0, (n_det + n_ul))
+        clean_ratio = n_dr24 / max(1.0, (n_det + n_dr24))
+        temporal_span = dt_days / max(1.0, n_det) if n_det > 0 else 0.0
+        norm_span = min(temporal_span, 100.0) / 100.0
+        prior_score = 0.8 if is_sn > 0 else (0.5 if is_agn > 0 else 0.2)
+
+        raw_vec = np.array([
+            cx, cy, cz, glon_proxy, glat_proxy,
+            log_ndet, log_nul, log_ndr24, norm_dt, log_dt,
+            survey_density, forced_flag, is_sn, is_agn, is_var, is_nuclear,
+            tier_val, quarantine_val, cp_proxy, norm_z,
+            det_ratio, clean_ratio, norm_span, prior_score
+        ], dtype=float)
+
+        norm = np.linalg.norm(raw_vec)
+        if norm > 0:
+            raw_vec = raw_vec / norm
+
+        return raw_vec.tolist()
+
     def ingest_candidates_dataframe(
         self,
         df: pd.DataFrame,
         batch_size: int = 500,
     ) -> Dict[str, Any]:
         """
-        Embeds and ingests candidate records into Qdrant in batches.
+        Derives physical 24-dim embeddings from candidate metadata and ingests into Qdrant.
         """
         start_time = time.perf_counter()
         total_points = len(df)
@@ -67,14 +175,7 @@ class AstraeusVectorEngine:
 
         for idx, row in df.iterrows():
             cand_id = str(row["candidate_id"])
-            # Generate deterministic 24-dim pseudo-embedding based on astrometric and temporal features
-            # or hash-seeded gaussian features to ensure reproducibility
-            seed = int(hashlib.sha256(cand_id.encode("utf-8")).hexdigest()[:8], 16)
-            rng = np.random.RandomState(seed)
-            vector = rng.randn(self.vector_dim).astype(float)
-            norm = np.linalg.norm(vector)
-            if norm > 0:
-                vector = vector / norm
+            vector = self.extract_astronomical_features_24d(row)
 
             payload = {
                 "candidate_id": cand_id,
@@ -89,7 +190,7 @@ class AstraeusVectorEngine:
                 "dec_deg": float(row["dec_deg"]),
             }
 
-            points.append(PointStruct(id=int(idx + 1), vector=vector.tolist(), payload=payload))
+            points.append(PointStruct(id=int(idx + 1), vector=vector, payload=payload))
 
         # Batch upsert
         for i in range(0, len(points), batch_size):
@@ -99,6 +200,8 @@ class AstraeusVectorEngine:
         duration = time.perf_counter() - start_time
         return {
             "collection_name": self.collection_name,
+            "mode": self.mode,
+            "is_live_backend": self.is_live_backend,
             "total_points_ingested": total_points,
             "vector_dim": self.vector_dim,
             "duration_seconds": duration,
