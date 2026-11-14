@@ -1,0 +1,44 @@
+{
+  "cohort_version": "real_survey_10k_v1.0",
+  "taxonomy_version": "real_survey_taxonomy_v1.0",
+  "generated_at_utc": "2026-11-13T05:45:41.650668+00:00",
+  "temporal_cutoff_mjd_utc": 60310.0,
+  "healpix_split_manifest": "configs/data_splits_healpix.json",
+  "selected_dr24_hats_tiles": [
+    {
+      "Norder": 4,
+      "Dir": 0,
+      "Npix": 1028
+    },
+    {
+      "Norder": 4,
+      "Dir": 0,
+      "Npix": 2745
+    },
+    {
+      "Norder": 4,
+      "Dir": 0,
+      "Npix": 1289
+    },
+    {
+      "Norder": 4,
+      "Dir": 0,
+      "Npix": 1598
+    },
+    {
+      "Norder": 4,
+      "Dir": 0,
+      "Npix": 1635
+    },
+    {
+      "Norder": 4,
+      "Dir": 0,
+      "Npix": 1565
+    }
+  ],
+  "tns_selection_rule": "deterministic sort_values('objid') stratified across pre/post-2024 classes up to N=3,500",
+  "gaia_selection_rule": "ESA Gaia DR3 ADQL indexed source_id HP4 ranges matching SELECTED_DR24_TILES (`ORDER BY source_id`), excluding any broker classifier outputs",
+  "artifact_selection_rule": "ZTF DR24 HATS shards disjoint >5 arcsec from TNS & Gaia with catflags bit-15 (32768) ratio >= 0.80",
+  "field_l5_selection_rule": "ZTF DR24 HATS shards disjoint >5 arcsec from TNS & Gaia with >=20 clean epochs (catflags=0) and zero cloud/moon flags",
+  "processed_parquet_sha256": "6713faee3c2ab47b7a14baa321c540f2b18ddb9b51d6ddcf88dba7008ad214ae"
+}

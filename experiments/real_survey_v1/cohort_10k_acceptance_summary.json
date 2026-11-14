@@ -1,0 +1,480 @@
+{
+  "cohort_version": "real_survey_10k_v1.0",
+  "taxonomy_version": "real_survey_taxonomy_v1.0",
+  "generated_at_utc": "2026-11-13T05:45:41.651960+00:00",
+  "candidate_count": 10000,
+  "unique_physical_events_count": 9968,
+  "persistent_sky_loci_count": 9928,
+  "catalog_reports_count": 4479,
+  "host_counterparts_count": 1061,
+  "multi_episode_loci_count": 40,
+  "tns_banner_utc": "2026-11-12 00:00:00",
+  "tns_total_catalog_rows": 212832,
+  "tns_ztf_linked_catalog_rows": 78953,
+  "tns_reconciled_subset_count": 3655,
+  "tns_host_redshift_only_kept_l5_count": 36,
+  "gaia_l3_available_in_tiles_count": 1735,
+  "dr24_total_tile_rows_scanned": 2693887,
+  "photometry_stats": {
+    "total_valid_observations": 1206975,
+    "total_clean_detections": 914202,
+    "alerce_msip_detections": 257625,
+    "alerce_negative_isdiffpos_detections": 117180,
+    "alerce_upper_limits": 292773,
+    "dr24_raw_epochs": 730640,
+    "dr24_clean_retained_epochs": 656577,
+    "dr24_fatal_cloud_moon_excluded_epochs": 74044,
+    "dr24_artifact_fatal_epochs": 27806,
+    "dr24_minor_nonfatal_warning_epochs": 19,
+    "total_raw_survey_epochs": 1281038,
+    "known_operational_pub_time_epochs": 0,
+    "availability_time_unknown_epochs": 1281038
+  },
+  "coverage_matrix": {
+    "total_candidates": 10000,
+    "has_msip_alert_true": 3482,
+    "has_dr24_lc_true": 6616,
+    "has_forced_photometry_true": 0,
+    "has_alerce_access_true": 3482,
+    "alerce_checked_true": 3900,
+    "alerce_checked_404_absent": 418,
+    "alerce_checked_http_error": 0,
+    "has_independent_tns_true": 3507,
+    "has_external_l3_gaia_true": 1064,
+    "by_stratum": {
+      "DETECTION_ARTIFACT_TRACK": {
+        "has_msip_alert": 0,
+        "has_dr24_lc": 1500,
+        "has_forced_photometry": 0,
+        "has_alerce_access": 0,
+        "has_independent_tns": 0,
+        "alerce_checked": 0
+      },
+      "DR24_FIELD_L5": {
+        "has_msip_alert": 0,
+        "has_dr24_lc": 3939,
+        "has_forced_photometry": 0,
+        "has_alerce_access": 0,
+        "has_independent_tns": 0,
+        "alerce_checked": 0
+      },
+      "GAIA_DR3_L3": {
+        "has_msip_alert": 45,
+        "has_dr24_lc": 1061,
+        "has_forced_photometry": 0,
+        "has_alerce_access": 45,
+        "has_independent_tns": 7,
+        "alerce_checked": 400
+      },
+      "TNS_STRATIFIED": {
+        "has_msip_alert": 3437,
+        "has_dr24_lc": 116,
+        "has_forced_photometry": 0,
+        "has_alerce_access": 3437,
+        "has_independent_tns": 3500,
+        "alerce_checked": 3500
+      }
+    }
+  },
+  "quarantine_reason_counts": {
+    "multiple_epoch_compatible_tns_counterparts": 77,
+    "ztf_alias_coordinate_conflict:9.39arcsec": 1,
+    "borderline_separation:2.79arcsec": 1
+  },
+  "per_class_split_support": {
+    "AGN_QSO": {
+      "quarantine": 0,
+      "test": 105,
+      "train": 499,
+      "val": 205
+    },
+    "CV_Nova": {
+      "quarantine": 0,
+      "test": 38,
+      "train": 246,
+      "val": 49
+    },
+    "DETECTION_ARTIFACT": {
+      "quarantine": 0,
+      "test": 0,
+      "train": 1480,
+      "val": 20
+    },
+    "OTHER_EXTRAGALACTIC": {
+      "quarantine": 0,
+      "test": 15,
+      "train": 63,
+      "val": 18
+    },
+    "SLSN": {
+      "quarantine": 0,
+      "test": 41,
+      "train": 200,
+      "val": 50
+    },
+    "SN_CC": {
+      "quarantine": 0,
+      "test": 126,
+      "train": 563,
+      "val": 120
+    },
+    "SN_Ia": {
+      "quarantine": 0,
+      "test": 182,
+      "train": 890,
+      "val": 202
+    },
+    "TDE": {
+      "quarantine": 0,
+      "test": 11,
+      "train": 101,
+      "val": 24
+    },
+    "UNCLASSIFIED": {
+      "quarantine": 79,
+      "test": 2692,
+      "train": 938,
+      "val": 656
+    },
+    "Varstar": {
+      "quarantine": 0,
+      "test": 68,
+      "train": 246,
+      "val": 73
+    }
+  },
+  "per_class_temporal_support": {
+    "AGN_QSO": {
+      "archival_observation_date_holdout": 16,
+      "historical_dev": 793
+    },
+    "CV_Nova": {
+      "archival_observation_date_holdout": 71,
+      "historical_dev": 262
+    },
+    "DETECTION_ARTIFACT": {
+      "archival_observation_date_holdout": 23,
+      "historical_dev": 1477
+    },
+    "OTHER_EXTRAGALACTIC": {
+      "archival_observation_date_holdout": 34,
+      "historical_dev": 62
+    },
+    "SLSN": {
+      "archival_observation_date_holdout": 102,
+      "historical_dev": 189
+    },
+    "SN_CC": {
+      "archival_observation_date_holdout": 322,
+      "historical_dev": 487
+    },
+    "SN_Ia": {
+      "archival_observation_date_holdout": 499,
+      "historical_dev": 775
+    },
+    "TDE": {
+      "archival_observation_date_holdout": 63,
+      "historical_dev": 73
+    },
+    "UNCLASSIFIED": {
+      "archival_observation_date_holdout": 155,
+      "historical_dev": 4210
+    },
+    "Varstar": {
+      "archival_observation_date_holdout": 6,
+      "historical_dev": 381
+    }
+  },
+  "per_class_evidence_tier": {
+    "AGN_QSO": {
+      "L1": 91,
+      "L2": 0,
+      "L3": 718,
+      "L4": 0,
+      "L5": 0
+    },
+    "CV_Nova": {
+      "L1": 332,
+      "L2": 1,
+      "L3": 0,
+      "L4": 0,
+      "L5": 0
+    },
+    "DETECTION_ARTIFACT": {
+      "L1": 0,
+      "L2": 0,
+      "L3": 0,
+      "L4": 1500,
+      "L5": 0
+    },
+    "OTHER_EXTRAGALACTIC": {
+      "L1": 96,
+      "L2": 0,
+      "L3": 0,
+      "L4": 0,
+      "L5": 0
+    },
+    "SLSN": {
+      "L1": 287,
+      "L2": 4,
+      "L3": 0,
+      "L4": 0,
+      "L5": 0
+    },
+    "SN_CC": {
+      "L1": 808,
+      "L2": 1,
+      "L3": 0,
+      "L4": 0,
+      "L5": 0
+    },
+    "SN_Ia": {
+      "L1": 1274,
+      "L2": 0,
+      "L3": 0,
+      "L4": 0,
+      "L5": 0
+    },
+    "TDE": {
+      "L1": 134,
+      "L2": 2,
+      "L3": 0,
+      "L4": 0,
+      "L5": 0
+    },
+    "UNCLASSIFIED": {
+      "L1": 0,
+      "L2": 0,
+      "L3": 0,
+      "L4": 0,
+      "L5": 4365
+    },
+    "Varstar": {
+      "L1": 41,
+      "L2": 0,
+      "L3": 346,
+      "L4": 0,
+      "L5": 0
+    }
+  },
+  "missingness_by_class_and_time": [
+    {
+      "coarse_class": "AGN_QSO",
+      "temporal_split": "archival_observation_date_holdout",
+      "n": 16,
+      "missing_alerce_among_checked": 1,
+      "missing_dr24": 14,
+      "missing_epoch": 0
+    },
+    {
+      "coarse_class": "AGN_QSO",
+      "temporal_split": "historical_dev",
+      "n": 793,
+      "missing_alerce_among_checked": 192,
+      "missing_dr24": 77,
+      "missing_epoch": 0
+    },
+    {
+      "coarse_class": "CV_Nova",
+      "temporal_split": "archival_observation_date_holdout",
+      "n": 71,
+      "missing_alerce_among_checked": 4,
+      "missing_dr24": 71,
+      "missing_epoch": 0
+    },
+    {
+      "coarse_class": "CV_Nova",
+      "temporal_split": "historical_dev",
+      "n": 262,
+      "missing_alerce_among_checked": 0,
+      "missing_dr24": 262,
+      "missing_epoch": 0
+    },
+    {
+      "coarse_class": "DETECTION_ARTIFACT",
+      "temporal_split": "archival_observation_date_holdout",
+      "n": 23,
+      "missing_alerce_among_checked": 0,
+      "missing_dr24": 0,
+      "missing_epoch": 0
+    },
+    {
+      "coarse_class": "DETECTION_ARTIFACT",
+      "temporal_split": "historical_dev",
+      "n": 1477,
+      "missing_alerce_among_checked": 0,
+      "missing_dr24": 0,
+      "missing_epoch": 0
+    },
+    {
+      "coarse_class": "OTHER_EXTRAGALACTIC",
+      "temporal_split": "archival_observation_date_holdout",
+      "n": 34,
+      "missing_alerce_among_checked": 4,
+      "missing_dr24": 34,
+      "missing_epoch": 0
+    },
+    {
+      "coarse_class": "OTHER_EXTRAGALACTIC",
+      "temporal_split": "historical_dev",
+      "n": 62,
+      "missing_alerce_among_checked": 1,
+      "missing_dr24": 62,
+      "missing_epoch": 0
+    },
+    {
+      "coarse_class": "SLSN",
+      "temporal_split": "archival_observation_date_holdout",
+      "n": 102,
+      "missing_alerce_among_checked": 10,
+      "missing_dr24": 102,
+      "missing_epoch": 0
+    },
+    {
+      "coarse_class": "SLSN",
+      "temporal_split": "historical_dev",
+      "n": 189,
+      "missing_alerce_among_checked": 0,
+      "missing_dr24": 189,
+      "missing_epoch": 0
+    },
+    {
+      "coarse_class": "SN_CC",
+      "temporal_split": "archival_observation_date_holdout",
+      "n": 322,
+      "missing_alerce_among_checked": 10,
+      "missing_dr24": 318,
+      "missing_epoch": 0
+    },
+    {
+      "coarse_class": "SN_CC",
+      "temporal_split": "historical_dev",
+      "n": 487,
+      "missing_alerce_among_checked": 1,
+      "missing_dr24": 482,
+      "missing_epoch": 0
+    },
+    {
+      "coarse_class": "SN_Ia",
+      "temporal_split": "archival_observation_date_holdout",
+      "n": 499,
+      "missing_alerce_among_checked": 5,
+      "missing_dr24": 497,
+      "missing_epoch": 0
+    },
+    {
+      "coarse_class": "SN_Ia",
+      "temporal_split": "historical_dev",
+      "n": 775,
+      "missing_alerce_among_checked": 12,
+      "missing_dr24": 767,
+      "missing_epoch": 0
+    },
+    {
+      "coarse_class": "TDE",
+      "temporal_split": "archival_observation_date_holdout",
+      "n": 63,
+      "missing_alerce_among_checked": 12,
+      "missing_dr24": 63,
+      "missing_epoch": 0
+    },
+    {
+      "coarse_class": "TDE",
+      "temporal_split": "historical_dev",
+      "n": 73,
+      "missing_alerce_among_checked": 0,
+      "missing_dr24": 73,
+      "missing_epoch": 0
+    },
+    {
+      "coarse_class": "UNCLASSIFIED",
+      "temporal_split": "archival_observation_date_holdout",
+      "n": 155,
+      "missing_alerce_among_checked": 1,
+      "missing_dr24": 126,
+      "missing_epoch": 0
+    },
+    {
+      "coarse_class": "UNCLASSIFIED",
+      "temporal_split": "historical_dev",
+      "n": 4210,
+      "missing_alerce_among_checked": 3,
+      "missing_dr24": 206,
+      "missing_epoch": 0
+    },
+    {
+      "coarse_class": "Varstar",
+      "temporal_split": "archival_observation_date_holdout",
+      "n": 6,
+      "missing_alerce_among_checked": 0,
+      "missing_dr24": 6,
+      "missing_epoch": 0
+    },
+    {
+      "coarse_class": "Varstar",
+      "temporal_split": "historical_dev",
+      "n": 381,
+      "missing_alerce_among_checked": 162,
+      "missing_dr24": 35,
+      "missing_epoch": 0
+    }
+  ],
+  "gate_a_report": {
+    "passed_gate_a": true,
+    "total_ztf_objects": 10000,
+    "unique_physical_events": 9968,
+    "unique_sky_loci": 9928,
+    "total_catalog_reports": 4479,
+    "total_host_counterparts": 1061,
+    "multi_episode_loci_count": 40,
+    "status_counts": {
+      "AMBIGUOUS_MULTI_COUNTERPART": 78,
+      "DIRECT_ID_AND_SPATIAL_MATCH": 3421,
+      "COORDINATE_ALIAS_CONFLICT": 1,
+      "EXTERNAL_CATALOG_MATCH": 1054,
+      "UNIQUE_SPATIAL_MATCH": 7,
+      "DETECTION_ARTIFACT_TRACK": 1500,
+      "UNMATCHED": 3939
+    },
+    "evidence_tier_counts": {
+      "L5": 4365,
+      "L1": 3063,
+      "L3": 1064,
+      "L2": 8,
+      "L4": 1500
+    },
+    "provenance_counts": {
+      "L5": 4365,
+      "L1": 3063,
+      "L3": 1064,
+      "L2": 8,
+      "L4": 1500
+    },
+    "availability_status_counts": {
+      "AVAILABILITY_TIME_UNKNOWN": 10000
+    },
+    "split_counts": {
+      "quarantine": 79,
+      "train": 5226,
+      "test": 3278,
+      "val": 1417
+    },
+    "physical_event_split_leakage_count": 0,
+    "sky_locus_split_leakage_count": 0,
+    "spatial_cluster_split_leakage_count": 0,
+    "alias_split_leakage_count": 0,
+    "unclassified_as_negative_count": 0,
+    "broker_truth_in_primary_count": 0,
+    "reference_corpus_overlap_count": 1,
+    "overlapping_reference_ids": [
+      "AT2018cow"
+    ],
+    "quarantined_count": 79
+  },
+  "raw_snapshot_manifest_verification": {
+    "passed": true,
+    "total_entries": 33,
+    "verified_count": 33,
+    "failures": []
+  }
+}

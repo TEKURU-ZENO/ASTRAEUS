@@ -55,6 +55,7 @@ htmlcov/
 data/raw/
 data/cache/
 data/downloads/
+data/storage/
 
 # ML & Experiment Tracking
 mlruns/

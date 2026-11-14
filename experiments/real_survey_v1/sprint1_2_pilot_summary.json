@@ -1,0 +1,85 @@
+{
+  "generated_at_utc": "2026-11-12T13:00:02.693203+00:00",
+  "manifest_verification": {
+    "passed": true,
+    "total_entries": 4,
+    "verified_count": 4,
+    "failures": []
+  },
+  "tns_catalog_stats": {
+    "snapshot_banner_utc": "2026-11-12 00:00:00",
+    "total_tns_objects": 212832,
+    "tns_with_ztf_id": 78953,
+    "ztf_coarse_class_counts": {
+      "UNCLASSIFIED": 63284,
+      "SN_Ia": 10513,
+      "SN_CC": 4118,
+      "NON_SN_TRANSIENT": 473,
+      "SLSN": 293,
+      "TDE": 137,
+      "OTHER_EXTRAGALACTIC": 97,
+      "UNKNOWN_OTHER": 38
+    },
+    "ztf_post_2024_counts": {
+      "UNCLASSIFIED": 21340,
+      "SN_Ia": 3566,
+      "SN_CC": 1431,
+      "SLSN": 102,
+      "NON_SN_TRANSIENT": 89,
+      "TDE": 63,
+      "OTHER_EXTRAGALACTIC": 34,
+      "UNKNOWN_OTHER": 16
+    },
+    "ztf_with_redshift": 15493
+  },
+  "ztf_dr24_stats": {
+    "partition_count_total": 12485,
+    "sampled_tile": "Norder=4,Dir=0,Npix=1028",
+    "tile_row_count": 10621,
+    "tile_size_bytes": 2400302,
+    "sample_100_objects_raw_epochs": 509,
+    "sample_100_objects_clean_epochs": 455,
+    "excluded_cloud_moon_or_invalid_epochs": 54
+  },
+  "alerce_pilot_lightcurve_stats": {
+    "fetched_lightcurves": 50,
+    "failed_fetches": 10,
+    "total_detections": 2706,
+    "negative_isdiffpos_detections": 19,
+    "total_upper_limits": 3018,
+    "empty_lightcurves": 0
+  },
+  "temporal_split_counts": {
+    "historical_dev": 43,
+    "blind_temporal_test": 27
+  },
+  "gate_a_report": {
+    "passed_gate_a": true,
+    "total_ztf_objects": 70,
+    "unique_physical_events": 70,
+    "status_counts": {
+      "UNMATCHED": 16,
+      "DIRECT_ID_AND_SPATIAL_MATCH": 47,
+      "UNIQUE_SPATIAL_MATCH": 1,
+      "AMBIGUOUS_MULTI_COUNTERPART": 6
+    },
+    "provenance_counts": {
+      "UNLABELED": 22,
+      "UNCLASSIFIED_TRANSIENT": 13,
+      "SPECTROSCOPIC_TNS": 35
+    },
+    "split_counts": {
+      "test": 7,
+      "val": 13,
+      "train": 44,
+      "quarantine": 6
+    },
+    "physical_event_split_leakage_count": 0,
+    "spatial_cluster_split_leakage_count": 0,
+    "alias_split_leakage_count": 0,
+    "unclassified_as_negative_count": 0,
+    "reference_corpus_overlap_count": 0,
+    "overlapping_reference_ids": [],
+    "quarantined_count": 6
+  }
+}
