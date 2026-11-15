@@ -1,0 +1,346 @@
+{
+  "milestone": "ASTRAEUS Sprint 4H Final Release Remediation & Strict Spatial Isolation",
+  "release_audit_timestamp": "2026-11-15T11:46:43Z",
+  "governance_status": "SEALED_PENDING_GATE3_DECISION",
+  "checklist_status": "7/7 RELEASE CONDITIONS VERIFIED",
+  "spatial_isolation_audit": {
+    "ingestion_filter_applied": "assigned_split IN ('train', 'val')",
+    "splits_in_harness_memory": [
+      "train",
+      "val"
+    ],
+    "harness_loaded_record_count": 6643,
+    "test_records_in_memory": 0,
+    "test_attributes_in_harness": null,
+    "subtraction_verification": {
+      "authoritative_track1_total": 4135,
+      "loaded_train_count": 2808,
+      "loaded_val_count": 741,
+      "sequestered_test_count": 586,
+      "formula": "4135 (Total Track 1) - 2808 (Train) - 741 (Val) = 586 (Sealed Test)"
+    },
+    "test_isolation_verdict": "CERTIFIED SEALED & UNTOUCHED (Zero-Touch Invariant)"
+  },
+  "champion_model_specification": {
+    "model_name": "CalibratedBalancedSubsampleRF",
+    "estimator_definition": "RandomForestClassifier(n_estimators=100, max_depth=12, min_samples_split=4, class_weight='balanced_subsample', random_state=42)",
+    "calibration_procedure": "CalibratedClassifierCV(method='sigmoid', cv=3)",
+    "feature_set": "PHYSICAL_FEATURES_27 (Strictly excluding 5 survey-origin indicators)",
+    "serialized_artifact_path": "experiments\\sprint4h_final_release_remediation\\sprint4h_champion_model.joblib",
+    "serialized_artifact_sha256": "466c2752808be01e4f41bd8fdb9c0804a57b03b2c02c35e5172ccebda411fce5",
+    "reproduced_validation_macro_f1": 0.5842,
+    "reproduced_validation_balanced_accuracy": 0.5711,
+    "reproduced_validation_accuracy": 0.7368,
+    "per_class_metrics": {
+      "SN_Ia": {
+        "support": 202,
+        "precision": 0.6992,
+        "precision_ci_95": [
+          0.6404,
+          0.7521
+        ],
+        "recall": 0.8861,
+        "recall_ci_95": [
+          0.8349,
+          0.9229
+        ],
+        "f1": 0.7817,
+        "true_positives": 179,
+        "false_positives": 77,
+        "false_negatives": 23
+      },
+      "SN_CC": {
+        "support": 120,
+        "precision": 0.5676,
+        "precision_ci_95": [
+          0.4747,
+          0.6559
+        ],
+        "recall": 0.525,
+        "recall_ci_95": [
+          0.4363,
+          0.6122
+        ],
+        "f1": 0.5455,
+        "true_positives": 63,
+        "false_positives": 48,
+        "false_negatives": 57
+      },
+      "SLSN": {
+        "support": 50,
+        "precision": 0.5946,
+        "precision_ci_95": [
+          0.4349,
+          0.7365
+        ],
+        "recall": 0.44,
+        "recall_ci_95": [
+          0.3116,
+          0.5769
+        ],
+        "f1": 0.5057,
+        "true_positives": 22,
+        "false_positives": 15,
+        "false_negatives": 28
+      },
+      "TDE": {
+        "support": 24,
+        "precision": 0.4737,
+        "precision_ci_95": [
+          0.2733,
+          0.6829
+        ],
+        "recall": 0.375,
+        "recall_ci_95": [
+          0.2116,
+          0.5729
+        ],
+        "f1": 0.4186,
+        "true_positives": 9,
+        "false_positives": 10,
+        "false_negatives": 15
+      },
+      "CV_Nova": {
+        "support": 49,
+        "precision": 0.7778,
+        "precision_ci_95": [
+          0.6373,
+          0.8746
+        ],
+        "recall": 0.7143,
+        "recall_ci_95": [
+          0.5759,
+          0.8215
+        ],
+        "f1": 0.7447,
+        "true_positives": 35,
+        "false_positives": 10,
+        "false_negatives": 14
+      },
+      "AGN_QSO": {
+        "support": 205,
+        "precision": 0.8937,
+        "precision_ci_95": [
+          0.8443,
+          0.9288
+        ],
+        "recall": 0.9024,
+        "recall_ci_95": [
+          0.8541,
+          0.936
+        ],
+        "f1": 0.8981,
+        "true_positives": 185,
+        "false_positives": 22,
+        "false_negatives": 20
+      },
+      "Varstar": {
+        "support": 73,
+        "precision": 0.8413,
+        "precision_ci_95": [
+          0.7319,
+          0.9114
+        ],
+        "recall": 0.726,
+        "recall_ci_95": [
+          0.6144,
+          0.8151
+        ],
+        "f1": 0.7794,
+        "true_positives": 53,
+        "false_positives": 10,
+        "false_negatives": 20
+      },
+      "OTHER_EXTRAGALACTIC": {
+        "support": 18,
+        "precision": 0.0,
+        "precision_ci_95": [
+          0.0,
+          0.5615
+        ],
+        "recall": 0.0,
+        "recall_ci_95": [
+          0.0,
+          0.1759
+        ],
+        "f1": 0.0,
+        "true_positives": 0,
+        "false_positives": 3,
+        "false_negatives": 18
+      }
+    }
+  },
+  "conformal_prediction_specification": {
+    "methodology": "Exact Finite-Sample Split Conformal Prediction",
+    "proper_train_size": 2246,
+    "calibration_holdout_size": 562,
+    "significance_alpha": 0.1,
+    "target_coverage": 0.9,
+    "order_statistic_k": 507,
+    "conformal_quantile_q_hat": 0.9294,
+    "probability_inclusion_threshold": 0.0706,
+    "empirical_validation_coverage": 0.919,
+    "mean_prediction_set_size": 1.87,
+    "singleton_set_fraction": 0.3792,
+    "scientific_qualification": "Under finite-sample exchangeability, split conformal prediction guarantees marginal coverage P(Y in C(X)) >= 1 - alpha = 90.0%. Because the astronomical alert validation set exhibits mild temporal distribution shift (validation alerts observed >= 2024-06-01 vs training alerts observed < 2024-06-01), the empirical validation coverage of 91.90% demonstrates strong operational reliability under real-world non-stationarity, but should be interpreted as an empirical diagnostic rather than an unconditioned theoretical guarantee under arbitrary distribution shifts."
+  },
+  "risk_coverage_curve": [
+    {
+      "confidence_threshold": 0.0,
+      "coverage": 1.0,
+      "accepted_count": 741,
+      "abstained_count": 0,
+      "accepted_accuracy": 0.7368,
+      "accepted_balanced_accuracy": 0.5711,
+      "selective_macro_f1_8class": 0.5842,
+      "effective_macro_f1_present_classes": 0.5842,
+      "num_present_classes": 8,
+      "tde_abstention_rate": 0.0,
+      "other_extragalactic_abstention_rate": 0.0
+    },
+    {
+      "confidence_threshold": 0.2,
+      "coverage": 1.0,
+      "accepted_count": 741,
+      "abstained_count": 0,
+      "accepted_accuracy": 0.7368,
+      "accepted_balanced_accuracy": 0.5711,
+      "selective_macro_f1_8class": 0.5842,
+      "effective_macro_f1_present_classes": 0.5842,
+      "num_present_classes": 8,
+      "tde_abstention_rate": 0.0,
+      "other_extragalactic_abstention_rate": 0.0
+    },
+    {
+      "confidence_threshold": 0.3,
+      "coverage": 0.9865,
+      "accepted_count": 731,
+      "abstained_count": 10,
+      "accepted_accuracy": 0.7442,
+      "accepted_balanced_accuracy": 0.5798,
+      "selective_macro_f1_8class": 0.5923,
+      "effective_macro_f1_present_classes": 0.5923,
+      "num_present_classes": 8,
+      "tde_abstention_rate": 0.0833,
+      "other_extragalactic_abstention_rate": 0.0
+    },
+    {
+      "confidence_threshold": 0.4,
+      "coverage": 0.9366,
+      "accepted_count": 694,
+      "abstained_count": 47,
+      "accepted_accuracy": 0.768,
+      "accepted_balanced_accuracy": 0.5854,
+      "selective_macro_f1_8class": 0.6024,
+      "effective_macro_f1_present_classes": 0.6024,
+      "num_present_classes": 8,
+      "tde_abstention_rate": 0.2917,
+      "other_extragalactic_abstention_rate": 0.1111
+    },
+    {
+      "confidence_threshold": 0.5,
+      "coverage": 0.8232,
+      "accepted_count": 610,
+      "abstained_count": 131,
+      "accepted_accuracy": 0.8131,
+      "accepted_balanced_accuracy": 0.6093,
+      "selective_macro_f1_8class": 0.6305,
+      "effective_macro_f1_present_classes": 0.6305,
+      "num_present_classes": 8,
+      "tde_abstention_rate": 0.5,
+      "other_extragalactic_abstention_rate": 0.3889
+    },
+    {
+      "confidence_threshold": 0.6,
+      "coverage": 0.7004,
+      "accepted_count": 519,
+      "abstained_count": 222,
+      "accepted_accuracy": 0.8613,
+      "accepted_balanced_accuracy": 0.637,
+      "selective_macro_f1_8class": 0.6637,
+      "effective_macro_f1_present_classes": 0.6637,
+      "num_present_classes": 8,
+      "tde_abstention_rate": 0.6667,
+      "other_extragalactic_abstention_rate": 0.6111
+    },
+    {
+      "confidence_threshold": 0.7,
+      "coverage": 0.5641,
+      "accepted_count": 418,
+      "abstained_count": 323,
+      "accepted_accuracy": 0.89,
+      "accepted_balanced_accuracy": 0.6296,
+      "selective_macro_f1_8class": 0.6548,
+      "effective_macro_f1_present_classes": 0.6548,
+      "num_present_classes": 8,
+      "tde_abstention_rate": 0.8333,
+      "other_extragalactic_abstention_rate": 0.8889
+    },
+    {
+      "confidence_threshold": 0.8,
+      "coverage": 0.3563,
+      "accepted_count": 264,
+      "abstained_count": 477,
+      "accepted_accuracy": 0.9432,
+      "accepted_balanced_accuracy": 0.8438,
+      "selective_macro_f1_8class": 0.654,
+      "effective_macro_f1_present_classes": 0.872,
+      "num_present_classes": 6,
+      "tde_abstention_rate": 1.0,
+      "other_extragalactic_abstention_rate": 1.0
+    },
+    {
+      "confidence_threshold": 0.85,
+      "coverage": 0.1876,
+      "accepted_count": 139,
+      "abstained_count": 602,
+      "accepted_accuracy": 0.964,
+      "accepted_balanced_accuracy": 0.9306,
+      "selective_macro_f1_8class": 0.4599,
+      "effective_macro_f1_present_classes": 0.9198,
+      "num_present_classes": 4,
+      "tde_abstention_rate": 1.0,
+      "other_extragalactic_abstention_rate": 1.0
+    }
+  ],
+  "frozen_operational_operating_points": {
+    "primary_triage_benchmark_point": {
+      "threshold": 0.0,
+      "coverage": 1.0,
+      "accepted_accuracy": 0.7368,
+      "selective_macro_f1_8class": 0.5842,
+      "description": "Complete astronomical alert triage (all alerts classified; headline baseline comparison)"
+    },
+    "selective_high_reliability_point": {
+      "threshold": 0.5,
+      "coverage": 0.8232,
+      "accepted_accuracy": 0.8131,
+      "selective_macro_f1_8class": 0.6305,
+      "tde_abstention_rate": 0.5,
+      "other_extragalactic_abstention_rate": 0.3889,
+      "description": "High-confidence operational alerting (81.31% accuracy, cleanly abstaining on ambiguous rare candidates)"
+    }
+  },
+  "immutable_cryptographic_hashes": {
+    "dataset_cohort_parquet": {
+      "path": "data\\processed\\real_survey_10k_v1\\candidates_10k.parquet",
+      "sha256": "6713faee3c2ab47b7a14baa321c540f2b18ddb9b51d6ddcf88dba7008ad214ae"
+    },
+    "observation_feature_pipeline_py": {
+      "path": "packages/astraeus-data/src/astraeus_data/real_survey/observation_feature_pipeline.py",
+      "sha256": "5494914c6a84e8541a9423c307b89c4ddd3d2ec57020dfba9b9215441ef427f6"
+    },
+    "real_survey_benchmark_protocol_py": {
+      "path": "packages/astraeus-bench/src/astraeus_bench/real_survey_benchmark_protocol.py",
+      "sha256": "8ba7e43d58f1eed5d7081a60e439be88e592df6ad4dfaddb92c99a8c12d777b2"
+    },
+    "sprint4h_spatial_isolation_py": {
+      "path": "experiments/sprint4h_final_release_remediation/run_sprint4h_spatial_isolation_and_release_remediation.py",
+      "sha256": "304ae3ea0693a9d1d88eb4486871ccccf65d8b0cdcf8c60c90c880036050b1dc"
+    },
+    "champion_model_joblib": {
+      "path": "experiments\\sprint4h_final_release_remediation\\sprint4h_champion_model.joblib",
+      "sha256": "466c2752808be01e4f41bd8fdb9c0804a57b03b2c02c35e5172ccebda411fce5"
+    }
+  }
+}
