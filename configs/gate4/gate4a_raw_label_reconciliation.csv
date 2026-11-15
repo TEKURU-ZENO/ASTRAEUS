@@ -1,0 +1,34 @@
+raw_bts_label,normalized_subtype,astraeus_class,admitted_status,reconciliation_rationale,raw_count
+SN Ia,SN Ia,SN_Ia,Approved,Standard thermonuclear Type Ia supernova,7636
+SN II,SN II,SN_CC,Approved,Core-collapse Type II supernova with hydrogen,1536
+SN IIn,SN IIn,SN_CC,Approved,Core-collapse Type II with narrow emission lines,291
+SN Ia-91T,SN Ia-91T-like,SN_Ia,Approved,Overluminous 1991T-like Type Ia alias,255
+SN Ic,SN Ic,SN_CC,Approved,Core-collapse Type Ic stripped-envelope supernova,198
+SN Ib,SN Ib,SN_CC,Approved,Core-collapse Type Ib stripped-envelope supernova,156
+SN IIb,SN IIb,SN_CC,Approved,Core-collapse transitional IIb supernova,138
+SN IIP,SN IIP,SN_CC,Approved,Core-collapse Type II plateau supernova,114
+SLSN-I,SLSN-I,SLSN,Approved,Hydrogen-poor super-luminous supernova,107
+SN Ic-BL,SN Ic-BL,SN_CC,Approved,Broad-lined Type Ic core-collapse supernova,90
+SN Ia-91bg,SN Ia-91bg-like,SN_Ia,Approved,Subluminous 1991bg-like Type Ia alias,70
+TDE,TDE,TDE,Approved,Spectroscopically confirmed Tidal Disruption Event,66
+SLSN-II,SLSN-II,SLSN,Approved,Hydrogen-rich super-luminous supernova,55
+SN Ia-pec,SN Ia-pec,SN_Ia,Approved,Peculiar thermonuclear Type Ia,53
+-,Unclassified,UNCLASSIFIED,Quarantined,Missing spectroscopic classification string,48
+SN Ibn,SN Ibn,SN_CC,Approved,Core-collapse Type Ib with narrow helium lines,40
+SN Ib/c,SN Ib/c,SN_CC,Approved,Stripped-envelope core-collapse unseparated Ib/c,39
+SN Ia-CSM,SN Ia-CSM,SN_Ia,Approved,Type Ia interacting with circumstellar medium,23
+SN Iax,SN Iax,SN_Ia,Approved,Subluminous Type Iax / 02cx-like thermonuclear,23
+SN Ia-SC,SN Ia-SC,SN_Ia,Approved,Super-Chandrasekhar candidate Type Ia,12
+SN II-pec,SN II-pec,SN_CC,Approved,Peculiar Type II core-collapse supernova,7
+Other,Generic Other,UNMAPPED,Quarantined,Generic fallback explicitly prohibited by taxonomy,5
+SN Icn,SN Icn,SN_CC,Approved,Core-collapse Type Ic with narrow carbon lines,5
+TDE-H-He,TDE-H-He,TDE,Unmapped,Optical H+He lines; unmapped pending taxonomy review,4
+TDE-He,TDE-He,TDE,Approved,Helium-rich Tidal Disruption Event admitted in YAML,4
+SN Ib-pec,SN Ib-pec,SN_CC,Approved,Peculiar Type Ib core-collapse supernova,3
+Ca-rich,Ca-rich,OTHER_EXTRAGALACTIC,Approved,Calcium-rich gap transient approved subject to evidence,2
+other,Generic Other,UNMAPPED,Quarantined,Generic fallback explicitly prohibited by taxonomy,2
+SN IIL,SN IIL,SN_CC,Approved,Linear declining Type II core-collapse supernova,2
+LBV,LBV,OTHER_EXTRAGALACTIC,Unmapped,Luminous Blue Variable eruption; unmapped pending review,1
+AGN,AGN,AGN_QSO,Approved,Active Galactic Nucleus (N=1 below evaluability floor),1
+SN Ic-pec,SN Ic-pec,SN_CC,Approved,Peculiar Type Ic core-collapse supernova,1
+TDE-featureless,TDE-featureless,TDE,Unmapped,Continuum-dominated TDE; unmapped pending review,1
