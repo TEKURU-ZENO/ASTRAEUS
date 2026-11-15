@@ -73,6 +73,7 @@ def test_spectroscopic_evidence_ledger():
     required_cols = [
         "candidate_id", "ztf_id", "iau_id", "matched_tns_name", "raw_bts_type",
         "normalized_subtype", "astraeus_class", "tns_type", "evidence_tier",
+        "is_provisional_s2", "has_named_instrument_in_reporters",
         "class_ads_bibcodes", "discovery_ads_bibcode", "reporting_group",
         "reporters", "discovery_date", "redshift", "tns_object_url",
         "verification_status", "permitted_eval_use",
@@ -89,10 +90,11 @@ def test_spectroscopic_evidence_ledger():
 
     # Verify that all S2 candidates have non-empty published Class_ADS_bibcodes and valid tns_type
     df_s2 = df_spec[df_spec["evidence_tier"] == "S2"]
-    assert (df_s2["class_ads_bibcodes"].str.len() > 0).all()
+    assert (df_s2["class_ads_bibcodes"].str.len() >= 19).all()
     assert (df_s2["tns_type"].str.len() > 0).all()
-    assert (df_s2["verification_status"] == "VERIFIED_TRACEABLE_REPORT").all()
+    assert df_s2["is_provisional_s2"].all()
     assert (df_s2["permitted_eval_use"] == "SECONDARY_TRACEABLE_EVIDENCE").all()
+    assert df_s2["has_named_instrument_in_reporters"].sum() > 7000
 
     # Verify both retained TDEs are in Tier S2
     tde_records = df_spec[df_spec["astraeus_class"] == "TDE"]
@@ -115,7 +117,8 @@ def test_lightcurve_match_ledger():
     required_cols = [
         "candidate_id", "ztf_id", "iau_id", "astraeus_class",
         "has_local_lightcurve_file", "n_det_g", "n_det_r", "n_det_other",
-        "n_det_total", "n_ul_g", "n_ul_r", "n_ul_total", "total_epochs",
+        "n_det_total", "n_det_snr5_g", "n_det_snr5_r", "n_det_snr5_total",
+        "has_both_bands_snr5", "n_ul_g", "n_ul_r", "n_ul_total", "total_epochs",
         "has_both_bands", "temporal_baseline_days", "median_cadence_days",
         "peak_flux_nmgy", "flux_dynamic_range_nmgy", "feature_interface_compatible",
         "feature_eligibility_status", "missingness_reason",
@@ -123,17 +126,17 @@ def test_lightcurve_match_ledger():
     for col in required_cols:
         assert col in df_lc.columns, f"Missing column {col} in lc ledger"
 
-    # Status counts
+    # Status counts under explicit SNR >= 5.0 and dual-band criteria
     status_counts = df_lc["feature_eligibility_status"].value_counts().to_dict()
-    assert status_counts.get("FEATURE_EVALUABLE", 0) == 16
-    assert status_counts.get("SINGLE_BAND_ONLY", 0) == 1
+    assert status_counts.get("FEATURE_EVALUABLE", 0) == 14
+    assert status_counts.get("SINGLE_BAND_ONLY", 0) == 3
     assert status_counts.get("AWAITING_BROKER_LIGHTCURVE_INGESTION", 0) == 7597
 
-    # Verify the 16 evaluable candidates
+    # Verify the 14 evaluable candidates
     df_eval = df_lc[df_lc["feature_eligibility_status"] == "FEATURE_EVALUABLE"]
     assert (df_eval["has_local_lightcurve_file"] == True).all()
-    assert (df_eval["n_det_total"] >= 5).all()
-    assert (df_eval["has_both_bands"] == True).all()
+    assert (df_eval["n_det_snr5_total"] >= 5).all()
+    assert (df_eval["has_both_bands_snr5"] == True).all()
     assert (df_eval["feature_interface_compatible"] == True).all()
     assert (df_eval["peak_flux_nmgy"] > 0.0).all()
     assert (df_eval["temporal_baseline_days"] > 0.0).all()
@@ -150,8 +153,8 @@ def test_independent_track_decoupling():
     # Crosstab verification
     ct = pd.crosstab(merged["evidence_tier"], merged["feature_eligibility_status"])
     assert "S2" in ct.index
-    assert ct.loc["S2", "FEATURE_EVALUABLE"] == 16
-    assert ct.loc["S2", "SINGLE_BAND_ONLY"] == 1
+    assert ct.loc["S2", "FEATURE_EVALUABLE"] == 14
+    assert ct.loc["S2", "SINGLE_BAND_ONLY"] == 3
     assert ct.loc["S2", "AWAITING_BROKER_LIGHTCURVE_INGESTION"] == 7565
 
 

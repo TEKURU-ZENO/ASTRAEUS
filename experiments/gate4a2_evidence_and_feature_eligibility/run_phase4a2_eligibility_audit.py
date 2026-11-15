@@ -58,6 +58,15 @@ RECONCILIATION_CSV_PATH = Path("configs/gate4/gate4a_raw_label_reconciliation.cs
 ADMITTED_CSV_PATH = Path("experiments/gate4a_external_cohort_preregistration/gate4a1_screened_admitted_candidates.csv")
 ALERCE_LC_DIR = Path("data/raw/real_survey_v1/alerce/lightcurves")
 
+# Known observatory and spectrograph keywords for TNS metadata parsing
+NAMED_INSTRUMENT_KEYWORDS = [
+    "sedm", "p60", "palomar", "keck", "lris", "deimos", "shane", "kast", "not",
+    "alfosc", "lt", "sprat", "ntt", "efosc", "soar", "goodman", "gemini", "gmos",
+    "vlt", "fors", "salt", "rss", "magellan", "ldss", "imacs", "subaru", "focas",
+    "hct", "hfosc", "iaao", "snifs", "uh88", "ztf", "epessto", "dopcor", "ing",
+    "wht", "isis", "grantecan", "osiris", "tng", "harps", "lick", "apo", "dis",
+]
+
 OUT_DIR = Path("experiments/gate4a2_evidence_and_feature_eligibility")
 
 
@@ -157,23 +166,32 @@ def main() -> None:
             tns_url = f"https://www.wis-tns.org/object/{tns_name}" if tns_name else ""
 
             has_valid_type = bool(tns_type and tns_type.upper() not in ("AT", "NONE", "NAN", "NULL", "?"))
-            has_valid_bib = bool(bibcodes and bibcodes.upper() not in ("NONE", "NAN", "NULL", "?"))
+            has_valid_bib = bool(
+                bibcodes
+                and len(bibcodes.strip()) >= 19
+                and ("tnscr" in bibcodes.lower() or bibcodes[:4].isdigit())
+            )
+            has_named_inst = any(k in reporters.lower() for k in NAMED_INSTRUMENT_KEYWORDS)
 
             # Strict hierarchy evaluation:
             # S1 requires directly accessible local spectrum file (0 local FITS).
             # S2 requires valid classification type AND non-empty published Class_ADS_bibcodes.
+            # Review qualification: Retain S2 as provisional pending full classification certificate parsing.
             # S3 is catalog-only classification without published report or without confirmed type.
             # S4 is unverified / unclassified.
             if has_valid_type and has_valid_bib:
                 tier = "S2"
-                status = "VERIFIED_TRACEABLE_REPORT"
+                is_prov = True
+                status = "PROVISIONAL_S2_NAMED_INST" if has_named_inst else "PROVISIONAL_S2_UNPARSED_INST"
                 permitted_use = "SECONDARY_TRACEABLE_EVIDENCE"
             elif has_valid_type and not has_valid_bib:
                 tier = "S3"
+                is_prov = False
                 status = "CATALOG_ONLY_UNVERIFIED_REPORT"
                 permitted_use = "SENSITIVITY_ANALYSIS_ONLY"
             else:
                 tier = "S3"
+                is_prov = False
                 status = "UNCLASSIFIED_IN_TNS_CATALOG"
                 permitted_use = "SENSITIVITY_ANALYSIS_ONLY"
         else:
@@ -187,6 +205,8 @@ def main() -> None:
             redshift = r.get("redshift")
             tns_url = ""
             tier = "S4"
+            is_prov = False
+            has_named_inst = False
             status = "NO_TNS_RECORD"
             permitted_use = "EXCLUDED_FROM_BENCHMARK"
 
@@ -200,6 +220,8 @@ def main() -> None:
             "astraeus_class": ast_cls,
             "tns_type": tns_type,
             "evidence_tier": tier,
+            "is_provisional_s2": is_prov,
+            "has_named_instrument_in_reporters": has_named_inst,
             "class_ads_bibcodes": bibcodes,
             "discovery_ads_bibcode": disc_bib,
             "reporting_group": reporting_grp,
@@ -248,6 +270,18 @@ def main() -> None:
             det_other = sum(1 for o in detections if o.passband not in ("g", "r"))
             det_total = len(detections)
 
+            # Strict SNR >= 5.0 detection threshold (flux / flux_err >= 5.0 or sigma_m <= 0.2171 mag)
+            # In nanomaggies with hyperbolic log-normal error, flux / sigma_flux >= 5.0 corresponds to sigma_m <= 0.2171 mag.
+            detections_snr5 = [
+                o for o in detections
+                if o.flux_err_nmgy > 0 and (o.flux_nmgy / o.flux_err_nmgy) >= 5.0
+            ]
+            det_g_snr5 = sum(1 for o in detections_snr5 if o.passband == "g")
+            det_r_snr5 = sum(1 for o in detections_snr5 if o.passband == "r")
+            det_other_snr5 = sum(1 for o in detections_snr5 if o.passband not in ("g", "r"))
+            det_snr5_total = len(detections_snr5)
+            has_both_bands_snr5 = (det_g_snr5 > 0 and det_r_snr5 > 0)
+
             ul_g = sum(1 for o in upper_limits if o.passband == "g")
             ul_r = sum(1 for o in upper_limits if o.passband == "r")
             ul_total = len(upper_limits)
@@ -276,15 +310,16 @@ def main() -> None:
                 peak_flux = 0.0
                 dyn_range = 0.0
 
-            if det_total >= 5 and has_both_bands and feat_ok:
+            # Strict multi-dimensional evaluability under SNR >= 5.0 and dual-band coverage
+            if det_snr5_total >= 5 and has_both_bands_snr5 and feat_ok:
                 status = "FEATURE_EVALUABLE"
-                reason = "None (Feature Evaluable)"
-            elif det_total < 5:
-                status = "INSUFFICIENT_DETECTIONS"
-                reason = f"Detections below threshold ({det_total} < 5)"
-            elif not has_both_bands:
+                reason = "None (Feature Evaluable at SNR >= 5)"
+            elif det_snr5_total >= 5 and not has_both_bands_snr5:
                 status = "SINGLE_BAND_ONLY"
-                reason = "Missing g or r band detections"
+                reason = f"Detections at SNR >= 5 present only in one band (g={det_g_snr5}, r={det_r_snr5})"
+            elif det_snr5_total < 5:
+                status = "INSUFFICIENT_DETECTIONS"
+                reason = f"Detections at SNR >= 5 below threshold ({det_snr5_total} < 5)"
             else:
                 status = "FEATURE_EXTRACTION_FAILED"
                 reason = "Frozen feature extraction failed numerical validation"
@@ -293,6 +328,11 @@ def main() -> None:
             det_r = 0
             det_other = 0
             det_total = 0
+            det_g_snr5 = 0
+            det_r_snr5 = 0
+            det_other_snr5 = 0
+            det_snr5_total = 0
+            has_both_bands_snr5 = False
             ul_g = 0
             ul_r = 0
             ul_total = 0
@@ -316,6 +356,10 @@ def main() -> None:
             "n_det_r": det_r,
             "n_det_other": det_other,
             "n_det_total": det_total,
+            "n_det_snr5_g": det_g_snr5,
+            "n_det_snr5_r": det_r_snr5,
+            "n_det_snr5_total": det_snr5_total,
+            "has_both_bands_snr5": has_both_bands_snr5,
             "n_ul_g": ul_g,
             "n_ul_r": ul_r,
             "n_ul_total": ul_total,

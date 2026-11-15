@@ -18,14 +18,14 @@ Following the scientific review authorization, Phase 4A.2 executed the independe
 
 1. **Track A (Spectroscopic Evidence Hierarchy):**
    - **Tier S1 (Direct Spectrum File):** **0 candidates**. In accordance with review directives, no candidate is silently promoted to Tier S1 without directly accessible local spectral FITS/ASCII files.
-   - **Tier S2 (Secondary Traceable Evidence):** **7,582 candidates (99.58%)**. Possess official IAU Transient Name Server (TNS) spectroscopic classifications backed by verifiable, published classification announcements (`Class_ADS_bibcodes` pointing to peer-traceable TNSCR reports or refereed literature) with named observatories and instruments.
-   - **Tier S3 (Catalog-Only / Sensitivity Analysis):** **31 candidates (0.41%)**. Have reported classifications in BTS or TNS, but lack verifiable ADS classification bibcodes or were announced as unclassified `AT` objects on TNS. Permitted exclusively for sensitivity analysis.
+   - **Tier S2 (Secondary Traceable Evidence):** **7,582 candidates (99.58%)**. Possess official IAU Transient Name Server (TNS) spectroscopic classifications backed by verifiable, published classification announcements (`Class_ADS_bibcodes` pointing to peer-traceable TNSCR reports or refereed literature). Formally designated as `PROVISIONAL_S2` pending full certificate parsing in Phase 4B (7,061 candidates have named observatory/instrument keywords in `reporters`, while 521 have institutional affiliations).
+   - **Tier S3 (Catalog-Only / Sensitivity Analysis):** **31 candidates (0.41%)**. Have reported classifications in BTS or TNS, but lack verifiable ADS classification bibcodes or were announced as unclassified `AT` objects on TNS. Permitted exclusively for sensitivity analysis (25 SN_Ia, 6 SN_CC).
    - **Tier S4 (Excluded):** **1 candidate (0.01%)**. Candidate `ZTF19aacomym` (BTS raw type `AGN`, without IAU ID) lacks an independent TNS record and is excluded from the benchmark.
 
 2. **Track B (Light-Curve Feature Evaluability):**
    - **17 candidates** have locally archived ALeRCE alert histories in the repository.
-     - **16 candidates** are verified as **`FEATURE_EVALUABLE`**: possess $\ge 5$ detections, dual-band ($g$ and $r$) coverage, valid baseline and cadence, and successfully populate all 27 features of the frozen physical interface without errors.
-     - **1 candidate** (`ZTF19aanfnvl`, SN_CC) is classified as **`SINGLE_BAND_ONLY`** (detections present only in $r$-band; insufficient dual-band coverage).
+   - **14 candidates** are verified as **`FEATURE_EVALUABLE`**: possess $\ge 5$ photometric detections meeting the physical signal-to-noise threshold ($SNR \ge 5.0$, $\sigma_m \le 0.2171$ mag), dual-band ($g$ and $r$) coverage, valid baseline and cadence, and successfully populate all 27 features of the frozen physical interface without errors (6 SN_Ia, 7 SN_CC, 1 SLSN).
+   - **3 candidates** (`ZTF18abzpbpi` [SN_Ia], `ZTF19aalfsqm` [SN_CC], `ZTF23aaihsvm` [SN_CC]) are classified as **`SINGLE_BAND_ONLY`** (detections meeting $SNR \ge 5.0$ are present in only one filter band, failing the dual-band requirement).
    - **7,597 candidates** are designated as **`AWAITING_BROKER_LIGHTCURVE_INGESTION`**. Their summary metrics exist in the BTS discovery table, but the frozen 27-feature pipeline strictly requires full time-series observation records (detections and non-detections). Under governance rules, summary parameters cannot substitute for raw observations.
 
 3. **Complete Decoupling of Tracks:**
@@ -37,12 +37,12 @@ flowchart TD
     ADMIT --> TB["TRACK B: Light-Curve Evaluability<br/>Frozen 27-Feature Interface Audit"]
     
     TA --> S1["Tier S1 (Direct FITS Spectrum)<br/>N = 0 candidates (0.0%)"]
-    TA --> S2["Tier S2 (Traceable TNSCR / Paper)<br/>N = 7,582 candidates (99.58%)"]
+    TA --> S2["Tier S2 (Traceable TNSCR / Paper)<br/>N = 7,582 candidates (99.58%)<br/>PROVISIONAL_S2"]
     TA --> S3["Tier S3 (Catalog-Only Sensitivity)<br/>N = 31 candidates (0.41%)"]
     TA --> S4["Tier S4 (Excluded / Unverified)<br/>N = 1 candidate (0.01%)"]
     
-    TB --> EVAL["Feature Evaluable (Dual-Band, >=5 det)<br/>N = 16 candidates"]
-    TB --> SBO["Single-Band Only<br/>N = 1 candidate"]
+    TB --> EVAL["Feature Evaluable (Dual-Band, >=5 det at SNR>=5)<br/>N = 14 candidates"]
+    TB --> SBO["Single-Band Only<br/>N = 3 candidates"]
     TB --> AWAIT["Awaiting Broker LC Ingestion<br/>N = 7,597 candidates"]
     
     style ADMIT fill:#e1f5fe,stroke:#0288d1,stroke-width:2px
@@ -134,35 +134,38 @@ In accordance with scientific guidance, light-curve evaluability is evaluated ac
 
 | Feature Evaluability Status | Candidate Count | Percentage | Description & Governance Action |
 | :--- | :---: | :---: | :--- |
-| **`FEATURE_EVALUABLE`** | **16** | 0.21% | Locally archived alert history; $\ge 5$ detections, dual-band ($g+r$), all 27 features valid. |
-| **`SINGLE_BAND_ONLY`** | **1** | 0.01% | Locally archived alert history; detections present in only one filter ($r$-band). |
-| **`INSUFFICIENT_DETECTIONS`**| **0** | 0.00% | Locally archived alert history; $< 5$ detections. |
+| **`FEATURE_EVALUABLE`** | **14** | 0.18% | Locally archived alert history; $\ge 5$ detections at $SNR \ge 5$, dual-band ($g+r$), all 27 features valid. |
+| **`SINGLE_BAND_ONLY`** | **3** | 0.04% | Locally archived alert history; detections meeting $SNR \ge 5$ present in only one filter ($r$-band). |
+| **`INSUFFICIENT_DETECTIONS`**| **0** | 0.00% | Locally archived alert history; $< 5$ detections meeting $SNR \ge 5$. |
 | **`AWAITING_BROKER_LIGHTCURVE_INGESTION`** | **7,597** | 99.78% | Raw difference-imaging epochs pending acquisition from ZTF alert broker (ALeRCE). |
 | **Total** | **7,614** | **100.00%** | — |
 
-### 2.3 Detailed Properties of the 16 Feature-Evaluable Candidates
+### 2.3 Detailed Properties of the 14 Feature-Evaluable Candidates
 
-For the 16 candidates with complete local observation histories, feature extraction through the frozen 27-feature pipeline succeeds deterministically:
+For the 14 candidates meeting the strict astronomical $SNR \ge 5.0$ and dual-band criteria with complete local observation histories, feature extraction through the frozen 27-feature pipeline succeeds deterministically:
 
-| ZTF Object ID | Astrophysical Class | $N_{\text{det}, g}$ | $N_{\text{det}, r}$ | Total Detections | Upper Limits | Total Epochs | Baseline (Days) | Median Cadence (Days) | Peak Flux (nJy) |
+| ZTF Object ID | Astrophysical Class | $N_{\text{det}, g}$ ($SNR \ge 5$) | $N_{\text{det}, r}$ ($SNR \ge 5$) | Total Detections ($SNR \ge 5$) | Upper Limits | Total Epochs | Baseline (Days) | Median Cadence (Days) | Peak Flux (nJy) |
 | :--- | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
-| `ZTF18aasdted` | `SN_Ia` | 42 | 37 | 79 | 61 | 140 | 2,353.74 | 2.97 | 516.37 |
-| `ZTF18abadjhx` | `SN_Ia` | 14 | 17 | 31 | 23 | 54 | 2,708.73 | 3.99 | 35.18 |
-| `ZTF18abaxlpi` | `SN_Ia` | 15 | 14 | 29 | 61 | 90 | 2,181.94 | 3.00 | 47.45 |
-| `ZTF18abzpbpi` | `SN_Ia` | 27 | 31 | 58 | 132 | 190 | 1,918.98 | 2.02 | 34.89 |
-| `ZTF18adbikdz` | `SN_CC` | 13 | 15 | 28 | 30 | 58 | 104.83 | 1.01 | 33.30 |
-| `ZTF19aalfsqm` | `SN_CC` | 2 | 3 | 5 | 7 | 12 | 48.88 | 3.01 | 34.10 |
-| `ZTF19abgbbzy` | `SN_CC` | 11 | 14 | 25 | 122 | 147 | 1,808.09 | 2.01 | 116.67 |
-| `ZTF20acnzkxb` | `SN_CC` | 12 | 16 | 28 | 24 | 52 | 71.95 | 1.02 | 56.21 |
-| `ZTF21abzithf` | `SN_Ia` | 11 | 12 | 23 | 22 | 45 | 68.84 | 1.01 | 40.29 |
-| `ZTF23aaihsvm` | `SN_CC` | 15 | 18 | 33 | 13 | 46 | 60.95 | 1.00 | 38.01 |
-| `ZTF23aamfqxc` | `SN_CC` | 46 | 48 | 94 | 38 | 132 | 215.73 | 0.99 | 403.83 |
-| `ZTF23abjwgre` | `SN_CC` | 14 | 19 | 33 | 24 | 57 | 122.82 | 1.01 | 43.34 |
-| `ZTF24aalbzkr` | `SN_Ia` | 18 | 17 | 35 | 20 | 55 | 83.94 | 1.01 | 91.05 |
-| `ZTF24aaskxde` | `SN_Ia` | 7 | 10 | 17 | 29 | 46 | 68.94 | 1.01 | 102.97 |
-| `ZTF24abdhylt` | `SLSN` | 29 | 35 | 64 | 42 | 106 | 154.81 | 1.02 | 44.09 |
-| `ZTF24abihsvi` | `SN_CC` | 24 | 28 | 52 | 49 | 101 | 134.84 | 1.01 | 82.04 |
+| `ZTF18aasdted` | `SN_Ia` | 37 | 38 | 75 | 61 | 140 | 2,353.74 | 1.95 | 516.37 |
+| `ZTF18abadjhx` | `SN_Ia` | 16 | 14 | 30 | 23 | 54 | 2,708.73 | 1.90 | 35.18 |
+| `ZTF18abaxlpi` | `SN_Ia` | 9 | 14 | 23 | 61 | 90 | 2,181.94 | 2.82 | 47.45 |
+| `ZTF18adbikdz` | `SN_CC` | 13 | 11 | 24 | 30 | 58 | 104.83 | 0.02 | 33.30 |
+| `ZTF19aanfnvl` | `SN_CC` | 7 | 8 | 15 | 6 | 21 | 69.96 | 3.00 | 62.88 |
+| `ZTF19abgbbzy` | `SN_CC` | 11 | 14 | 25 | 122 | 147 | 1,808.09 | 0.04 | 116.67 |
+| `ZTF20acnzkxb` | `SN_CC` | 9 | 14 | 23 | 24 | 52 | 71.95 | 1.93 | 56.21 |
+| `ZTF21abzithf` | `SN_Ia` | 9 | 12 | 21 | 22 | 45 | 68.84 | 1.89 | 40.29 |
+| `ZTF23aamfqxc` | `SN_CC` | 41 | 45 | 86 | 38 | 132 | 215.73 | 0.13 | 403.83 |
+| `ZTF23abjwgre` | `SN_CC` | 13 | 19 | 32 | 24 | 57 | 122.82 | 1.81 | 43.34 |
+| `ZTF24aalbzkr` | `SN_Ia` | 17 | 17 | 35 | 20 | 55 | 83.94 | 1.91 | 91.05 |
+| `ZTF24aaskxde` | `SN_Ia` | 11 | 6 | 17 | 29 | 46 | 68.94 | 1.90 | 102.97 |
+| `ZTF24abdhylt` | `SLSN` | 19 | 37 | 56 | 42 | 106 | 154.81 | 1.80 | 44.09 |
+| `ZTF24abihsvi` | `SN_CC` | 6 | 44 | 50 | 49 | 101 | 134.84 | 0.06 | 82.04 |
 
+#### Single-Band Only Candidates ($N = 3$):
+The following 3 candidates have local alert histories but fail the dual-band requirement because detections at $SNR \ge 5.0$ occur exclusively in the $r$-band:
+- **`ZTF18abzpbpi`** (`SN_Ia`): $N_{\text{det}, g}(SNR \ge 5) = 0$, $N_{\text{det}, r}(SNR \ge 5) = 5$ (52 raw $g$-band detections failed the strict $SNR \ge 5$ threshold).
+- **`ZTF19aalfsqm`** (`SN_CC`): $N_{\text{det}, g}(SNR \ge 5) = 0$, $N_{\text{det}, r}(SNR \ge 5) = 5$ (0 raw $g$-band detections).
+- **`ZTF23aaihsvm`** (`SN_CC`): $N_{\text{det}, g}(SNR \ge 5) = 0$, $N_{\text{det}, r}(SNR \ge 5) = 32$ (1 raw $g$-band detection failed the strict $SNR \ge 5$ threshold).
 ---
 
 ## 3. Cross-Track Decoupling Matrix (Track A vs Track B)
@@ -171,8 +174,8 @@ To ensure that spectroscopic evidence and photometric evaluability remain indepe
 
 | Feature Evaluability Status (Track B) | Tier S1 (Direct FITS) | Tier S2 (Traceable TNSCR) | Tier S3 (Catalog Only) | Tier S4 (Excluded) | Total Candidates |
 | :--- | :---: | :---: | :---: | :---: | :---: |
-| **`FEATURE_EVALUABLE`** | 0 | **16** | 0 | 0 | **16** |
-| **`SINGLE_BAND_ONLY`** | 0 | **1** | 0 | 0 | **1** |
+| **`FEATURE_EVALUABLE`** | 0 | **14** | 0 | 0 | **14** |
+| **`SINGLE_BAND_ONLY`** | 0 | **3** | 0 | 0 | **3** |
 | **`AWAITING_BROKER_LIGHTCURVE_INGESTION`** | 0 | **7,565** | **31** | **1** | **7,597** |
 | **Total Candidates** | **0** | **7,582** | **31** | **1** | **7,614** |
 
@@ -189,10 +192,10 @@ All deliverables have been emitted and cryptographically verified:
 
 | Deliverable Artifact | Repository Path | Format / Size | Cryptographic SHA-256 Checksum | Invariant Status |
 | :--- | :--- | :---: | :--- | :---: |
-| **Spectroscopic Evidence Ledger** | `experiments/gate4a2_evidence_and_feature_eligibility/spectroscopic_evidence_ledger.csv` | CSV (7,614 rows) | `af55e95338606513a65fd49cc43e1afb8a621f5ec6bf78e3f7893455a32ba5b5` | **CERTIFIED** |
-| **Light-Curve Match Ledger (Parquet)** | `experiments/gate4a2_evidence_and_feature_eligibility/lightcurve_match_ledger.parquet` | Parquet (7,614 rows) | `6c8eee8caebccf7ee22f9cf38ca6ed891fa6c8c90e2ce68ad2f1257ff86f062f` | **CERTIFIED** |
-| **Light-Curve Match Ledger (CSV)** | `experiments/gate4a2_evidence_and_feature_eligibility/lightcurve_match_ledger.csv` | CSV (7,614 rows) | `224df5f967f741cb05a4f73642789e0805abace27fbbb9ea91c81baa28715047` | **CERTIFIED** |
-| **Reproducibility Manifest** | `experiments/gate4a2_evidence_and_feature_eligibility/phase4a2_reproducibility_manifest.json` | JSON (1,668 bytes) | `f861028f2b73c8e800ff9660416b9480ceca53910c4e8329fa5398a1a6c7f935` | **CERTIFIED** |
+| **Spectroscopic Evidence Ledger** | `experiments/gate4a2_evidence_and_feature_eligibility/spectroscopic_evidence_ledger.csv` | CSV (7,614 rows) | `3d1daf1653e47a6f4ce7ec4a34913a5506b7c00f6807e664b8154ef025e39a83` | **CERTIFIED** |
+| **Light-Curve Match Ledger (Parquet)** | `experiments/gate4a2_evidence_and_feature_eligibility/lightcurve_match_ledger.parquet` | Parquet (7,614 rows) | `ff0f763ee9cf69cc7d74a39bc02188699ccbe5a8f6f60c75d209ab40e4bb107d` | **CERTIFIED** |
+| **Light-Curve Match Ledger (CSV)** | `experiments/gate4a2_evidence_and_feature_eligibility/lightcurve_match_ledger.csv` | CSV (7,614 rows) | `ed789e28a8c35da2cba8fb40a1a273359d6e0779432d63adee495f05c128dbba` | **CERTIFIED** |
+| **Reproducibility Manifest** | `experiments/gate4a2_evidence_and_feature_eligibility/phase4a2_reproducibility_manifest.json` | JSON (125 lines) | `bbed937a00337c8d9d2c8fc86a6f39f8a53ca5513c09261d33faaa339a15bcd5` | **CERTIFIED** |
 
 ---
 

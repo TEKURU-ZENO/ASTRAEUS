@@ -11,8 +11,8 @@
 ## 1. Executive Certification Statement
 
 Under the governing Gate 4 Phase 4A.2 protocol, the 7,614 taxonomy-admitted external candidates have been independently evaluated across two decoupled scientific criteria:
-1. **Track A (Spectroscopic Evidence Hierarchy):** Evaluated against the official IAU Transient Name Server (TNS) public snapshot. Exactly **7,582 candidates (99.58%)** are certified under **Tier S2 (Secondary Traceable Evidence)** with verifiable, peer-traceable published classification reports (`Class_ADS_bibcodes`). Zero candidates are upgraded to Tier S1 due to the absence of local raw spectral FITS files. Exactly 31 candidates are assigned to Tier S3 (Catalog-Only / Sensitivity Analysis), and 1 candidate is excluded under Tier S4.
-2. **Track B (Light-Curve Feature Evaluability):** Evaluated across multi-dimensional criteria (detection counts, dual-band coverage, non-detection preservation, temporal baseline, cadence, and 27-feature interface compatibility). Exactly **16 candidates** with local alert histories are certified as **`FEATURE_EVALUABLE`**, 1 candidate is classified as **`SINGLE_BAND_ONLY`**, and **7,597 candidates** are designated as **`AWAITING_BROKER_LIGHTCURVE_INGESTION`**.
+1. **Track A (Spectroscopic Evidence Hierarchy):** Evaluated against the official IAU Transient Name Server (TNS) public snapshot. Exactly **7,582 candidates (99.58%)** are certified under **Tier S2 (Secondary Traceable Evidence)** with verifiable, peer-traceable published classification reports (`Class_ADS_bibcodes`). Formally designated as `PROVISIONAL_S2` pending full certificate parsing in Phase 4B (7,061 candidates have named observatory/instrument keywords in `reporters`, while 521 have institutional affiliations). Zero candidates are upgraded to Tier S1 due to the absence of local raw spectral FITS files. Exactly 31 candidates are assigned to Tier S3 (Catalog-Only / Sensitivity Analysis; 25 SN_Ia, 6 SN_CC), and 1 candidate is excluded under Tier S4 (`ZTF19aacomym`, AGN_QSO).
+2. **Track B (Light-Curve Feature Evaluability):** Evaluated across multi-dimensional criteria (detection counts, dual-band coverage at astronomical $SNR \ge 5.0$, non-detection preservation, temporal baseline, cadence, and 27-feature interface compatibility). Exactly **14 candidates** with local alert histories are certified as **`FEATURE_EVALUABLE`** (6 SN_Ia, 7 SN_CC, 1 SLSN), **3 candidates** are classified as **`SINGLE_BAND_ONLY`** (`ZTF18abzpbpi` [SN_Ia], `ZTF19aalfsqm` [SN_CC], `ZTF23aaihsvm` [SN_CC]), and **7,597 candidates** are designated as **`AWAITING_BROKER_LIGHTCURVE_INGESTION`**.
 
 ---
 
@@ -27,9 +27,10 @@ Under the governing Gate 4 Phase 4A.2 protocol, the 7,614 taxonomy-admitted exte
 | **Taxonomy Mapping** | `configs/gate4/gate4a_taxonomy_mapping.yaml` | `265b538f2ad040e15a4b9b0069676c7dbbaec095c9a8b88bbcbe96ad7e8364b1` | Version `gate4a_taxonomy_v1.0` | **FROZEN** |
 | **Label Reconciliation** | `configs/gate4/gate4a_raw_label_reconciliation.csv` | `c5c8b06e0e3b065437224513efef33212ae4fdd4404f65c9dca6b7bdc6cef0f1` | 33 raw label rows | **FROZEN** |
 | **Admitted Candidates** | `experiments/gate4a_external_cohort_preregistration/gate4a1_screened_admitted_candidates.csv` | `abd7dc90eebeeb5507334f5f30acddf01824e4c3c6efd2834186ca850456fcb9` | 7,614 candidates | **CERTIFIED** |
-| **Spectroscopic Ledger** | `experiments/gate4a2_evidence_and_feature_eligibility/spectroscopic_evidence_ledger.csv` | `af55e95338606513a65fd49cc43e1afb8a621f5ec6bf78e3f7893455a32ba5b5` | 7,614 rows | **EMITTED** |
-| **Light-Curve Ledger (Parquet)** | `experiments/gate4a2_evidence_and_feature_eligibility/lightcurve_match_ledger.parquet` | `6c8eee8caebccf7ee22f9cf38ca6ed891fa6c8c90e2ce68ad2f1257ff86f062f` | 7,614 rows | **EMITTED** |
-| **Reproducibility Manifest** | `experiments/gate4a2_evidence_and_feature_eligibility/phase4a2_reproducibility_manifest.json` | `f861028f2b73c8e800ff9660416b9480ceca53910c4e8329fa5398a1a6c7f935` | Machine-readable | **EMITTED** |
+| **Spectroscopic Ledger** | `experiments/gate4a2_evidence_and_feature_eligibility/spectroscopic_evidence_ledger.csv` | `3d1daf1653e47a6f4ce7ec4a34913a5506b7c00f6807e664b8154ef025e39a83` | 7,614 rows | **EMITTED** |
+| **Light-Curve Match Ledger (Parquet)** | `experiments/gate4a2_evidence_and_feature_eligibility/lightcurve_match_ledger.parquet` | `ff0f763ee9cf69cc7d74a39bc02188699ccbe5a8f6f60c75d209ab40e4bb107d` | 7,614 rows | **EMITTED** |
+| **Light-Curve Match Ledger (CSV)** | `experiments/gate4a2_evidence_and_feature_eligibility/lightcurve_match_ledger.csv` | `ed789e28a8c35da2cba8fb40a1a273359d6e0779432d63adee495f05c128dbba` | 7,614 rows | **EMITTED** |
+| **Reproducibility Manifest** | `experiments/gate4a2_evidence_and_feature_eligibility/phase4a2_reproducibility_manifest.json` | `bbed937a00337c8d9d2c8fc86a6f39f8a53ca5513c09261d33faaa339a15bcd5` | Machine-readable | **EMITTED** |
 
 ---
 
@@ -57,12 +58,13 @@ Total Screened Taxonomy-Admitted Candidates : 7,614 (100.00%)
 
 ```
 Total Screened Taxonomy-Admitted Candidates : 7,614 (100.00%)
-  - FEATURE_EVALUABLE (Local LCs, >=5 det)  :    16 (  0.21%) -> READY FOR BENCHMARK INFERENCE
-      - Type Ia Supernovae (SN_Ia)          :     7
-      - Core-Collapse Supernovae (SN_CC)    :     9
+  - FEATURE_EVALUABLE (SNR >= 5, dual-band) :    14 (  0.18%) -> READY FOR BENCHMARK INFERENCE
+      - Type Ia Supernovae (SN_Ia)          :     6
+      - Core-Collapse Supernovae (SN_CC)    :     7
       - Super-Luminous Supernovae (SLSN)    :     1
-  - SINGLE_BAND_ONLY (Missing dual-band)    :     1 (  0.01%) -> INSUFFICIENT FILTER COVERAGE
-      - Core-Collapse Supernovae (SN_CC)    :     1
+  - SINGLE_BAND_ONLY (Missing dual-band)    :     3 (  0.04%) -> INSUFFICIENT DUAL-BAND AT SNR>=5
+      - Type Ia Supernovae (SN_Ia)          :     1 (ZTF18abzpbpi)
+      - Core-Collapse Supernovae (SN_CC)    :     2 (ZTF19aalfsqm, ZTF23aaihsvm)
   - AWAITING_BROKER_LIGHTCURVE_INGESTION    : 7,597 ( 99.78%) -> PENDING BROKER TIME-SERIES FETCH
 ```
 
@@ -74,7 +76,7 @@ Total Screened Taxonomy-Admitted Candidates : 7,614 (100.00%)
 - [x] **No Silent Upgrade of S2 to S1:** Tier S1 strictly requires directly accessible local spectrum files ($N=0$). All 7,582 traceable TNSCR candidates remain under Tier S2.
 - [x] **Decoupled Eligibility Accounting:** Evaluability of spectra and light curves tracked in independent, dedicated ledgers.
 - [x] **Preservation of Non-Detections:** Negative difference fluxes and $5\sigma$ upper limits preserved without clipping or imputation.
-- [x] **Frozen Feature Interface Compatibility:** The 16 feature-evaluable candidates verified against the frozen 27 physical observable features.
+- [x] **Frozen Feature Interface Compatibility:** The 14 feature-evaluable candidates verified against the frozen 27 physical observable features.
 - [x] **Zero Inference / Zero Tuning:** No model execution, weight modification, or threshold selection performed.
 
 ---

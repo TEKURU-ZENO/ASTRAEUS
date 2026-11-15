@@ -1,6 +1,6 @@
 {
   "milestone": "ASTRAEUS Gate 4 Phase 4A.2 Evidence & Feature Eligibility",
-  "execution_timestamp_utc": "2026-11-15T18:42:39.870294+00:00",
+  "execution_timestamp_utc": "2026-11-15T18:59:40.727433+00:00",
   "python_version": "3.14.3 (tags/v3.14.3:323c59a, Feb  3 2026, 16:04:56) [MSC v.1944 64 bit (AMD64)]",
   "input_dependencies": {
     "bts_raw_snapshot_csv": {
@@ -89,11 +89,11 @@
     "total_candidates_evaluated": 7614,
     "feature_eligibility_status_counts": {
       "AWAITING_BROKER_LIGHTCURVE_INGESTION": 7597,
-      "FEATURE_EVALUABLE": 16,
-      "SINGLE_BAND_ONLY": 1
+      "FEATURE_EVALUABLE": 14,
+      "SINGLE_BAND_ONLY": 3
     },
     "local_lightcurve_coverage_count": 17,
-    "feature_evaluable_count": 16,
+    "feature_evaluable_count": 14,
     "frozen_27_feature_interface_compatible_count": 17,
     "eligibility_criteria": {
       "minimum_detections": 5,
@@ -108,17 +108,17 @@
   "emitted_artifacts": {
     "spectroscopic_evidence_ledger_csv": {
       "path": "experiments\\gate4a2_evidence_and_feature_eligibility\\spectroscopic_evidence_ledger.csv",
-      "sha256": "af55e95338606513a65fd49cc43e1afb8a621f5ec6bf78e3f7893455a32ba5b5",
+      "sha256": "3d1daf1653e47a6f4ce7ec4a34913a5506b7c00f6807e664b8154ef025e39a83",
       "row_count": 7614
     },
     "lightcurve_match_ledger_parquet": {
       "path": "experiments\\gate4a2_evidence_and_feature_eligibility\\lightcurve_match_ledger.parquet",
-      "sha256": "6c8eee8caebccf7ee22f9cf38ca6ed891fa6c8c90e2ce68ad2f1257ff86f062f",
+      "sha256": "ff0f763ee9cf69cc7d74a39bc02188699ccbe5a8f6f60c75d209ab40e4bb107d",
       "row_count": 7614
     },
     "lightcurve_match_ledger_csv": {
       "path": "experiments\\gate4a2_evidence_and_feature_eligibility\\lightcurve_match_ledger.csv",
-      "sha256": "224df5f967f741cb05a4f73642789e0805abace27fbbb9ea91c81baa28715047",
+      "sha256": "ed789e28a8c35da2cba8fb40a1a273359d6e0779432d63adee495f05c128dbba",
       "row_count": 7614
     }
   }
