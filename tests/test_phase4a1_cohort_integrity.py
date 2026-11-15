@@ -1,14 +1,13 @@
 """
 ASTRAEUS Gate 4 Phase 4A.1 Cohort Integrity & Set Arithmetic Test Suite.
 
-Verifies:
-1. Cryptographic hashes of all 5 input dependencies.
-2. Complete 33-label raw BTS reconciliation table (Approved, Quarantined, Unmapped).
-3. Exact set-theoretic and sequential attrition arithmetic (|A|, |B|, |A ∩ B|, |A ∪ B|, |B \\ A|).
-4. Four distinct cohort accounting totals (Screened: 7,616, Admitted: 7,614).
-5. Comprehensive TDE subclass breakdown (75 raw, 70 admitted, 64 Train/Val overlaps, 4 spatial exclusions, 2 retained).
-6. Disciplined class support designations (LARGE_SAMPLE_SUPPORT vs NOT_EVALUABLE).
-7. Ledger row counts, columns, and partition filtering consistency.
+Contains 6 focused integrity test functions:
+1. test_input_hashes: Cryptographic hashes of all 5 input dependencies.
+2. test_raw_label_reconciliation_coverage: Complete 33-label raw BTS reconciliation table (Approved, Quarantined, Unmapped).
+3. test_set_arithmetic_consistency: Exact set-theoretic and sequential attrition arithmetic (|A|, |B|, |A ∩ B|, |A ∪ B|, |B \\ A|).
+4. test_cohort_accounting_totals: Four distinct cohort accounting totals (Screened: 7,616, Admitted: 7,614) and class support designations (LARGE_SAMPLE_SUPPORT vs NOT_EVALUABLE).
+5. test_tde_subclass_reconciliation: Comprehensive TDE subclass breakdown (75 raw, 70 admitted, 64 Train/Val overlaps, 4 spatial exclusions, 2 retained).
+6. test_ledger_file_integrity: Ledger row counts (10,988), columns, and partition filtering consistency across Parquet and CSV files.
 """
 
 import hashlib

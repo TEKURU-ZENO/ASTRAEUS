@@ -67,9 +67,24 @@ Total 4: Feature-Evaluable Candidates                 : Pending (Light-Curve Epo
 
 ---
 
-## 4. Final Scientific Certification Verdict
+## 4. Final Scientific Certification Verdict & Formal Phase 4A.1 Closure
 
-Phase 4A.1 has completed the reconciliation:
-1. The 7,614 taxonomy-admitted candidates are proven to be free of detected overlap with accessible Train/Val records and geographically excluded from the buffered Gate 3 spatial footprint.
-2. The cohort is formally recognized as an **independent, ZTF-derived external evaluation test bed for the SN_Ia and SN_CC tasks**, rather than a universal external-validity benchmark.
-3. Model development, feature extraction, and inference remain 100% frozen awaiting formal Phase 4A.1 sign-off.
+**Formal Status:** **APPROVED AND CLOSED** (Authorized Nov 15, 2026)  
+**Governing Commit:** `0553f3eb81e86c3ed6c8c7628dc07b322595fbb3`
+
+Phase 4A.1 has completed the reconciliation and is formally closed under the following recorded qualifications:
+
+1. **Test Suite Scope & Integrity Qualification:**  
+   The automated test suite (`tests/test_phase4a1_cohort_integrity.py`, 6/6 passed) asserts consistency checks across generated ledgers, metrics JSON, configuration files, and pinned cryptographic input hashes. Row-level consistency between the full CSV and Parquet accounting ledgers is guaranteed by joint generation from the identical in-memory dataframe (`df_ledger`). The test suite establishes pipeline integrity and invariant satisfaction under the committed protocol, not unconstrained numerical reproduction from external third-party raw feeds.
+
+2. **Spatial Geometry Scope Qualification:**  
+   The 60-arcsecond buffered screening establishes non-intersection with the discrete set of 1,808 test pixels under the defined $\text{NSIDE}=32$ NESTED ICRS HEALPix geometry. It formally proves that every retained candidate's 60-arcsecond disc does not touch any test-partition pixel, satisfying the zero-query quarantine invariant without accessing quarantined Gate 3 records.
+
+3. **Sample Support Designation Scope:**  
+   The label `LARGE_SAMPLE_SUPPORT` designates sample magnitude ($N \ge 30$) within this specific screened ZTF-derived cohort, not an automatic guarantee of statistical power, unbiased asymptotic estimation, or uniform bootstrap validity across all possible estimators or classes.
+
+4. **Scope of Independence:**  
+   The independence claim is bounded to: zero detected overlap with accessible Train/Validation records ($N = 6,643$), and spatial non-intersection with the buffered Gate 3 footprint ($1,808$ test pixels). It does not claim universal independence from all historical astronomical archives or cross-survey selection effects.
+
+5. **Transition Authorization:**  
+   With Phase 4A.1 closed, Phase 4A.2 (Evidence & Feature Eligibility) is authorized to proceed with zero model training, zero parameter tuning, and zero inference.

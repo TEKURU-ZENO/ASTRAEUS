@@ -75,8 +75,8 @@ The remaining **7,614 taxonomy-admitted candidates** map into the ASTRAEUS class
 
 | Astrophysical Class | Raw BTS Count | Set A Overlap | Set B Overlap | Admitted Disjoint Count | Support Designation | Statistical Justification |
 | :--- | :---: | :---: | :---: | :---: | :---: | :--- |
-| **SN_Ia** | 8,072 | 1,232 | 1,217 | **5,916** | **`LARGE_SAMPLE_SUPPORT`** | $N \ge 30$; large-sample bootstrap valid. |
-| **SN_CC** | 2,620 | 450 | 469 | **1,693** | **`LARGE_SAMPLE_SUPPORT`** | $N \ge 30$; supports rigorous Wilson intervals. |
+| **SN_Ia** | 8,072 | 1,232 | 1,217 | **5,916** | **`LARGE_SAMPLE_SUPPORT`** | $N \ge 30$; sample magnitude supports class-level metrics; bootstrap validity remains estimator-dependent. |
+| **SN_CC** | 2,620 | 450 | 469 | **1,693** | **`LARGE_SAMPLE_SUPPORT`** | $N \ge 30$; sample magnitude supports class-level metrics; Wilson score intervals recommended. |
 | **SLSN** | 162 | 133 | 28 | **1** | **`NOT_EVALUABLE`** | $N = 1 < 5$; 82.1% (133/162) in Train/Val. |
 | **TDE** | 70\* | 64 | 4 | **2** | **`NOT_EVALUABLE`** | $N = 2 < 5$; $70 - 64 - 4 = 2$; 91.4% in Train/Val (69/75 raw strings). |
 | **OTHER_EXTRAGALACTIC** | 2\* | 1 | 0 | **1** | **`NOT_EVALUABLE`** | $N = 1 < 5$; Ca-rich admitted; generic Other quarantined. |

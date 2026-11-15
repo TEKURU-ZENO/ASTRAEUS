@@ -1,0 +1,125 @@
+{
+  "milestone": "ASTRAEUS Gate 4 Phase 4A.2 Evidence & Feature Eligibility",
+  "execution_timestamp_utc": "2026-11-15T18:42:39.870294+00:00",
+  "python_version": "3.14.3 (tags/v3.14.3:323c59a, Feb  3 2026, 16:04:56) [MSC v.1944 64 bit (AMD64)]",
+  "input_dependencies": {
+    "bts_raw_snapshot_csv": {
+      "path": "data\\external_validity_v1\\raw\\bts\\bts_raw_snapshot.csv",
+      "sha256": "51d85f50772fd1412fcc2646f48b4d331b2e07f7023454f89cddd7a8e7e283ed",
+      "verified": true
+    },
+    "tns_public_objects_zip": {
+      "path": "data\\external_validity_v1\\raw\\tns\\tns_public_objects.csv.zip",
+      "sha256": "5d3fa52497de6f24491ebf25715fa9b617a220f662b2fc5102f9baa02e094ad8",
+      "verified": true
+    },
+    "candidates_10k_parquet": {
+      "path": "data\\processed\\real_survey_10k_v1\\candidates_10k.parquet",
+      "sha256": "6713faee3c2ab47b7a14baa321c540f2b18ddb9b51d6ddcf88dba7008ad214ae",
+      "verified": true
+    },
+    "data_splits_healpix_json": {
+      "path": "configs\\data_splits_healpix.json",
+      "sha256": "234bb08c482824648607fa8f874477d0225717c18263b0f16ea276dd1e12417b",
+      "verified": true
+    },
+    "gate4a_taxonomy_mapping_yaml": {
+      "path": "configs\\gate4\\gate4a_taxonomy_mapping.yaml",
+      "sha256": "265b538f2ad040e15a4b9b0069676c7dbbaec095c9a8b88bbcbe96ad7e8364b1",
+      "verified": true
+    },
+    "gate4a_raw_label_reconciliation_csv": {
+      "path": "configs\\gate4\\gate4a_raw_label_reconciliation.csv",
+      "sha256": "c5c8b06e0e3b065437224513efef33212ae4fdd4404f65c9dca6b7bdc6cef0f1",
+      "verified": true
+    },
+    "gate4a1_screened_admitted_candidates_csv": {
+      "path": "experiments\\gate4a_external_cohort_preregistration\\gate4a1_screened_admitted_candidates.csv",
+      "sha256": "abd7dc90eebeeb5507334f5f30acddf01824e4c3c6efd2834186ca850456fcb9",
+      "verified": true
+    }
+  },
+  "track_a_spectroscopic_evidence_summary": {
+    "total_candidates_evaluated": 7614,
+    "tier_counts": {
+      "S2": 7582,
+      "S3": 31,
+      "S4": 1
+    },
+    "class_tier_breakdown": {
+      "AGN_QSO": {
+        "S2": 0,
+        "S3": 0,
+        "S4": 1
+      },
+      "OTHER_EXTRAGALACTIC": {
+        "S2": 1,
+        "S3": 0,
+        "S4": 0
+      },
+      "SLSN": {
+        "S2": 1,
+        "S3": 0,
+        "S4": 0
+      },
+      "SN_CC": {
+        "S2": 1687,
+        "S3": 6,
+        "S4": 0
+      },
+      "SN_Ia": {
+        "S2": 5891,
+        "S3": 25,
+        "S4": 0
+      },
+      "TDE": {
+        "S2": 2,
+        "S3": 0,
+        "S4": 0
+      }
+    },
+    "tier_definitions": {
+      "S1": "Directly accessible spectrum file with event identity, date, instrument, metadata (0 local FITS).",
+      "S2": "Traceable published classification with named observatory/instrument and verifiable TNSCR report.",
+      "S3": "Traceable catalog classification without accessible spectrum or published report (sensitivity only).",
+      "S4": "Photometric or unverified classification (excluded from benchmark)."
+    }
+  },
+  "track_b_lightcurve_feature_eligibility_summary": {
+    "total_candidates_evaluated": 7614,
+    "feature_eligibility_status_counts": {
+      "AWAITING_BROKER_LIGHTCURVE_INGESTION": 7597,
+      "FEATURE_EVALUABLE": 16,
+      "SINGLE_BAND_ONLY": 1
+    },
+    "local_lightcurve_coverage_count": 17,
+    "feature_evaluable_count": 16,
+    "frozen_27_feature_interface_compatible_count": 17,
+    "eligibility_criteria": {
+      "minimum_detections": 5,
+      "passbands_required": [
+        "g",
+        "r"
+      ],
+      "preservation_of_upper_limits": true,
+      "numerical_feature_validation": true
+    }
+  },
+  "emitted_artifacts": {
+    "spectroscopic_evidence_ledger_csv": {
+      "path": "experiments\\gate4a2_evidence_and_feature_eligibility\\spectroscopic_evidence_ledger.csv",
+      "sha256": "af55e95338606513a65fd49cc43e1afb8a621f5ec6bf78e3f7893455a32ba5b5",
+      "row_count": 7614
+    },
+    "lightcurve_match_ledger_parquet": {
+      "path": "experiments\\gate4a2_evidence_and_feature_eligibility\\lightcurve_match_ledger.parquet",
+      "sha256": "6c8eee8caebccf7ee22f9cf38ca6ed891fa6c8c90e2ce68ad2f1257ff86f062f",
+      "row_count": 7614
+    },
+    "lightcurve_match_ledger_csv": {
+      "path": "experiments\\gate4a2_evidence_and_feature_eligibility\\lightcurve_match_ledger.csv",
+      "sha256": "224df5f967f741cb05a4f73642789e0805abace27fbbb9ea91c81baa28715047",
+      "row_count": 7614
+    }
+  }
+}
