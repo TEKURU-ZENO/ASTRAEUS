@@ -1,0 +1,2097 @@
+{
+  "milestone": "ASTRAEUS Sprint 4A Rare-Class Learning",
+  "execution_date": "2026-11-15T10:05:50Z",
+  "spatial_test_sealed": true,
+  "train_size": 2808,
+  "val_size": 741,
+  "taxonomy": [
+    "SN_Ia",
+    "SN_CC",
+    "SLSN",
+    "TDE",
+    "CV_Nova",
+    "AGN_QSO",
+    "Varstar",
+    "OTHER_EXTRAGALACTIC"
+  ],
+  "train_class_distribution": {
+    "SN_Ia": 890,
+    "SN_CC": 563,
+    "SLSN": 200,
+    "TDE": 101,
+    "CV_Nova": 246,
+    "AGN_QSO": 499,
+    "Varstar": 246,
+    "OTHER_EXTRAGALACTIC": 63
+  },
+  "cross_validation_results": {
+    "Control_Unweighted_RF": {
+      "strategy": "Control_Unweighted_RF",
+      "cv_folds": 5,
+      "cv_macro_f1_mean": 0.5995,
+      "cv_macro_f1_std": 0.0143,
+      "cv_bal_acc_mean": 0.5796,
+      "cv_bal_acc_std": 0.0106,
+      "oof_macro_f1": 0.6007,
+      "oof_bal_acc": 0.5795
+    },
+    "Balanced_Weights_RF": {
+      "strategy": "Balanced_Weights_RF",
+      "cv_folds": 5,
+      "cv_macro_f1_mean": 0.6086,
+      "cv_macro_f1_std": 0.0113,
+      "cv_bal_acc_mean": 0.5924,
+      "cv_bal_acc_std": 0.0092,
+      "oof_macro_f1": 0.6074,
+      "oof_bal_acc": 0.5923
+    },
+    "Effective_Number_Beta99_RF": {
+      "strategy": "Effective_Number_Beta99_RF",
+      "cv_folds": 5,
+      "cv_macro_f1_mean": 0.6097,
+      "cv_macro_f1_std": 0.01,
+      "cv_bal_acc_mean": 0.5876,
+      "cv_bal_acc_std": 0.0089,
+      "oof_macro_f1": 0.6104,
+      "oof_bal_acc": 0.5873
+    },
+    "Effective_Number_Beta999_RF": {
+      "strategy": "Effective_Number_Beta999_RF",
+      "cv_folds": 5,
+      "cv_macro_f1_mean": 0.6053,
+      "cv_macro_f1_std": 0.0093,
+      "cv_bal_acc_mean": 0.5901,
+      "cv_bal_acc_std": 0.0075,
+      "oof_macro_f1": 0.6055,
+      "oof_bal_acc": 0.59
+    },
+    "Balanced_Random_Forest": {
+      "strategy": "Balanced_Random_Forest",
+      "cv_folds": 5,
+      "cv_macro_f1_mean": 0.606,
+      "cv_macro_f1_std": 0.0113,
+      "cv_bal_acc_mean": 0.5913,
+      "cv_bal_acc_std": 0.0078,
+      "oof_macro_f1": 0.6055,
+      "oof_bal_acc": 0.5913
+    },
+    "Balanced_Weights_HGBT": {
+      "strategy": "Balanced_Weights_HGBT",
+      "cv_folds": 5,
+      "cv_macro_f1_mean": 0.5866,
+      "cv_macro_f1_std": 0.0186,
+      "cv_bal_acc_mean": 0.5709,
+      "cv_bal_acc_std": 0.017,
+      "oof_macro_f1": 0.5884,
+      "oof_bal_acc": 0.571
+    },
+    "Focal_Loss_PyTorch": {
+      "strategy": "Focal_Loss_PyTorch",
+      "cv_folds": 5,
+      "cv_macro_f1_mean": 0.4886,
+      "cv_macro_f1_std": 0.0238,
+      "cv_bal_acc_mean": 0.4804,
+      "cv_bal_acc_std": 0.0169,
+      "oof_macro_f1": 0.4903,
+      "oof_bal_acc": 0.4804
+    },
+    "SMOTE_Physical_Ablation_RF": {
+      "strategy": "SMOTE_Physical_Ablation_RF",
+      "cv_folds": 5,
+      "cv_macro_f1_mean": 0.6085,
+      "cv_macro_f1_std": 0.0058,
+      "cv_bal_acc_mean": 0.6007,
+      "cv_bal_acc_std": 0.0074,
+      "oof_macro_f1": 0.6107,
+      "oof_bal_acc": 0.6002
+    }
+  },
+  "validation_holdout_results": {
+    "Control_Unweighted_RF": {
+      "strategy": "Control_Unweighted_RF",
+      "fit_time_seconds": 3.2,
+      "val_macro_f1": 0.574,
+      "val_weighted_f1": 0.7222,
+      "val_accuracy": 0.7395,
+      "val_balanced_accuracy": 0.5546,
+      "val_ece": 0.0592,
+      "val_brier_score": 0.3692,
+      "per_class": {
+        "SN_Ia": {
+          "support": 202,
+          "precision": 0.6917,
+          "precision_ci_95": [
+            0.6338,
+            0.7442
+          ],
+          "recall": 0.9109,
+          "recall_ci_95": [
+            0.8636,
+            0.9429
+          ],
+          "f1": 0.7863,
+          "true_positives": 184,
+          "false_positives": 82,
+          "false_negatives": 18,
+          "is_rare_class": false
+        },
+        "SN_CC": {
+          "support": 120,
+          "precision": 0.5826,
+          "precision_ci_95": [
+            0.4912,
+            0.6686
+          ],
+          "recall": 0.5583,
+          "recall_ci_95": [
+            0.469,
+            0.644
+          ],
+          "f1": 0.5702,
+          "true_positives": 67,
+          "false_positives": 48,
+          "false_negatives": 53,
+          "is_rare_class": false
+        },
+        "SLSN": {
+          "support": 50,
+          "precision": 0.5429,
+          "precision_ci_95": [
+            0.3819,
+            0.6953
+          ],
+          "recall": 0.38,
+          "recall_ci_95": [
+            0.2586,
+            0.5185
+          ],
+          "f1": 0.4471,
+          "true_positives": 19,
+          "false_positives": 16,
+          "false_negatives": 31,
+          "is_rare_class": false
+        },
+        "TDE": {
+          "support": 24,
+          "precision": 0.75,
+          "precision_ci_95": [
+            0.4093,
+            0.9285
+          ],
+          "recall": 0.25,
+          "recall_ci_95": [
+            0.12,
+            0.449
+          ],
+          "f1": 0.375,
+          "true_positives": 6,
+          "false_positives": 2,
+          "false_negatives": 18,
+          "is_rare_class": true
+        },
+        "CV_Nova": {
+          "support": 49,
+          "precision": 0.7778,
+          "precision_ci_95": [
+            0.6373,
+            0.8746
+          ],
+          "recall": 0.7143,
+          "recall_ci_95": [
+            0.5759,
+            0.8215
+          ],
+          "f1": 0.7447,
+          "true_positives": 35,
+          "false_positives": 10,
+          "false_negatives": 14,
+          "is_rare_class": false
+        },
+        "AGN_QSO": {
+          "support": 205,
+          "precision": 0.8932,
+          "precision_ci_95": [
+            0.8436,
+            0.9284
+          ],
+          "recall": 0.8976,
+          "recall_ci_95": [
+            0.8485,
+            0.932
+          ],
+          "f1": 0.8954,
+          "true_positives": 184,
+          "false_positives": 22,
+          "false_negatives": 21,
+          "is_rare_class": false
+        },
+        "Varstar": {
+          "support": 73,
+          "precision": 0.8281,
+          "precision_ci_95": [
+            0.7179,
+            0.9012
+          ],
+          "recall": 0.726,
+          "recall_ci_95": [
+            0.6144,
+            0.8151
+          ],
+          "f1": 0.7737,
+          "true_positives": 53,
+          "false_positives": 11,
+          "false_negatives": 20,
+          "is_rare_class": false
+        },
+        "OTHER_EXTRAGALACTIC": {
+          "support": 18,
+          "precision": 0.0,
+          "precision_ci_95": [
+            0.0,
+            0.6576
+          ],
+          "recall": 0.0,
+          "recall_ci_95": [
+            0.0,
+            0.1759
+          ],
+          "f1": 0.0,
+          "true_positives": 0,
+          "false_positives": 2,
+          "false_negatives": 18,
+          "is_rare_class": true
+        }
+      },
+      "confusion_matrix": [
+        [
+          184,
+          11,
+          1,
+          0,
+          4,
+          2,
+          0,
+          0
+        ],
+        [
+          43,
+          67,
+          4,
+          0,
+          3,
+          2,
+          0,
+          1
+        ],
+        [
+          11,
+          20,
+          19,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          7,
+          5,
+          5,
+          6,
+          0,
+          1,
+          0,
+          0
+        ],
+        [
+          11,
+          2,
+          0,
+          0,
+          35,
+          1,
+          0,
+          0
+        ],
+        [
+          2,
+          2,
+          3,
+          2,
+          1,
+          184,
+          11,
+          0
+        ],
+        [
+          0,
+          1,
+          0,
+          0,
+          2,
+          16,
+          53,
+          1
+        ],
+        [
+          8,
+          7,
+          3,
+          0,
+          0,
+          0,
+          0,
+          0
+        ]
+      ]
+    },
+    "Balanced_Weights_RF": {
+      "strategy": "Balanced_Weights_RF",
+      "fit_time_seconds": 3.17,
+      "val_macro_f1": 0.5733,
+      "val_weighted_f1": 0.7159,
+      "val_accuracy": 0.7301,
+      "val_balanced_accuracy": 0.5612,
+      "val_ece": 0.078,
+      "val_brier_score": 0.3703,
+      "per_class": {
+        "SN_Ia": {
+          "support": 202,
+          "precision": 0.6992,
+          "precision_ci_95": [
+            0.6404,
+            0.7521
+          ],
+          "recall": 0.8861,
+          "recall_ci_95": [
+            0.8349,
+            0.9229
+          ],
+          "f1": 0.7817,
+          "true_positives": 179,
+          "false_positives": 77,
+          "false_negatives": 23,
+          "is_rare_class": false
+        },
+        "SN_CC": {
+          "support": 120,
+          "precision": 0.5545,
+          "precision_ci_95": [
+            0.4614,
+            0.644
+          ],
+          "recall": 0.5083,
+          "recall_ci_95": [
+            0.42,
+            0.5961
+          ],
+          "f1": 0.5304,
+          "true_positives": 61,
+          "false_positives": 49,
+          "false_negatives": 59,
+          "is_rare_class": false
+        },
+        "SLSN": {
+          "support": 50,
+          "precision": 0.5556,
+          "precision_ci_95": [
+            0.3958,
+            0.7046
+          ],
+          "recall": 0.4,
+          "recall_ci_95": [
+            0.2761,
+            0.5382
+          ],
+          "f1": 0.4651,
+          "true_positives": 20,
+          "false_positives": 16,
+          "false_negatives": 30,
+          "is_rare_class": false
+        },
+        "TDE": {
+          "support": 24,
+          "precision": 0.45,
+          "precision_ci_95": [
+            0.2582,
+            0.6579
+          ],
+          "recall": 0.375,
+          "recall_ci_95": [
+            0.2116,
+            0.5729
+          ],
+          "f1": 0.4091,
+          "true_positives": 9,
+          "false_positives": 11,
+          "false_negatives": 15,
+          "is_rare_class": true
+        },
+        "CV_Nova": {
+          "support": 49,
+          "precision": 0.7609,
+          "precision_ci_95": [
+            0.6206,
+            0.8609
+          ],
+          "recall": 0.7143,
+          "recall_ci_95": [
+            0.5759,
+            0.8215
+          ],
+          "f1": 0.7368,
+          "true_positives": 35,
+          "false_positives": 11,
+          "false_negatives": 14,
+          "is_rare_class": false
+        },
+        "AGN_QSO": {
+          "support": 205,
+          "precision": 0.8857,
+          "precision_ci_95": [
+            0.8356,
+            0.922
+          ],
+          "recall": 0.9073,
+          "recall_ci_95": [
+            0.8598,
+            0.9399
+          ],
+          "f1": 0.8964,
+          "true_positives": 186,
+          "false_positives": 24,
+          "false_negatives": 19,
+          "is_rare_class": false
+        },
+        "Varstar": {
+          "support": 73,
+          "precision": 0.85,
+          "precision_ci_95": [
+            0.7389,
+            0.919
+          ],
+          "recall": 0.6986,
+          "recall_ci_95": [
+            0.5856,
+            0.7918
+          ],
+          "f1": 0.7669,
+          "true_positives": 51,
+          "false_positives": 9,
+          "false_negatives": 22,
+          "is_rare_class": false
+        },
+        "OTHER_EXTRAGALACTIC": {
+          "support": 18,
+          "precision": 0.0,
+          "precision_ci_95": [
+            0.0,
+            0.5615
+          ],
+          "recall": 0.0,
+          "recall_ci_95": [
+            0.0,
+            0.1759
+          ],
+          "f1": 0.0,
+          "true_positives": 0,
+          "false_positives": 3,
+          "false_negatives": 18,
+          "is_rare_class": true
+        }
+      },
+      "confusion_matrix": [
+        [
+          179,
+          12,
+          1,
+          4,
+          4,
+          2,
+          0,
+          0
+        ],
+        [
+          47,
+          61,
+          5,
+          1,
+          3,
+          2,
+          0,
+          1
+        ],
+        [
+          8,
+          19,
+          20,
+          3,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          5,
+          5,
+          4,
+          9,
+          0,
+          1,
+          0,
+          0
+        ],
+        [
+          8,
+          3,
+          0,
+          1,
+          35,
+          1,
+          0,
+          1
+        ],
+        [
+          2,
+          2,
+          3,
+          1,
+          2,
+          186,
+          9,
+          0
+        ],
+        [
+          0,
+          1,
+          0,
+          0,
+          2,
+          18,
+          51,
+          1
+        ],
+        [
+          7,
+          7,
+          3,
+          1,
+          0,
+          0,
+          0,
+          0
+        ]
+      ]
+    },
+    "Effective_Number_Beta99_RF": {
+      "strategy": "Effective_Number_Beta99_RF",
+      "fit_time_seconds": 3.3,
+      "val_macro_f1": 0.575,
+      "val_weighted_f1": 0.7273,
+      "val_accuracy": 0.7436,
+      "val_balanced_accuracy": 0.5578,
+      "val_ece": 0.0709,
+      "val_brier_score": 0.3685,
+      "per_class": {
+        "SN_Ia": {
+          "support": 202,
+          "precision": 0.7023,
+          "precision_ci_95": [
+            0.6443,
+            0.7544
+          ],
+          "recall": 0.9109,
+          "recall_ci_95": [
+            0.8636,
+            0.9429
+          ],
+          "f1": 0.7931,
+          "true_positives": 184,
+          "false_positives": 78,
+          "false_negatives": 18,
+          "is_rare_class": false
+        },
+        "SN_CC": {
+          "support": 120,
+          "precision": 0.5932,
+          "precision_ci_95": [
+            0.503,
+            0.6776
+          ],
+          "recall": 0.5833,
+          "recall_ci_95": [
+            0.4939,
+            0.6676
+          ],
+          "f1": 0.5882,
+          "true_positives": 70,
+          "false_positives": 48,
+          "false_negatives": 50,
+          "is_rare_class": false
+        },
+        "SLSN": {
+          "support": 50,
+          "precision": 0.5429,
+          "precision_ci_95": [
+            0.3819,
+            0.6953
+          ],
+          "recall": 0.38,
+          "recall_ci_95": [
+            0.2586,
+            0.5185
+          ],
+          "f1": 0.4471,
+          "true_positives": 19,
+          "false_positives": 16,
+          "false_negatives": 31,
+          "is_rare_class": false
+        },
+        "TDE": {
+          "support": 24,
+          "precision": 0.6667,
+          "precision_ci_95": [
+            0.3542,
+            0.8794
+          ],
+          "recall": 0.25,
+          "recall_ci_95": [
+            0.12,
+            0.449
+          ],
+          "f1": 0.3636,
+          "true_positives": 6,
+          "false_positives": 3,
+          "false_negatives": 18,
+          "is_rare_class": true
+        },
+        "CV_Nova": {
+          "support": 49,
+          "precision": 0.7447,
+          "precision_ci_95": [
+            0.6049,
+            0.8475
+          ],
+          "recall": 0.7143,
+          "recall_ci_95": [
+            0.5759,
+            0.8215
+          ],
+          "f1": 0.7292,
+          "true_positives": 35,
+          "false_positives": 12,
+          "false_negatives": 14,
+          "is_rare_class": false
+        },
+        "AGN_QSO": {
+          "support": 205,
+          "precision": 0.902,
+          "precision_ci_95": [
+            0.8534,
+            0.9356
+          ],
+          "recall": 0.8976,
+          "recall_ci_95": [
+            0.8485,
+            0.932
+          ],
+          "f1": 0.8998,
+          "true_positives": 184,
+          "false_positives": 20,
+          "false_negatives": 21,
+          "is_rare_class": false
+        },
+        "Varstar": {
+          "support": 73,
+          "precision": 0.8413,
+          "precision_ci_95": [
+            0.7319,
+            0.9114
+          ],
+          "recall": 0.726,
+          "recall_ci_95": [
+            0.6144,
+            0.8151
+          ],
+          "f1": 0.7794,
+          "true_positives": 53,
+          "false_positives": 10,
+          "false_negatives": 20,
+          "is_rare_class": false
+        },
+        "OTHER_EXTRAGALACTIC": {
+          "support": 18,
+          "precision": 0.0,
+          "precision_ci_95": [
+            0.0,
+            0.5615
+          ],
+          "recall": 0.0,
+          "recall_ci_95": [
+            0.0,
+            0.1759
+          ],
+          "f1": 0.0,
+          "true_positives": 0,
+          "false_positives": 3,
+          "false_negatives": 18,
+          "is_rare_class": true
+        }
+      },
+      "confusion_matrix": [
+        [
+          184,
+          10,
+          1,
+          0,
+          5,
+          2,
+          0,
+          0
+        ],
+        [
+          41,
+          70,
+          4,
+          0,
+          3,
+          1,
+          0,
+          1
+        ],
+        [
+          10,
+          21,
+          19,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          8,
+          5,
+          5,
+          6,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          10,
+          2,
+          0,
+          0,
+          35,
+          1,
+          0,
+          1
+        ],
+        [
+          2,
+          2,
+          3,
+          2,
+          2,
+          184,
+          10,
+          0
+        ],
+        [
+          0,
+          1,
+          0,
+          0,
+          2,
+          16,
+          53,
+          1
+        ],
+        [
+          7,
+          7,
+          3,
+          1,
+          0,
+          0,
+          0,
+          0
+        ]
+      ]
+    },
+    "Effective_Number_Beta999_RF": {
+      "strategy": "Effective_Number_Beta999_RF",
+      "fit_time_seconds": 3.09,
+      "val_macro_f1": 0.5794,
+      "val_weighted_f1": 0.7271,
+      "val_accuracy": 0.7409,
+      "val_balanced_accuracy": 0.5678,
+      "val_ece": 0.0792,
+      "val_brier_score": 0.3697,
+      "per_class": {
+        "SN_Ia": {
+          "support": 202,
+          "precision": 0.7087,
+          "precision_ci_95": [
+            0.65,
+            0.7611
+          ],
+          "recall": 0.8911,
+          "recall_ci_95": [
+            0.8406,
+            0.927
+          ],
+          "f1": 0.7895,
+          "true_positives": 180,
+          "false_positives": 74,
+          "false_negatives": 22,
+          "is_rare_class": false
+        },
+        "SN_CC": {
+          "support": 120,
+          "precision": 0.5946,
+          "precision_ci_95": [
+            0.5016,
+            0.6813
+          ],
+          "recall": 0.55,
+          "recall_ci_95": [
+            0.4608,
+            0.6361
+          ],
+          "f1": 0.5714,
+          "true_positives": 66,
+          "false_positives": 45,
+          "false_negatives": 54,
+          "is_rare_class": false
+        },
+        "SLSN": {
+          "support": 50,
+          "precision": 0.5556,
+          "precision_ci_95": [
+            0.3958,
+            0.7046
+          ],
+          "recall": 0.4,
+          "recall_ci_95": [
+            0.2761,
+            0.5382
+          ],
+          "f1": 0.4651,
+          "true_positives": 20,
+          "false_positives": 16,
+          "false_negatives": 30,
+          "is_rare_class": false
+        },
+        "TDE": {
+          "support": 24,
+          "precision": 0.4444,
+          "precision_ci_95": [
+            0.2456,
+            0.6628
+          ],
+          "recall": 0.3333,
+          "recall_ci_95": [
+            0.1797,
+            0.5329
+          ],
+          "f1": 0.381,
+          "true_positives": 8,
+          "false_positives": 10,
+          "false_negatives": 16,
+          "is_rare_class": true
+        },
+        "CV_Nova": {
+          "support": 49,
+          "precision": 0.75,
+          "precision_ci_95": [
+            0.6122,
+            0.8508
+          ],
+          "recall": 0.7347,
+          "recall_ci_95": [
+            0.5974,
+            0.8379
+          ],
+          "f1": 0.7423,
+          "true_positives": 36,
+          "false_positives": 12,
+          "false_negatives": 13,
+          "is_rare_class": false
+        },
+        "AGN_QSO": {
+          "support": 205,
+          "precision": 0.8942,
+          "precision_ci_95": [
+            0.8451,
+            0.9291
+          ],
+          "recall": 0.9073,
+          "recall_ci_95": [
+            0.8598,
+            0.9399
+          ],
+          "f1": 0.9007,
+          "true_positives": 186,
+          "false_positives": 22,
+          "false_negatives": 19,
+          "is_rare_class": false
+        },
+        "Varstar": {
+          "support": 73,
+          "precision": 0.8548,
+          "precision_ci_95": [
+            0.7466,
+            0.9217
+          ],
+          "recall": 0.726,
+          "recall_ci_95": [
+            0.6144,
+            0.8151
+          ],
+          "f1": 0.7852,
+          "true_positives": 53,
+          "false_positives": 9,
+          "false_negatives": 20,
+          "is_rare_class": false
+        },
+        "OTHER_EXTRAGALACTIC": {
+          "support": 18,
+          "precision": 0.0,
+          "precision_ci_95": [
+            0.0,
+            0.4899
+          ],
+          "recall": 0.0,
+          "recall_ci_95": [
+            0.0,
+            0.1759
+          ],
+          "f1": 0.0,
+          "true_positives": 0,
+          "false_positives": 4,
+          "false_negatives": 18,
+          "is_rare_class": true
+        }
+      },
+      "confusion_matrix": [
+        [
+          180,
+          9,
+          1,
+          4,
+          5,
+          3,
+          0,
+          0
+        ],
+        [
+          43,
+          66,
+          5,
+          0,
+          3,
+          2,
+          0,
+          1
+        ],
+        [
+          9,
+          18,
+          20,
+          3,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          5,
+          6,
+          5,
+          8,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          8,
+          2,
+          0,
+          1,
+          36,
+          1,
+          0,
+          1
+        ],
+        [
+          2,
+          2,
+          3,
+          1,
+          2,
+          186,
+          9,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          0,
+          2,
+          16,
+          53,
+          2
+        ],
+        [
+          7,
+          8,
+          2,
+          1,
+          0,
+          0,
+          0,
+          0
+        ]
+      ]
+    },
+    "Balanced_Random_Forest": {
+      "strategy": "Balanced_Random_Forest",
+      "fit_time_seconds": 3.5,
+      "val_macro_f1": 0.5842,
+      "val_weighted_f1": 0.7236,
+      "val_accuracy": 0.7368,
+      "val_balanced_accuracy": 0.5711,
+      "val_ece": 0.0628,
+      "val_brier_score": 0.3713,
+      "per_class": {
+        "SN_Ia": {
+          "support": 202,
+          "precision": 0.6992,
+          "precision_ci_95": [
+            0.6404,
+            0.7521
+          ],
+          "recall": 0.8861,
+          "recall_ci_95": [
+            0.8349,
+            0.9229
+          ],
+          "f1": 0.7817,
+          "true_positives": 179,
+          "false_positives": 77,
+          "false_negatives": 23,
+          "is_rare_class": false
+        },
+        "SN_CC": {
+          "support": 120,
+          "precision": 0.5676,
+          "precision_ci_95": [
+            0.4747,
+            0.6559
+          ],
+          "recall": 0.525,
+          "recall_ci_95": [
+            0.4363,
+            0.6122
+          ],
+          "f1": 0.5455,
+          "true_positives": 63,
+          "false_positives": 48,
+          "false_negatives": 57,
+          "is_rare_class": false
+        },
+        "SLSN": {
+          "support": 50,
+          "precision": 0.5946,
+          "precision_ci_95": [
+            0.4349,
+            0.7365
+          ],
+          "recall": 0.44,
+          "recall_ci_95": [
+            0.3116,
+            0.5769
+          ],
+          "f1": 0.5057,
+          "true_positives": 22,
+          "false_positives": 15,
+          "false_negatives": 28,
+          "is_rare_class": false
+        },
+        "TDE": {
+          "support": 24,
+          "precision": 0.4737,
+          "precision_ci_95": [
+            0.2733,
+            0.6829
+          ],
+          "recall": 0.375,
+          "recall_ci_95": [
+            0.2116,
+            0.5729
+          ],
+          "f1": 0.4186,
+          "true_positives": 9,
+          "false_positives": 10,
+          "false_negatives": 15,
+          "is_rare_class": true
+        },
+        "CV_Nova": {
+          "support": 49,
+          "precision": 0.7778,
+          "precision_ci_95": [
+            0.6373,
+            0.8746
+          ],
+          "recall": 0.7143,
+          "recall_ci_95": [
+            0.5759,
+            0.8215
+          ],
+          "f1": 0.7447,
+          "true_positives": 35,
+          "false_positives": 10,
+          "false_negatives": 14,
+          "is_rare_class": false
+        },
+        "AGN_QSO": {
+          "support": 205,
+          "precision": 0.8937,
+          "precision_ci_95": [
+            0.8443,
+            0.9288
+          ],
+          "recall": 0.9024,
+          "recall_ci_95": [
+            0.8541,
+            0.936
+          ],
+          "f1": 0.8981,
+          "true_positives": 185,
+          "false_positives": 22,
+          "false_negatives": 20,
+          "is_rare_class": false
+        },
+        "Varstar": {
+          "support": 73,
+          "precision": 0.8413,
+          "precision_ci_95": [
+            0.7319,
+            0.9114
+          ],
+          "recall": 0.726,
+          "recall_ci_95": [
+            0.6144,
+            0.8151
+          ],
+          "f1": 0.7794,
+          "true_positives": 53,
+          "false_positives": 10,
+          "false_negatives": 20,
+          "is_rare_class": false
+        },
+        "OTHER_EXTRAGALACTIC": {
+          "support": 18,
+          "precision": 0.0,
+          "precision_ci_95": [
+            0.0,
+            0.5615
+          ],
+          "recall": 0.0,
+          "recall_ci_95": [
+            0.0,
+            0.1759
+          ],
+          "f1": 0.0,
+          "true_positives": 0,
+          "false_positives": 3,
+          "false_negatives": 18,
+          "is_rare_class": true
+        }
+      },
+      "confusion_matrix": [
+        [
+          179,
+          12,
+          1,
+          4,
+          4,
+          2,
+          0,
+          0
+        ],
+        [
+          45,
+          63,
+          5,
+          1,
+          3,
+          2,
+          0,
+          1
+        ],
+        [
+          9,
+          17,
+          22,
+          2,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          5,
+          5,
+          4,
+          9,
+          0,
+          1,
+          0,
+          0
+        ],
+        [
+          8,
+          3,
+          0,
+          1,
+          35,
+          1,
+          0,
+          1
+        ],
+        [
+          2,
+          2,
+          3,
+          2,
+          1,
+          185,
+          10,
+          0
+        ],
+        [
+          0,
+          1,
+          0,
+          0,
+          2,
+          16,
+          53,
+          1
+        ],
+        [
+          8,
+          8,
+          2,
+          0,
+          0,
+          0,
+          0,
+          0
+        ]
+      ]
+    },
+    "Balanced_Weights_HGBT": {
+      "strategy": "Balanced_Weights_HGBT",
+      "fit_time_seconds": 6.75,
+      "val_macro_f1": 0.583,
+      "val_weighted_f1": 0.7316,
+      "val_accuracy": 0.753,
+      "val_balanced_accuracy": 0.5626,
+      "val_ece": 0.1107,
+      "val_brier_score": 0.3749,
+      "per_class": {
+        "SN_Ia": {
+          "support": 202,
+          "precision": 0.6667,
+          "precision_ci_95": [
+            0.61,
+            0.7189
+          ],
+          "recall": 0.9406,
+          "recall_ci_95": [
+            0.899,
+            0.9657
+          ],
+          "f1": 0.7803,
+          "true_positives": 190,
+          "false_positives": 95,
+          "false_negatives": 12,
+          "is_rare_class": false
+        },
+        "SN_CC": {
+          "support": 120,
+          "precision": 0.6,
+          "precision_ci_95": [
+            0.4995,
+            0.6928
+          ],
+          "recall": 0.475,
+          "recall_ci_95": [
+            0.3878,
+            0.5637
+          ],
+          "f1": 0.5302,
+          "true_positives": 57,
+          "false_positives": 38,
+          "false_negatives": 63,
+          "is_rare_class": false
+        },
+        "SLSN": {
+          "support": 50,
+          "precision": 0.5676,
+          "precision_ci_95": [
+            0.4091,
+            0.7133
+          ],
+          "recall": 0.42,
+          "recall_ci_95": [
+            0.2938,
+            0.5577
+          ],
+          "f1": 0.4828,
+          "true_positives": 21,
+          "false_positives": 16,
+          "false_negatives": 29,
+          "is_rare_class": false
+        },
+        "TDE": {
+          "support": 24,
+          "precision": 0.8333,
+          "precision_ci_95": [
+            0.4365,
+            0.9699
+          ],
+          "recall": 0.2083,
+          "recall_ci_95": [
+            0.0924,
+            0.4047
+          ],
+          "f1": 0.3333,
+          "true_positives": 5,
+          "false_positives": 1,
+          "false_negatives": 19,
+          "is_rare_class": true
+        },
+        "CV_Nova": {
+          "support": 49,
+          "precision": 0.8085,
+          "precision_ci_95": [
+            0.6746,
+            0.8958
+          ],
+          "recall": 0.7755,
+          "recall_ci_95": [
+            0.6412,
+            0.8698
+          ],
+          "f1": 0.7917,
+          "true_positives": 38,
+          "false_positives": 9,
+          "false_negatives": 11,
+          "is_rare_class": false
+        },
+        "AGN_QSO": {
+          "support": 205,
+          "precision": 0.9147,
+          "precision_ci_95": [
+            0.8692,
+            0.9454
+          ],
+          "recall": 0.9415,
+          "recall_ci_95": [
+            0.9005,
+            0.9662
+          ],
+          "f1": 0.9279,
+          "true_positives": 193,
+          "false_positives": 18,
+          "false_negatives": 12,
+          "is_rare_class": false
+        },
+        "Varstar": {
+          "support": 73,
+          "precision": 0.9153,
+          "precision_ci_95": [
+            0.8165,
+            0.9633
+          ],
+          "recall": 0.7397,
+          "recall_ci_95": [
+            0.6289,
+            0.8266
+          ],
+          "f1": 0.8182,
+          "true_positives": 54,
+          "false_positives": 5,
+          "false_negatives": 19,
+          "is_rare_class": false
+        },
+        "OTHER_EXTRAGALACTIC": {
+          "support": 18,
+          "precision": 0.0,
+          "precision_ci_95": [
+            0.0,
+            0.7935
+          ],
+          "recall": 0.0,
+          "recall_ci_95": [
+            0.0,
+            0.1759
+          ],
+          "f1": 0.0,
+          "true_positives": 0,
+          "false_positives": 1,
+          "false_negatives": 18,
+          "is_rare_class": true
+        }
+      },
+      "confusion_matrix": [
+        [
+          190,
+          5,
+          1,
+          0,
+          3,
+          2,
+          1,
+          0
+        ],
+        [
+          54,
+          57,
+          7,
+          0,
+          2,
+          0,
+          0,
+          0
+        ],
+        [
+          11,
+          18,
+          21,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          9,
+          3,
+          6,
+          5,
+          1,
+          0,
+          0,
+          0
+        ],
+        [
+          8,
+          1,
+          0,
+          0,
+          38,
+          1,
+          0,
+          1
+        ],
+        [
+          3,
+          2,
+          1,
+          1,
+          1,
+          193,
+          4,
+          0
+        ],
+        [
+          3,
+          0,
+          0,
+          0,
+          1,
+          15,
+          54,
+          0
+        ],
+        [
+          7,
+          9,
+          1,
+          0,
+          1,
+          0,
+          0,
+          0
+        ]
+      ]
+    },
+    "Focal_Loss_PyTorch": {
+      "strategy": "Focal_Loss_PyTorch",
+      "fit_time_seconds": 8.17,
+      "val_macro_f1": 0.5185,
+      "val_weighted_f1": 0.6445,
+      "val_accuracy": 0.6532,
+      "val_balanced_accuracy": 0.5221,
+      "val_ece": 0.1472,
+      "val_brier_score": 0.5227,
+      "per_class": {
+        "SN_Ia": {
+          "support": 202,
+          "precision": 0.627,
+          "precision_ci_95": [
+            0.5648,
+            0.6853
+          ],
+          "recall": 0.7574,
+          "recall_ci_95": [
+            0.6939,
+            0.8114
+          ],
+          "f1": 0.6861,
+          "true_positives": 153,
+          "false_positives": 91,
+          "false_negatives": 49,
+          "is_rare_class": false
+        },
+        "SN_CC": {
+          "support": 120,
+          "precision": 0.4516,
+          "precision_ci_95": [
+            0.3668,
+            0.5393
+          ],
+          "recall": 0.4667,
+          "recall_ci_95": [
+            0.3798,
+            0.5556
+          ],
+          "f1": 0.459,
+          "true_positives": 56,
+          "false_positives": 68,
+          "false_negatives": 64,
+          "is_rare_class": false
+        },
+        "SLSN": {
+          "support": 50,
+          "precision": 0.5833,
+          "precision_ci_95": [
+            0.422,
+            0.7286
+          ],
+          "recall": 0.42,
+          "recall_ci_95": [
+            0.2938,
+            0.5577
+          ],
+          "f1": 0.4884,
+          "true_positives": 21,
+          "false_positives": 15,
+          "false_negatives": 29,
+          "is_rare_class": false
+        },
+        "TDE": {
+          "support": 24,
+          "precision": 0.5455,
+          "precision_ci_95": [
+            0.2801,
+            0.7873
+          ],
+          "recall": 0.25,
+          "recall_ci_95": [
+            0.12,
+            0.449
+          ],
+          "f1": 0.3429,
+          "true_positives": 6,
+          "false_positives": 5,
+          "false_negatives": 18,
+          "is_rare_class": true
+        },
+        "CV_Nova": {
+          "support": 49,
+          "precision": 0.6364,
+          "precision_ci_95": [
+            0.5042,
+            0.7507
+          ],
+          "recall": 0.7143,
+          "recall_ci_95": [
+            0.5759,
+            0.8215
+          ],
+          "f1": 0.6731,
+          "true_positives": 35,
+          "false_positives": 20,
+          "false_negatives": 14,
+          "is_rare_class": false
+        },
+        "AGN_QSO": {
+          "support": 205,
+          "precision": 0.9217,
+          "precision_ci_95": [
+            0.8706,
+            0.9537
+          ],
+          "recall": 0.7463,
+          "recall_ci_95": [
+            0.6826,
+            0.801
+          ],
+          "f1": 0.8248,
+          "true_positives": 153,
+          "false_positives": 13,
+          "false_negatives": 52,
+          "is_rare_class": false
+        },
+        "Varstar": {
+          "support": 73,
+          "precision": 0.5714,
+          "precision_ci_95": [
+            0.4759,
+            0.6619
+          ],
+          "recall": 0.8219,
+          "recall_ci_95": [
+            0.7188,
+            0.8929
+          ],
+          "f1": 0.6742,
+          "true_positives": 60,
+          "false_positives": 45,
+          "false_negatives": 13,
+          "is_rare_class": false
+        },
+        "OTHER_EXTRAGALACTIC": {
+          "support": 18,
+          "precision": 0.0,
+          "precision_ci_95": [
+            0.0,
+            0.0
+          ],
+          "recall": 0.0,
+          "recall_ci_95": [
+            0.0,
+            0.1759
+          ],
+          "f1": 0.0,
+          "true_positives": 0,
+          "false_positives": 0,
+          "false_negatives": 18,
+          "is_rare_class": true
+        }
+      },
+      "confusion_matrix": [
+        [
+          153,
+          34,
+          2,
+          1,
+          7,
+          3,
+          2,
+          0
+        ],
+        [
+          48,
+          56,
+          7,
+          0,
+          7,
+          1,
+          1,
+          0
+        ],
+        [
+          11,
+          17,
+          21,
+          1,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          11,
+          2,
+          4,
+          6,
+          1,
+          0,
+          0,
+          0
+        ],
+        [
+          12,
+          2,
+          0,
+          0,
+          35,
+          0,
+          0,
+          0
+        ],
+        [
+          2,
+          1,
+          1,
+          2,
+          4,
+          153,
+          42,
+          0
+        ],
+        [
+          1,
+          2,
+          0,
+          0,
+          1,
+          9,
+          60,
+          0
+        ],
+        [
+          6,
+          10,
+          1,
+          1,
+          0,
+          0,
+          0,
+          0
+        ]
+      ]
+    },
+    "SMOTE_Physical_Ablation_RF": {
+      "strategy": "SMOTE_Physical_Ablation_RF",
+      "fit_time_seconds": 3.72,
+      "val_macro_f1": 0.6274,
+      "val_weighted_f1": 0.7349,
+      "val_accuracy": 0.7382,
+      "val_balanced_accuracy": 0.622,
+      "val_ece": 0.0592,
+      "val_brier_score": 0.3701,
+      "per_class": {
+        "SN_Ia": {
+          "support": 202,
+          "precision": 0.7208,
+          "precision_ci_95": [
+            0.6609,
+            0.7738
+          ],
+          "recall": 0.8564,
+          "recall_ci_95": [
+            0.8014,
+            0.8981
+          ],
+          "f1": 0.7828,
+          "true_positives": 173,
+          "false_positives": 67,
+          "false_negatives": 29,
+          "is_rare_class": false
+        },
+        "SN_CC": {
+          "support": 120,
+          "precision": 0.6214,
+          "precision_ci_95": [
+            0.5249,
+            0.7091
+          ],
+          "recall": 0.5333,
+          "recall_ci_95": [
+            0.4444,
+            0.6202
+          ],
+          "f1": 0.574,
+          "true_positives": 64,
+          "false_positives": 39,
+          "false_negatives": 56,
+          "is_rare_class": false
+        },
+        "SLSN": {
+          "support": 50,
+          "precision": 0.6562,
+          "precision_ci_95": [
+            0.4831,
+            0.7959
+          ],
+          "recall": 0.42,
+          "recall_ci_95": [
+            0.2938,
+            0.5577
+          ],
+          "f1": 0.5122,
+          "true_positives": 21,
+          "false_positives": 11,
+          "false_negatives": 29,
+          "is_rare_class": false
+        },
+        "TDE": {
+          "support": 24,
+          "precision": 0.4138,
+          "precision_ci_95": [
+            0.2551,
+            0.5926
+          ],
+          "recall": 0.5,
+          "recall_ci_95": [
+            0.3143,
+            0.6857
+          ],
+          "f1": 0.4528,
+          "true_positives": 12,
+          "false_positives": 17,
+          "false_negatives": 12,
+          "is_rare_class": true
+        },
+        "CV_Nova": {
+          "support": 49,
+          "precision": 0.7447,
+          "precision_ci_95": [
+            0.6049,
+            0.8475
+          ],
+          "recall": 0.7143,
+          "recall_ci_95": [
+            0.5759,
+            0.8215
+          ],
+          "f1": 0.7292,
+          "true_positives": 35,
+          "false_positives": 12,
+          "false_negatives": 14,
+          "is_rare_class": false
+        },
+        "AGN_QSO": {
+          "support": 205,
+          "precision": 0.8971,
+          "precision_ci_95": [
+            0.8478,
+            0.9317
+          ],
+          "recall": 0.8927,
+          "recall_ci_95": [
+            0.8429,
+            0.9281
+          ],
+          "f1": 0.8949,
+          "true_positives": 183,
+          "false_positives": 21,
+          "false_negatives": 22,
+          "is_rare_class": false
+        },
+        "Varstar": {
+          "support": 73,
+          "precision": 0.8281,
+          "precision_ci_95": [
+            0.7179,
+            0.9012
+          ],
+          "recall": 0.726,
+          "recall_ci_95": [
+            0.6144,
+            0.8151
+          ],
+          "f1": 0.7737,
+          "true_positives": 53,
+          "false_positives": 11,
+          "false_negatives": 20,
+          "is_rare_class": false
+        },
+        "OTHER_EXTRAGALACTIC": {
+          "support": 18,
+          "precision": 0.2727,
+          "precision_ci_95": [
+            0.1315,
+            0.4815
+          ],
+          "recall": 0.3333,
+          "recall_ci_95": [
+            0.1628,
+            0.5625
+          ],
+          "f1": 0.3,
+          "true_positives": 6,
+          "false_positives": 16,
+          "false_negatives": 12,
+          "is_rare_class": true
+        }
+      },
+      "confusion_matrix": [
+        [
+          173,
+          12,
+          1,
+          4,
+          5,
+          2,
+          0,
+          5
+        ],
+        [
+          42,
+          64,
+          2,
+          2,
+          3,
+          2,
+          0,
+          5
+        ],
+        [
+          4,
+          16,
+          21,
+          7,
+          0,
+          0,
+          0,
+          2
+        ],
+        [
+          5,
+          2,
+          4,
+          12,
+          0,
+          0,
+          0,
+          1
+        ],
+        [
+          9,
+          2,
+          0,
+          1,
+          35,
+          1,
+          0,
+          1
+        ],
+        [
+          2,
+          2,
+          2,
+          3,
+          2,
+          183,
+          11,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          0,
+          2,
+          16,
+          53,
+          2
+        ],
+        [
+          5,
+          5,
+          2,
+          0,
+          0,
+          0,
+          0,
+          6
+        ]
+      ]
+    }
+  },
+  "rare_class_tradeoff_analysis": {
+    "Control_Unweighted_RF": {
+      "overall_accuracy_delta": 0.0,
+      "macro_f1_delta": 0.0,
+      "other_extragalactic_fp": 2,
+      "other_extragalactic_tp": 0,
+      "other_extragalactic_f1": 0.0,
+      "tde_fp": 2,
+      "tde_tp": 6,
+      "tde_f1": 0.375
+    },
+    "Balanced_Weights_RF": {
+      "overall_accuracy_delta": -0.0094,
+      "macro_f1_delta": -0.0007,
+      "other_extragalactic_fp": 3,
+      "other_extragalactic_tp": 0,
+      "other_extragalactic_f1": 0.0,
+      "tde_fp": 11,
+      "tde_tp": 9,
+      "tde_f1": 0.4091
+    },
+    "Effective_Number_Beta99_RF": {
+      "overall_accuracy_delta": 0.0041,
+      "macro_f1_delta": 0.001,
+      "other_extragalactic_fp": 3,
+      "other_extragalactic_tp": 0,
+      "other_extragalactic_f1": 0.0,
+      "tde_fp": 3,
+      "tde_tp": 6,
+      "tde_f1": 0.3636
+    },
+    "Effective_Number_Beta999_RF": {
+      "overall_accuracy_delta": 0.0014,
+      "macro_f1_delta": 0.0054,
+      "other_extragalactic_fp": 4,
+      "other_extragalactic_tp": 0,
+      "other_extragalactic_f1": 0.0,
+      "tde_fp": 10,
+      "tde_tp": 8,
+      "tde_f1": 0.381
+    },
+    "Balanced_Random_Forest": {
+      "overall_accuracy_delta": -0.0027,
+      "macro_f1_delta": 0.0102,
+      "other_extragalactic_fp": 3,
+      "other_extragalactic_tp": 0,
+      "other_extragalactic_f1": 0.0,
+      "tde_fp": 10,
+      "tde_tp": 9,
+      "tde_f1": 0.4186
+    },
+    "Balanced_Weights_HGBT": {
+      "overall_accuracy_delta": 0.0135,
+      "macro_f1_delta": 0.009,
+      "other_extragalactic_fp": 1,
+      "other_extragalactic_tp": 0,
+      "other_extragalactic_f1": 0.0,
+      "tde_fp": 1,
+      "tde_tp": 5,
+      "tde_f1": 0.3333
+    },
+    "Focal_Loss_PyTorch": {
+      "overall_accuracy_delta": -0.0863,
+      "macro_f1_delta": -0.0555,
+      "other_extragalactic_fp": 0,
+      "other_extragalactic_tp": 0,
+      "other_extragalactic_f1": 0.0,
+      "tde_fp": 5,
+      "tde_tp": 6,
+      "tde_f1": 0.3429
+    },
+    "SMOTE_Physical_Ablation_RF": {
+      "overall_accuracy_delta": -0.0013,
+      "macro_f1_delta": 0.0534,
+      "other_extragalactic_fp": 16,
+      "other_extragalactic_tp": 6,
+      "other_extragalactic_f1": 0.3,
+      "tde_fp": 17,
+      "tde_tp": 12,
+      "tde_f1": 0.4528
+    }
+  }
+}

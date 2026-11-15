@@ -1,0 +1,338 @@
+{
+  "milestone": "ASTRAEUS Sprint 4B, 4C, 4D Execution",
+  "execution_date": "2026-11-15T10:15:16Z",
+  "spatial_test_sealed": true,
+  "track1_train_size": 2808,
+  "track1_val_size": 741,
+  "track2_unclassified_size": 4365,
+  "sprint4b_temporal_comparison": {
+    "astromer": {
+      "model_name": "AstromerEncoder_Temporal",
+      "fit_time_seconds": 361.54,
+      "inference_latency_ms_per_sample": 4.31,
+      "macro_f1": 0.5295,
+      "balanced_accuracy": 0.5345,
+      "accuracy": 0.6464
+    },
+    "balanced_rf": {
+      "model_name": "BalancedRandomForest_27D_Physical",
+      "fit_time_seconds": 1.82,
+      "inference_latency_ms_per_sample": 0.04,
+      "macro_f1": 0.5916,
+      "balanced_accuracy": 0.5816,
+      "accuracy": 0.7382
+    }
+  },
+  "sprint4c_calibration_and_abstention": {
+    "risk_coverage_curve": [
+      {
+        "confidence_threshold": 0.2,
+        "coverage": 1.0,
+        "accepted_samples": 741,
+        "abstained_samples": 0,
+        "accepted_accuracy": 0.7382,
+        "accepted_macro_f1": 0.5916,
+        "accepted_balanced_accuracy": 0.5816,
+        "rare_class_abstention": {
+          "TDE": {
+            "support": 24,
+            "abstained_count": 0,
+            "abstention_rate": 0.0
+          },
+          "OTHER_EXTRAGALACTIC": {
+            "support": 18,
+            "abstained_count": 0,
+            "abstention_rate": 0.0
+          }
+        }
+      },
+      {
+        "confidence_threshold": 0.3,
+        "coverage": 0.9703,
+        "accepted_samples": 719,
+        "abstained_samples": 22,
+        "accepted_accuracy": 0.7566,
+        "accepted_macro_f1": 0.6099,
+        "accepted_balanced_accuracy": 0.6008,
+        "rare_class_abstention": {
+          "TDE": {
+            "support": 24,
+            "abstained_count": 3,
+            "abstention_rate": 0.125
+          },
+          "OTHER_EXTRAGALACTIC": {
+            "support": 18,
+            "abstained_count": 1,
+            "abstention_rate": 0.0556
+          }
+        }
+      },
+      {
+        "confidence_threshold": 0.4,
+        "coverage": 0.8718,
+        "accepted_samples": 646,
+        "abstained_samples": 95,
+        "accepted_accuracy": 0.7895,
+        "accepted_macro_f1": 0.6192,
+        "accepted_balanced_accuracy": 0.6024,
+        "rare_class_abstention": {
+          "TDE": {
+            "support": 24,
+            "abstained_count": 11,
+            "abstention_rate": 0.4583
+          },
+          "OTHER_EXTRAGALACTIC": {
+            "support": 18,
+            "abstained_count": 9,
+            "abstention_rate": 0.5
+          }
+        }
+      },
+      {
+        "confidence_threshold": 0.5,
+        "coverage": 0.7382,
+        "accepted_samples": 547,
+        "abstained_samples": 194,
+        "accepted_accuracy": 0.8391,
+        "accepted_macro_f1": 0.6392,
+        "accepted_balanced_accuracy": 0.6191,
+        "rare_class_abstention": {
+          "TDE": {
+            "support": 24,
+            "abstained_count": 15,
+            "abstention_rate": 0.625
+          },
+          "OTHER_EXTRAGALACTIC": {
+            "support": 18,
+            "abstained_count": 14,
+            "abstention_rate": 0.7778
+          }
+        }
+      },
+      {
+        "confidence_threshold": 0.6,
+        "coverage": 0.6059,
+        "accepted_samples": 449,
+        "abstained_samples": 292,
+        "accepted_accuracy": 0.8797,
+        "accepted_macro_f1": 0.6635,
+        "accepted_balanced_accuracy": 0.6468,
+        "rare_class_abstention": {
+          "TDE": {
+            "support": 24,
+            "abstained_count": 19,
+            "abstention_rate": 0.7917
+          },
+          "OTHER_EXTRAGALACTIC": {
+            "support": 18,
+            "abstained_count": 16,
+            "abstention_rate": 0.8889
+          }
+        }
+      },
+      {
+        "confidence_threshold": 0.7,
+        "coverage": 0.4669,
+        "accepted_samples": 346,
+        "abstained_samples": 395,
+        "accepted_accuracy": 0.9104,
+        "accepted_macro_f1": 0.7155,
+        "accepted_balanced_accuracy": 0.6921,
+        "rare_class_abstention": {
+          "TDE": {
+            "support": 24,
+            "abstained_count": 21,
+            "abstention_rate": 0.875
+          },
+          "OTHER_EXTRAGALACTIC": {
+            "support": 18,
+            "abstained_count": 17,
+            "abstention_rate": 0.9444
+          }
+        }
+      },
+      {
+        "confidence_threshold": 0.8,
+        "coverage": 0.3428,
+        "accepted_samples": 254,
+        "abstained_samples": 487,
+        "accepted_accuracy": 0.9488,
+        "accepted_macro_f1": 0.9653,
+        "accepted_balanced_accuracy": 0.9626,
+        "rare_class_abstention": {
+          "TDE": {
+            "support": 24,
+            "abstained_count": 24,
+            "abstention_rate": 1.0
+          },
+          "OTHER_EXTRAGALACTIC": {
+            "support": 18,
+            "abstained_count": 18,
+            "abstention_rate": 1.0
+          }
+        }
+      },
+      {
+        "confidence_threshold": 0.85,
+        "coverage": 0.2901,
+        "accepted_samples": 215,
+        "abstained_samples": 526,
+        "accepted_accuracy": 0.9488,
+        "accepted_macro_f1": 0.9585,
+        "accepted_balanced_accuracy": 0.9586,
+        "rare_class_abstention": {
+          "TDE": {
+            "support": 24,
+            "abstained_count": 24,
+            "abstention_rate": 1.0
+          },
+          "OTHER_EXTRAGALACTIC": {
+            "support": 18,
+            "abstained_count": 18,
+            "abstention_rate": 1.0
+          }
+        }
+      }
+    ]
+  },
+  "sprint4d_track2_openset_discovery": {
+    "candidate_count": 4365,
+    "rank_correlations": {
+      "iso_vs_lof": 0.4455,
+      "iso_vs_mahal": 0.5252,
+      "lof_vs_mahal": 0.5378
+    },
+    "top10_candidate_discoveries": [
+      {
+        "rank": 1,
+        "candidate_id": "ZTF23aabknao",
+        "ra_deg": 191.28615,
+        "dec_deg": -0.46171,
+        "composite_anomaly_score": 0.6582,
+        "isolation_forest_score": 0.9745,
+        "lof_score": 0.0,
+        "mahalanobis_score": 1.0,
+        "primary_anomalous_feature": "flux_dynamic_range_nmgy",
+        "feature_value": 6040.45,
+        "feature_z_score": 6.31
+      },
+      {
+        "rank": 2,
+        "candidate_id": "DR24_FLD_257204400008997",
+        "ra_deg": 87.05204,
+        "dec_deg": -27.62247,
+        "composite_anomaly_score": 0.4449,
+        "isolation_forest_score": 0.8544,
+        "lof_score": 0.0,
+        "mahalanobis_score": 0.4804,
+        "primary_anomalous_feature": "flux_kurtosis",
+        "feature_value": 264.4974,
+        "feature_z_score": 15.75
+      },
+      {
+        "rank": 3,
+        "candidate_id": "DR24_FLD_257104400020987",
+        "ra_deg": 86.96386,
+        "dec_deg": -27.87728,
+        "composite_anomaly_score": 0.4146,
+        "isolation_forest_score": 0.7552,
+        "lof_score": 0.0,
+        "mahalanobis_score": 0.4886,
+        "primary_anomalous_feature": "flux_kurtosis",
+        "feature_value": 262.3092,
+        "feature_z_score": 15.62
+      },
+      {
+        "rank": 4,
+        "candidate_id": "ZTF22aaaoenn",
+        "ra_deg": 192.10191,
+        "dec_deg": -3.82325,
+        "composite_anomaly_score": 0.4062,
+        "isolation_forest_score": 0.2186,
+        "lof_score": 1.0,
+        "mahalanobis_score": 0.0001,
+        "primary_anomalous_feature": "has_multiband_detections",
+        "feature_value": 0.0,
+        "feature_z_score": 3.0
+      },
+      {
+        "rank": 5,
+        "candidate_id": "ZTF24aaadlto",
+        "ra_deg": 246.01418,
+        "dec_deg": 25.11625,
+        "composite_anomaly_score": 0.406,
+        "isolation_forest_score": 0.2186,
+        "lof_score": 0.9995,
+        "mahalanobis_score": 0.0001,
+        "primary_anomalous_feature": "has_multiband_detections",
+        "feature_value": 0.0,
+        "feature_z_score": 3.0
+      },
+      {
+        "rank": 6,
+        "candidate_id": "ZTF18aabylvn",
+        "ra_deg": 214.49817,
+        "dec_deg": 25.13683,
+        "composite_anomaly_score": 0.3975,
+        "isolation_forest_score": 1.0,
+        "lof_score": 0.0,
+        "mahalanobis_score": 0.1924,
+        "primary_anomalous_feature": "total_epochs",
+        "feature_value": 1577.0,
+        "feature_z_score": 4.1
+      },
+      {
+        "rank": 7,
+        "candidate_id": "ZTF22aaezoey",
+        "ra_deg": 193.64904,
+        "dec_deg": -12.56861,
+        "composite_anomaly_score": 0.3905,
+        "isolation_forest_score": 0.9692,
+        "lof_score": 0.0,
+        "mahalanobis_score": 0.2024,
+        "primary_anomalous_feature": "peak_flux_r_band",
+        "feature_value": 2832.554,
+        "feature_z_score": 3.84
+      },
+      {
+        "rank": 8,
+        "candidate_id": "DR24_FLD_421107100007700",
+        "ra_deg": 177.38049,
+        "dec_deg": -3.10064,
+        "composite_anomaly_score": 0.3729,
+        "isolation_forest_score": 0.8869,
+        "lof_score": 0.0,
+        "mahalanobis_score": 0.2316,
+        "primary_anomalous_feature": "flux_kurtosis",
+        "feature_value": 199.2334,
+        "feature_z_score": 11.83
+      },
+      {
+        "rank": 9,
+        "candidate_id": "ZTF21aazxtha",
+        "ra_deg": 192.73828,
+        "dec_deg": -14.33317,
+        "composite_anomaly_score": 0.3675,
+        "isolation_forest_score": 0.852,
+        "lof_score": 0.0,
+        "mahalanobis_score": 0.2505,
+        "primary_anomalous_feature": "flux_dynamic_range_nmgy",
+        "feature_value": 2794.9083,
+        "feature_z_score": 2.81
+      },
+      {
+        "rank": 10,
+        "candidate_id": "ZTF18adjkgrv",
+        "ra_deg": 193.65255,
+        "dec_deg": -12.55802,
+        "composite_anomaly_score": 0.3602,
+        "isolation_forest_score": 0.9413,
+        "lof_score": 0.0,
+        "mahalanobis_score": 0.1392,
+        "primary_anomalous_feature": "peak_flux_r_band",
+        "feature_value": 2625.0384,
+        "feature_z_score": 3.54
+      }
+    ]
+  }
+}
