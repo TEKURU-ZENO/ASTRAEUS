@@ -110,10 +110,10 @@ All four retained rare-transient candidates in the disjoint cohort are spectrosc
    - TNS Type: `SLSN-I`
    - Classification Bibcode: `2024TNSCR3279....1P`
    - Status: **Tier S2 (Traceable Spectroscopic Confirmation)**; designated `NOT_EVALUABLE` ($N < 5$).
-4. **`ZTF21abfmpiv`** (`AT2021sjt`, OTHER_EXTRAGALACTIC):
-   - Redshift: $z = 0.027$, Peak Mag: $18.49$
+4. **`ZTF19abrdxbh`** (`SN2019ofm`, OTHER_EXTRAGALACTIC):
+   - Redshift: $z = 0.03025$, Peak Mag: $18.57$
    - Normalized Subtype: `Ca-rich` (Calcium-rich gap transient)
-   - Classification Bibcode: `2021TNSCR2352....1D`
+   - Classification Bibcode: `2019TNSCR1756....1F, 2020TNSCR2316....1D, 2022TNSCR.404....1D`
    - Status: **Tier S2 (Traceable Spectroscopic Confirmation)**; designated `NOT_EVALUABLE` ($N < 5$).
 
 ---

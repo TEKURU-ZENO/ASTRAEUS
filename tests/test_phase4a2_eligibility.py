@@ -5,8 +5,8 @@ Verifies:
 1. Cryptographic hashes of all 7 input dependencies.
 2. Spectroscopic evidence ledger row count (7,614) and exact tier breakdown (S1=0, S2=7582, S3=31, S4=1).
 3. Traceability of all Tier S2 candidates to published TNSCR/ADS classification bibcodes.
-4. Light-curve match ledger row count (7,614) and evaluability breakdown (16 Evaluable, 1 Single-Band, 7,597 Awaiting Broker).
-5. Numerical validity and frozen 27-feature interface compatibility for all 16 evaluable candidates.
+4. Light-curve match ledger row count (7,614) and evaluability breakdown (14 Evaluable, 3 Single-Band, 7,597 Awaiting Broker).
+5. Numerical validity and frozen 27-feature interface compatibility for all 14 evaluable candidates.
 6. Decoupled and independent auditability across Track A and Track B.
 7. Integrity and checksum consistency of the reproducibility manifest.
 """
