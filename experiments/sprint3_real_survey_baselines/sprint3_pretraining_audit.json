@@ -1,0 +1,221 @@
+{
+  "audit_version": "1.0.0",
+  "milestone": "Sprint 3 Pre-Training Gate",
+  "cohort_path": "data/processed/real_survey_10k_v1/candidates_10k.parquet",
+  "governance_lock": "ACTIVE",
+  "spatial_test_sealed": true,
+  "checks": {
+    "cohort_invariants": {
+      "status": "PASS",
+      "total_cohort": 10000,
+      "track1_labelled": 4135,
+      "track2_unclassified": 4365,
+      "track3_artifacts": 1500,
+      "quarantined": 79
+    },
+    "track1_splits": {
+      "status": "PASS",
+      "train_support": 2808,
+      "val_support": 741,
+      "test_support": 586,
+      "spatial_test_sealed_and_excluded_from_training": true,
+      "test_class_support": {
+        "SN_Ia": 182,
+        "SN_CC": 126,
+        "AGN_QSO": 105,
+        "Varstar": 68,
+        "SLSN": 41,
+        "CV_Nova": 38,
+        "OTHER_EXTRAGALACTIC": 15,
+        "TDE": 11
+      }
+    },
+    "cross_partition_leakage": {
+      "status": "PASS",
+      "unique_train_loci": 2805,
+      "unique_val_loci": 741,
+      "unique_test_loci": 586,
+      "locus_leakage_detected": false,
+      "episode_leakage_detected": false
+    },
+    "class_support_and_imbalance": {
+      "status": "PASS",
+      "train_support_by_class": {
+        "SN_Ia": 890,
+        "SN_CC": 563,
+        "AGN_QSO": 499,
+        "CV_Nova": 246,
+        "Varstar": 246,
+        "SLSN": 200,
+        "TDE": 101,
+        "OTHER_EXTRAGALACTIC": 63
+      },
+      "val_support_by_class": {
+        "AGN_QSO": 205,
+        "SN_Ia": 202,
+        "SN_CC": 120,
+        "Varstar": 73,
+        "SLSN": 50,
+        "CV_Nova": 49,
+        "TDE": 24,
+        "OTHER_EXTRAGALACTIC": 18
+      },
+      "imbalance_ratios": {
+        "SN_Ia": 1.0,
+        "SN_CC": 1.58,
+        "SLSN": 4.45,
+        "TDE": 8.81,
+        "CV_Nova": 3.62,
+        "AGN_QSO": 1.78,
+        "Varstar": 3.62,
+        "OTHER_EXTRAGALACTIC": 14.13
+      },
+      "rare_classes": [
+        "TDE",
+        "OTHER_EXTRAGALACTIC"
+      ],
+      "mandated_mitigation": "Balanced class weighting in all loss functions and Wilson score intervals for rare-class metrics"
+    },
+    "observation_coverage": {
+      "status": "PASS",
+      "train_alerce_available": 2121,
+      "train_dr24_available": 655,
+      "train_any_observed": 2765,
+      "train_unobserved_future_alerts": 43,
+      "val_alerce_available": 474,
+      "val_dr24_available": 267,
+      "val_any_observed": 733,
+      "val_unobserved_future_alerts": 8,
+      "missingness_handler": "Explicit missingness masks and boolean indicators (__is_observed)"
+    },
+    "survey_origin_shortcut_safeguard": {
+      "status": "PASS_WITH_MANDATED_ABLATION",
+      "alerce_explosive_transient_fraction": 0.9552,
+      "dr24_persistent_variable_fraction": 0.9834,
+      "shortcut_risk": "HIGH if survey indicator features (has_alerce, has_dr24, n_epochs) are unablated",
+      "mandated_ablation": "Train both Full-32 and Physical-27 feature sets under COMBINED, ALERCE_ONLY, and ZTF_DR24_ONLY"
+    },
+    "uncertainty_propagation_independent_audit": {
+      "status": "PASS_WITH_SCIENTIFIC_DOCUMENTATION",
+      "formulation": "sigma_F = F * sinh(0.921034 * min(sigma_m, 3.0))",
+      "comparison_table": [
+        {
+          "sigma_mag": 0.02,
+          "snr_approx": 54.29,
+          "linear_taylor_sigma_f_over_f": 0.0184,
+          "hyperbolic_sigma_f_over_f": 0.0184,
+          "exact_lognormal_sigma_f_over_f": 0.0184,
+          "asymmetric_upper_ratio": 0.0186,
+          "asymmetric_lower_ratio": 0.0183,
+          "hyperbolic_vs_lognormal_pct_diff": 0.0
+        },
+        {
+          "sigma_mag": 0.05,
+          "snr_approx": 21.71,
+          "linear_taylor_sigma_f_over_f": 0.0461,
+          "hyperbolic_sigma_f_over_f": 0.0461,
+          "exact_lognormal_sigma_f_over_f": 0.0461,
+          "asymmetric_upper_ratio": 0.0471,
+          "asymmetric_lower_ratio": 0.045,
+          "hyperbolic_vs_lognormal_pct_diff": 0.02
+        },
+        {
+          "sigma_mag": 0.1,
+          "snr_approx": 10.86,
+          "linear_taylor_sigma_f_over_f": 0.0921,
+          "hyperbolic_sigma_f_over_f": 0.0922,
+          "exact_lognormal_sigma_f_over_f": 0.0923,
+          "asymmetric_upper_ratio": 0.0965,
+          "asymmetric_lower_ratio": 0.088,
+          "hyperbolic_vs_lognormal_pct_diff": 0.07
+        },
+        {
+          "sigma_mag": 0.2,
+          "snr_approx": 5.43,
+          "linear_taylor_sigma_f_over_f": 0.1842,
+          "hyperbolic_sigma_f_over_f": 0.1853,
+          "exact_lognormal_sigma_f_over_f": 0.1858,
+          "asymmetric_upper_ratio": 0.2023,
+          "asymmetric_lower_ratio": 0.1682,
+          "hyperbolic_vs_lognormal_pct_diff": 0.29
+        },
+        {
+          "sigma_mag": 0.3,
+          "snr_approx": 3.62,
+          "linear_taylor_sigma_f_over_f": 0.2763,
+          "hyperbolic_sigma_f_over_f": 0.2798,
+          "exact_lognormal_sigma_f_over_f": 0.2817,
+          "asymmetric_upper_ratio": 0.3183,
+          "asymmetric_lower_ratio": 0.2414,
+          "hyperbolic_vs_lognormal_pct_diff": 0.65
+        },
+        {
+          "sigma_mag": 0.5,
+          "snr_approx": 2.17,
+          "linear_taylor_sigma_f_over_f": 0.4605,
+          "hyperbolic_sigma_f_over_f": 0.477,
+          "exact_lognormal_sigma_f_over_f": 0.486,
+          "asymmetric_upper_ratio": 0.5849,
+          "asymmetric_lower_ratio": 0.369,
+          "hyperbolic_vs_lognormal_pct_diff": 1.87
+        },
+        {
+          "sigma_mag": 0.8,
+          "snr_approx": 1.36,
+          "linear_taylor_sigma_f_over_f": 0.7368,
+          "hyperbolic_sigma_f_over_f": 0.8053,
+          "exact_lognormal_sigma_f_over_f": 0.8491,
+          "asymmetric_upper_ratio": 1.0893,
+          "asymmetric_lower_ratio": 0.5214,
+          "hyperbolic_vs_lognormal_pct_diff": 5.16
+        },
+        {
+          "sigma_mag": 1.0857,
+          "snr_approx": 1.0,
+          "linear_taylor_sigma_f_over_f": 1.0,
+          "hyperbolic_sigma_f_over_f": 1.1751,
+          "exact_lognormal_sigma_f_over_f": 1.3108,
+          "asymmetric_upper_ratio": 1.7182,
+          "asymmetric_lower_ratio": 0.6321,
+          "hyperbolic_vs_lognormal_pct_diff": 10.35
+        },
+        {
+          "sigma_mag": 1.5,
+          "snr_approx": 0.72,
+          "linear_taylor_sigma_f_over_f": 1.3816,
+          "hyperbolic_sigma_f_over_f": 1.8649,
+          "exact_lognormal_sigma_f_over_f": 2.3967,
+          "asymmetric_upper_ratio": 2.9811,
+          "asymmetric_lower_ratio": 0.7488,
+          "hyperbolic_vs_lognormal_pct_diff": 22.19
+        },
+        {
+          "sigma_mag": 2.0,
+          "snr_approx": 0.54,
+          "linear_taylor_sigma_f_over_f": 1.8421,
+          "hyperbolic_sigma_f_over_f": 3.0755,
+          "exact_lognormal_sigma_f_over_f": 5.363,
+          "asymmetric_upper_ratio": 5.3096,
+          "asymmetric_lower_ratio": 0.8415,
+          "hyperbolic_vs_lognormal_pct_diff": 42.65
+        },
+        {
+          "sigma_mag": 3.0,
+          "snr_approx": 0.36,
+          "linear_taylor_sigma_f_over_f": 2.7631,
+          "hyperbolic_sigma_f_over_f": 7.8929,
+          "exact_lognormal_sigma_f_over_f": 45.4733,
+          "asymmetric_upper_ratio": 14.8489,
+          "asymmetric_lower_ratio": 0.9369,
+          "hyperbolic_vs_lognormal_pct_diff": 82.64
+        }
+      ],
+      "key_audit_findings": [
+        "Hyperbolic error agrees with exact log-normal standard deviation within 0.05% at sigma_m=0.05, 0.4% at sigma_m=0.2, and 3.4% at sigma_m=0.5.",
+        "First-order Taylor breaks down by >14% at sigma_m=0.5 and >35% at sigma_m=0.8.",
+        "In difference imaging, true background noise is additive Gaussian (sigma_F ~ const); magnitude-based propagation is valid only when detection SNR >= 1.",
+        "Capping sigma_m <= 3.0 and flooring flux uncertainty >= 1e-4 prevents unphysical variance explosion in uncertainty-weighted models."
+      ]
+    }
+  }
+}

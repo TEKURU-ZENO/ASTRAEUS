@@ -696,6 +696,48 @@ class CandidateObservationLoader:
             except Exception:
                 pass
 
+        # 2. Load ZTF DR24 observations
+        dr24_lc_dir = self.dr24_dir / "lightcurves"
+        dr24_path = dr24_lc_dir / f"{candidate_id}.json"
+        if dr24_path.exists():
+            try:
+                with open(dr24_path, "r") as f:
+                    dr_data = json.load(f)
+                for obs in dr_data.get("observations", []):
+                    hmjd = obs.get("hmjd")
+                    mag = obs.get("mag")
+                    magerr = obs.get("magerr")
+                    fid = obs.get("filterid", 1)
+                    cflag = obs.get("catflags", 0)
+                    if hmjd is None or mag is None or magerr is None:
+                        continue
+                    # Check catflags: bit 15 (32768) marks fatal clouds/moon
+                    is_fatal = bool(int(cflag) & 32768)
+                    if is_fatal:
+                        continue  # Exclude fatal cloud/moon exposures per ZTF DR24 specification
+
+                    mag_val = float(mag)
+                    flux_nmgy = 10.0 ** (- (mag_val - 22.500) / 2.5)
+                    clamped_sigmam = min(max(float(magerr), 0.0), 3.0)
+                    sigma_nmgy = flux_nmgy * math.sinh(0.9210340371976184 * clamped_sigmam)
+
+                    observations.append(
+                        CanonicalObservation(
+                            mjd=float(hmjd),
+                            passband=self._filter_map.get(int(fid), "r"),
+                            flux_nmgy=flux_nmgy,
+                            flux_err_nmgy=max(sigma_nmgy, 1e-4),
+                            is_upper_limit=False,
+                            limiting_flux_nmgy=None,
+                            is_negative_flux=False,
+                            source_survey="ZTF_DR24",
+                            quality_flag=int(cflag),
+                            severity="DEGRADED" if cflag != 0 else "INFORMATIONAL",
+                        )
+                    )
+            except Exception:
+                pass
+
         # Sort chronologically
         observations.sort(key=lambda o: o.mjd)
         return observations
