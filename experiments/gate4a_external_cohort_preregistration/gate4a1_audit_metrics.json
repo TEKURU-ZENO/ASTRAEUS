@@ -1,0 +1,80 @@
+{
+  "milestone": "ASTRAEUS Gate 4 Phase 4A.1 Cohort Integrity Reconciliation",
+  "audit_timestamp_utc": "2026-11-15T13:55:26.247697+00:00",
+  "input_artifacts": {
+    "bts_raw_snapshot_csv": {
+      "path": "data\\external_validity_v1\\raw\\bts\\bts_raw_snapshot.csv",
+      "sha256": "51d85f50772fd1412fcc2646f48b4d331b2e07f7023454f89cddd7a8e7e283ed",
+      "record_count": 10988
+    },
+    "candidates_10k_parquet": {
+      "path": "data\\processed\\real_survey_10k_v1\\candidates_10k.parquet",
+      "sha256": "6713faee3c2ab47b7a14baa321c540f2b18ddb9b51d6ddcf88dba7008ad214ae",
+      "train_val_records_ingested": 6643
+    },
+    "healpix_splits_json": {
+      "path": "configs\\data_splits_healpix.json",
+      "sha256": "234bb08c482824648607fa8f874477d0225717c18263b0f16ea276dd1e12417b",
+      "test_pixels_count": 1808
+    },
+    "taxonomy_mapping_yaml": {
+      "path": "configs\\gate4\\gate4a_taxonomy_mapping.yaml",
+      "sha256": "265b538f2ad040e15a4b9b0069676c7dbbaec095c9a8b88bbcbe96ad7e8364b1"
+    },
+    "raw_label_reconciliation_csv": {
+      "path": "configs\\gate4\\gate4a_raw_label_reconciliation.csv",
+      "sha256": "c5c8b06e0e3b065437224513efef33212ae4fdd4404f65c9dca6b7bdc6cef0f1"
+    }
+  },
+  "exact_attrition_arithmetic": {
+    "raw_bts_records": 10988,
+    "set_A_train_val_overlap": 1712,
+    "set_B_spatial_test_buffer": 1665,
+    "set_intersection_A_and_B": 5,
+    "set_union_total_excluded": 3372,
+    "stage1_train_val_exclusions": 1712,
+    "stage2_incremental_spatial_exclusions": 1660,
+    "retained_screened_candidates": 7616,
+    "formula_proof": "1712 (Train/Val) + 1660 (New Spatial Buffer) = 3372 (Total Excluded)",
+    "retention_proof": "10988 (Raw) - 3372 (Excluded) = 7616 (Screened Retained)"
+  },
+  "four_distinct_cohort_totals": {
+    "total_1_screened_candidates": 7616,
+    "screened_quarantined_or_unclassified": 2,
+    "total_2_taxonomy_admitted_candidates": 7614,
+    "total_3_spectroscopically_supported_events": "Pending event-level spectral FITS verification",
+    "total_4_feature_evaluable_events": "Pending ZTF difference light-curve matching"
+  },
+  "class_support_taxonomy_admitted": {
+    "SN_Ia": 5916,
+    "SN_CC": 1693,
+    "TDE": 2,
+    "AGN_QSO": 1,
+    "OTHER_EXTRAGALACTIC": 1,
+    "SLSN": 1
+  },
+  "tde_subclass_reconciliation": {
+    "raw_tde_string_records": 75,
+    "raw_admitted_tde_records": 70,
+    "raw_unmapped_tde_records": 5,
+    "tde_records_in_train_val": 69,
+    "tde_records_in_spatial_buffer": 4,
+    "tde_records_admitted_screened": 2,
+    "admitted_tde_candidates": [
+      {
+        "ztf_id": "ZTF18aabdajx",
+        "iau_id": "AT2022dbl",
+        "raw_type": "TDE",
+        "normalized_subtype": "TDE",
+        "taxonomy_admitted_status": "Approved"
+      },
+      {
+        "ztf_id": "ZTF18aabtxvd",
+        "iau_id": "AT2018zr",
+        "raw_type": "TDE",
+        "normalized_subtype": "TDE",
+        "taxonomy_admitted_status": "Approved"
+      }
+    ]
+  }
+}
