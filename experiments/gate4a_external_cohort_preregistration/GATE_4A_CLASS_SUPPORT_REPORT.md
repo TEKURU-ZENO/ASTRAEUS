@@ -23,7 +23,7 @@ The audit establishes:
    - **Total 3: Spectroscopically Supported Candidates (S1/S2):** *Pending event-level spectral FITS verification*
    - **Total 4: Feature-Evaluable Candidates:** *Pending ZTF difference light-curve matching*
 3. **Historical Ingestion Overlap in Rare Classes:** Of the 75 raw TDE records in BTS, 69 were already ingested into the original Track 1 Train/Val split. Similarly, of the 162 SLSN records in BTS, 133 were already present in Train/Val.
-4. **Evaluability Reality on Disjoint BTS Cohort:** The disjoint BTS sample is **adequately powered exclusively for Type Ia supernovae ($N = 5,916$) and core-collapse supernovae ($N = 1,693$)**. All other classes possess fewer than 5 records ($N < 5$) and are designated strictly as **`NOT_EVALUABLE`**.
+4. **Evaluability Reality on Disjoint BTS Cohort:** The disjoint BTS sample provides **`LARGE_SAMPLE_SUPPORT` ($N \ge 30$) exclusively for Type Ia supernovae ($N = 5,916$) and core-collapse supernovae ($N = 1,693$)**. All other classes possess fewer than 5 records ($N < 5$) and are designated strictly as **`NOT_EVALUABLE`**.
 
 ```mermaid
 flowchart TD
@@ -32,8 +32,8 @@ flowchart TD
     S2 --> SCREENED["Total 1: Screened Candidates<br/>N = 7,616 candidates"]
     SCREENED --> QUAR["Quarantined / Unclassified<br/>N = 2 (-: 1, Other: 1)"]
     SCREENED --> ADMIT["Total 2: Taxonomy-Admitted Candidates<br/>N = 7,614 candidates"]
-    ADMIT --> P_SNIA["SN_Ia: N = 5,916<br/>ADEQUATELY_POWERED"]
-    ADMIT --> P_SNCC["SN_CC: N = 1,693<br/>ADEQUATELY_POWERED"]
+    ADMIT --> P_SNIA["SN_Ia: N = 5,916<br/>LARGE_SAMPLE_SUPPORT"]
+    ADMIT --> P_SNCC["SN_CC: N = 1,693<br/>LARGE_SAMPLE_SUPPORT"]
     ADMIT --> P_RARE["TDE (N=2), SLSN (N=1), Other (N=1)<br/>NOT_EVALUABLE (N < 5)"]
     ADMIT --> P_GAL["CV_Nova (N=0), Varstar (N=0), AGN (N=1)<br/>NOT_EVALUABLE (N < 5)"]
     style RAW fill:#e1f5fe,stroke:#0288d1,stroke-width:2px
@@ -73,12 +73,12 @@ Of the 7,616 geometrically screened candidates, exactly **2 are quarantined**:
 
 The remaining **7,614 taxonomy-admitted candidates** map into the ASTRAEUS classes:
 
-| Astrophysical Class | Raw BTS Count | Set A Overlap | Set B Overlap | Admitted Disjoint Count | Power Designation | Statistical Justification |
+| Astrophysical Class | Raw BTS Count | Set A Overlap | Set B Overlap | Admitted Disjoint Count | Support Designation | Statistical Justification |
 | :--- | :---: | :---: | :---: | :---: | :---: | :--- |
-| **SN_Ia** | 8,072 | 1,232 | 1,217 | **5,916** | **`ADEQUATELY_POWERED`** | $N \ge 30$; large-sample bootstrap valid. |
-| **SN_CC** | 2,620 | 450 | 469 | **1,693** | **`ADEQUATELY_POWERED`** | $N \ge 30$; supports rigorous Wilson intervals. |
-| **SLSN** | 162 | 133 | 28 | **1** | **`NOT_EVALUABLE`** | $N = 1 < 5$; 82.1% in Train/Val. |
-| **TDE** | 70\* | 69 | 4 | **2** | **`NOT_EVALUABLE`** | $N = 2 < 5$; 92.0% in Train/Val. |
+| **SN_Ia** | 8,072 | 1,232 | 1,217 | **5,916** | **`LARGE_SAMPLE_SUPPORT`** | $N \ge 30$; large-sample bootstrap valid. |
+| **SN_CC** | 2,620 | 450 | 469 | **1,693** | **`LARGE_SAMPLE_SUPPORT`** | $N \ge 30$; supports rigorous Wilson intervals. |
+| **SLSN** | 162 | 133 | 28 | **1** | **`NOT_EVALUABLE`** | $N = 1 < 5$; 82.1% (133/162) in Train/Val. |
+| **TDE** | 70\* | 64 | 4 | **2** | **`NOT_EVALUABLE`** | $N = 2 < 5$; $70 - 64 - 4 = 2$; 91.4% in Train/Val (69/75 raw strings). |
 | **OTHER_EXTRAGALACTIC** | 2\* | 1 | 0 | **1** | **`NOT_EVALUABLE`** | $N = 1 < 5$; Ca-rich admitted; generic Other quarantined. |
 | **AGN_QSO** | 1 | 0 | 0 | **1** | **`NOT_EVALUABLE`** | $N = 1 < 5$; BTS selection excludes AGNs. |
 | **CV_Nova** | 0 | 0 | 0 | **0** | **`NOT_EVALUABLE`** | $N = 0$; BTS selection excludes Galactic novae. |

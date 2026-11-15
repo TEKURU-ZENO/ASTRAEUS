@@ -37,12 +37,13 @@ Phase 4A.1 resolves all blocking findings identified in the Phase 4A Scientific 
 | **BTS Raw Snapshot** | `data/external_validity_v1/raw/bts/bts_raw_snapshot.csv` | `51d85f50772fd1412fcc2646f48b4d331b2e07f7023454f89cddd7a8e7e283ed` | 10,988 records (1.34 MB) | **IMMUTABLE RAW** |
 | **TNS Raw Snapshot** | `data/external_validity_v1/raw/tns/tns_public_objects.csv.zip` | `5d3fa52497de6f24491ebf25715fa9b617a220f662b2fc5102f9baa02e094ad8` | 212,833 objects (14.7 MB) | **IMMUTABLE RAW** |
 | **Raw Acquisition Manifest** | `data/external_validity_v1/provenance/raw_acquisition_manifest.json` | `b0d143471f599c65823a28ae2404b357bfff90ab9fb781d7b249428d4f6961a9` | 1,475 bytes | **CERTIFIED** |
-| **Taxonomy Mapping** | `configs/gate4/gate4a_taxonomy_mapping.yaml` | `378d38865cbb685ddb152ecb77bc096ea3e0fa4ef3b2591b9487c69a4891bca7` | Version `gate4a_taxonomy_v1.0` | **FROZEN** |
-| **Label Reconciliation** | `configs/gate4/gate4a_raw_label_reconciliation.csv` | `3df9cf159bb8a994ef0f2df988950db8166c3a64bc775e5c8e31281dbd935400` | Exactly 33 raw label rows | **FROZEN** |
+| **Taxonomy Mapping** | `configs/gate4/gate4a_taxonomy_mapping.yaml` | `265b538f2ad040e15a4b9b0069676c7dbbaec095c9a8b88bbcbe96ad7e8364b1` | Version `gate4a_taxonomy_v1.0` | **FROZEN** |
+| **Label Reconciliation** | `configs/gate4/gate4a_raw_label_reconciliation.csv` | `c5c8b06e0e3b065437224513efef33212ae4fdd4404f65c9dca6b7bdc6cef0f1` | Exactly 33 raw label rows | **FROZEN** |
 | **HEALPix Splits Manifest** | `configs/data_splits_healpix.json` | `234bb08c482824648607fa8f874477d0225717c18263b0f16ea276dd1e12417b` | 1,808 test pixels (NSIDE=32) | **LOCKED** |
 | **Candidate Parquet** | `data/processed/real_survey_10k_v1/candidates_10k.parquet` | `6713faee3c2ab47b7a14baa321c540f2b18ddb9b51d6ddcf88dba7008ad214ae` | 10,000 historical candidates | **LOCKED** |
-| **Audit Script** | `experiments/gate4a_external_cohort_preregistration/run_phase4a1_cohort_integrity_audit.py` | `0d25fa1cecf9b0629734e565ad57fecae41951ca79e49bfefd0a7a3b4e69b0fa` | Deterministic audit script | **EXECUTABLE** |
-| **Audit Metrics Output** | `experiments/gate4a_external_cohort_preregistration/gate4a1_audit_metrics.json` | `ffcaa39ee134caec900ba9500e5bb4d3e202f27350871857b4deaf0e13dbc61c` | Exact machine-readable results | **CERTIFIED** |
+| **Audit Script** | `experiments/gate4a_external_cohort_preregistration/run_phase4a1_cohort_integrity_audit.py` | `949d09b3a84c498e7c859250aad7a2f97dfebbbd37e5a24de1fedbe85a18ea7d` | Deterministic audit script | **EXECUTABLE** |
+| **Audit Metrics Output** | `experiments/gate4a_external_cohort_preregistration/gate4a1_audit_metrics.json` | `3db98a22aa98bfb2e5f2aadd017ba6caf21cea2e263e56e11c884072c5e54ab3` | Exact machine-readable results | **CERTIFIED** |
+| **Integrity Test Suite** | `tests/test_phase4a1_cohort_integrity.py` | Passing (6/6 tests) | Automated pytest verification | **VERIFIED** |
 
 ---
 
@@ -52,8 +53,8 @@ Phase 4A.1 resolves all blocking findings identified in the Phase 4A Scientific 
 Total 1: Geometrically & Identity-Screened Candidates : 7,616
   - Quarantined / Unclassified in Screened Set        :     2 (Raw types '-' and 'Other')
 Total 2: Taxonomy-Admitted Candidates                 : 7,614
-  - Type Ia Supernovae (SN_Ia)                        : 5,916 -> ADEQUATELY_POWERED
-  - Core-Collapse Supernovae (SN_CC)                  : 1,693 -> ADEQUATELY_POWERED
+  - Type Ia Supernovae (SN_Ia)                        : 5,916 -> LARGE_SAMPLE_SUPPORT (N >= 30)
+  - Core-Collapse Supernovae (SN_CC)                  : 1,693 -> LARGE_SAMPLE_SUPPORT (N >= 30)
   - Super-Luminous Supernovae (SLSN)                  :     1 -> NOT_EVALUABLE (N < 5)
   - Tidal Disruption Events (TDE)                     :     2 -> NOT_EVALUABLE (N < 5)
   - Other Extragalactic Transients                    :     1 -> NOT_EVALUABLE (N < 5)
