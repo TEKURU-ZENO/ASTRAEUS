@@ -1,0 +1,143 @@
+# ASTRAEUS Gate 4 Phase 4A Authoritative Taxonomy Mapping
+version: "gate4a_taxonomy_v1.0"
+governance_contract: "FROZEN_GATE_4A_TAXONOMY_SPECIFICATION"
+created_at_utc: "2026-11-15T12:25:00Z"
+
+principles:
+  - "Preserve all 8 classes individually; no aggregation of rare classes."
+  - "Spectroscopic confirmation required for primary tiers (S1/S2)."
+  - "Do not use OTHER_EXTRAGALACTIC as an uncertainty or low-confidence bucket."
+  - "Unsupported classes in a sub-cohort remain strictly NOT EVALUABLE."
+
+classes:
+  SN_Ia:
+    description: "Thermonuclear Type Ia Supernovae"
+    admitted_source_subtypes:
+      - "SN Ia"
+      - "SNIa"
+      - "Ia"
+      - "SN Ia-normal"
+      - "SN Ia-91T-like"
+      - "SN Ia-91bg-like"
+      - "SN Ia-CSM"
+      - "SN Ia-pec"
+      - "SN Ia-SC"
+    subtypes_requiring_flag:
+      SN_Iax:
+        admitted_in_primary: true
+        flag: "is_subluminous_iax"
+        description: "Sub-luminous Type Iax / 02cx-like thermonuclear transients"
+    prohibited_mappings:
+      - "SN I"  # Ambiguous without subtype confirmation
+
+  SN_CC:
+    description: "Core-Collapse Supernovae (Type II, Type Ib, Type Ic)"
+    admitted_source_subtypes:
+      - "SN II"
+      - "SN IIP"
+      - "SN IIL"
+      - "SN IIn"
+      - "SN IIb"
+      - "SN Ib"
+      - "SN Ic"
+      - "SN Ic-BL"
+      - "SN Ibn"
+      - "SN Icn"
+      - "SN II-pec"
+      - "SN Ib/c"
+    prohibited_mappings:
+      - "SLSN-II"  # Must map strictly to SLSN
+
+  SLSN:
+    description: "Super-Luminous Supernovae (Hydrogen-rich and Hydrogen-poor)"
+    admitted_source_subtypes:
+      - "SLSN-I"
+      - "SLSN-II"
+      - "SLSN-R"
+      - "SLSN-Ib"
+      - "SLSN-IIn"
+    strict_rule: "Never merge into ordinary SN_CC."
+
+  TDE:
+    description: "Tidal Disruption Events"
+    admitted_source_subtypes:
+      - "TDE"
+      - "TDE-H"
+      - "TDE-He"
+      - "TDE-Bowen"
+      - "Tidal Disruption Event"
+    strict_rule: "Must possess traceable spectroscopic confirmation; never inferred from blue colors, nuclear host offset, or power-law decay alone."
+
+  CV_Nova:
+    description: "Cataclysmic Variables and Novae"
+    admitted_source_subtypes:
+      - "Nova"
+      - "Classical Nova"
+      - "Recurrent Nova"
+      - "Nova-like"
+      - "CV"
+      - "Dwarf Nova"
+      - "UG"
+      - "AM CVn"
+    provenance_tracking: "Preserve nova versus dwarf nova subtype in fine_class."
+
+  AGN_QSO:
+    description: "Active Galactic Nuclei and Quasars"
+    admitted_source_subtypes:
+      - "AGN"
+      - "QSO"
+      - "Blazar"
+      - "Seyfert 1"
+      - "Seyfert 2"
+      - "LINER"
+      - "BLLac"
+    selection_notice: "BTS primary spectroscopic selection deliberately excludes AGNs; supplementary sourcing required."
+
+  Varstar:
+    description: "Galactic Variable Stars"
+    admitted_source_subtypes:
+      - "Varstar"
+      - "Variable Star"
+      - "RR Lyrae"
+      - "Mira"
+      - "Cepheid"
+      - "Eclipsing Binary"
+      - "YSO"
+      - "LPV"
+      - "Delta Scuti"
+      - "BY Dra"
+    selection_notice: "BTS primary selection excludes Galactic stellar sources; requires supplementary external catalog (e.g. Gaia DR3)."
+
+  OTHER_EXTRAGALACTIC:
+    description: "Explicitly Confirmed Exotic / Rare Extragalactic Transients"
+    admitted_source_subtypes:
+      - "Kilonova"
+      - "KN"
+      - "FBOT"
+      - "Fast Blue Optical Transient"
+      - "Luminous Red Nova"
+      - "LRN"
+      - "ILRT"
+      - "Intermediate Luminosity Red Transient"
+      - "Ca-rich"
+      - "Calcium-rich transient"
+      - "Gap transient"
+    strict_rule: "Strictly prohibited as an uncertainty bucket or unclassified fallback. Must have affirmative evidence of an exotic physical transient nature."
+
+excluded_and_quarantined_categories:
+  UNCLASSIFIED:
+    source_labels:
+      - "AT"
+      - "Astronomical Transient"
+      - "Candidate"
+      - "Unknown"
+    cohort_action: "QUARANTINE_FROM_SUPERVISED"
+  
+  DETECTION_ARTIFACT:
+    source_labels:
+      - "Bogus"
+      - "Artifact"
+      - "Cosmic Ray"
+      - "Satellite Trail"
+      - "Defect"
+    cohort_action: "EXCLUDE_FROM_ASTROPHYSICAL"

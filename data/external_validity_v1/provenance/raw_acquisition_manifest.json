@@ -1,0 +1,42 @@
+{
+  "milestone": "ASTRAEUS Gate 4 Phase 4A Raw Data Acquisition",
+  "acquisition_timestamp_utc": "2026-11-15T12:47:32.037114+00:00",
+  "governance_status": "RAW_DATA_ACQUIRED_MODEL_FROZEN",
+  "sources": {
+    "bts_primary_catalog": {
+      "source_url": "https://sites.astro.caltech.edu/ztf/bts/explorer.php?f=s&subsample=all&format=csv",
+      "local_path": "data\\external_validity_v1\\raw\\bts\\bts_raw_snapshot.csv",
+      "sha256": "51d85f50772fd1412fcc2646f48b4d331b2e07f7023454f89cddd7a8e7e283ed",
+      "size_bytes": 1341719,
+      "row_count": 10988,
+      "columns": [
+        "ZTFID",
+        "IAUID",
+        "RA",
+        "Dec",
+        "peakt",
+        "peakfilt",
+        "peakmag",
+        "peakabs",
+        "duration",
+        "rise",
+        "fade",
+        "type",
+        "redshift",
+        "b",
+        "A_V"
+      ],
+      "source_organization": "Caltech / Zwicky Transient Facility (ZTF)",
+      "survey_programme": "Bright Transient Survey (BTS)"
+    },
+    "tns_supplementary_snapshot": {
+      "source_system": "Transient Name Server (TNS)",
+      "local_path": "data\\external_validity_v1\\raw\\tns\\tns_public_objects.csv.zip",
+      "sha256": "5d3fa52497de6f24491ebf25715fa9b617a220f662b2fc5102f9baa02e094ad8",
+      "size_bytes": 14726528,
+      "row_count": 212833,
+      "format": "csv.zip",
+      "source_organization": "IAU / Weizmann Institute of Science"
+    }
+  }
+}
