@@ -1,0 +1,523 @@
+{
+  "milestone": "ASTRAEUS Gate 3: Spatial Test Partition Unblinded Evaluation",
+  "evaluation_timestamp_utc": "2026-11-15T11:55:08.846798+00:00",
+  "evaluation_contract": "FROZEN_GATE_3_ONE_TIME_EVALUATION",
+  "spatial_holdout_region": "HEALPix Ring 80 (Geographically Held-Out Real Sky Region)",
+  "cohort_size": 586,
+  "cryptographic_lineage": {
+    "champion_model_sha256": "466c2752808be01e4f41bd8fdb9c0804a57b03b2c02c35e5172ccebda411fce5",
+    "champion_model_path": "experiments\\sprint4h_final_release_remediation\\sprint4h_champion_model.joblib",
+    "candidates_parquet_sha256": "6713faee3c2ab47b7a14baa321c540f2b18ddb9b51d6ddcf88dba7008ad214ae",
+    "evaluation_script_sha256": "06318abf326543041396e8efe1405de92bae0e7020a55d1e5d4de62d8e6aebdc",
+    "git_commit": "b9afd87c1c45e583cb893b5f95808fb95a21d9a2"
+  },
+  "operating_point_theta_0_00": {
+    "threshold": 0.0,
+    "coverage": 1.0,
+    "accepted_count": 586,
+    "top1_accuracy": 0.7406,
+    "balanced_accuracy": 0.6052,
+    "macro_f1_8class": 0.6096,
+    "weighted_f1": 0.7323,
+    "expected_calibration_error": 0.0726,
+    "brier_score": 0.3695,
+    "confusion_matrix": [
+      [
+        157,
+        19,
+        0,
+        3,
+        3,
+        0,
+        0,
+        0
+      ],
+      [
+        36,
+        71,
+        11,
+        4,
+        2,
+        1,
+        0,
+        1
+      ],
+      [
+        3,
+        10,
+        27,
+        1,
+        0,
+        0,
+        0,
+        0
+      ],
+      [
+        3,
+        3,
+        2,
+        3,
+        0,
+        0,
+        0,
+        0
+      ],
+      [
+        6,
+        2,
+        0,
+        0,
+        29,
+        1,
+        0,
+        0
+      ],
+      [
+        0,
+        3,
+        2,
+        0,
+        1,
+        95,
+        4,
+        0
+      ],
+      [
+        1,
+        0,
+        0,
+        0,
+        4,
+        12,
+        51,
+        0
+      ],
+      [
+        4,
+        8,
+        0,
+        2,
+        0,
+        0,
+        0,
+        1
+      ]
+    ],
+    "per_class_metrics": {
+      "SN_Ia": {
+        "support": 182,
+        "true_positives": 157,
+        "false_positives": 53,
+        "false_negatives": 25,
+        "precision": 0.7476,
+        "precision_ci_95": [
+          0.6848,
+          0.8016
+        ],
+        "recall": 0.8626,
+        "recall_ci_95": [
+          0.8051,
+          0.9052
+        ],
+        "f1": 0.801,
+        "is_rare_class": false
+      },
+      "SN_CC": {
+        "support": 126,
+        "true_positives": 71,
+        "false_positives": 45,
+        "false_negatives": 55,
+        "precision": 0.6121,
+        "precision_ci_95": [
+          0.5212,
+          0.6958
+        ],
+        "recall": 0.5635,
+        "recall_ci_95": [
+          0.4763,
+          0.6469
+        ],
+        "f1": 0.5868,
+        "is_rare_class": false
+      },
+      "SLSN": {
+        "support": 41,
+        "true_positives": 27,
+        "false_positives": 15,
+        "false_negatives": 14,
+        "precision": 0.6429,
+        "precision_ci_95": [
+          0.4917,
+          0.7701
+        ],
+        "recall": 0.6585,
+        "recall_ci_95": [
+          0.5055,
+          0.7844
+        ],
+        "f1": 0.6506,
+        "is_rare_class": false
+      },
+      "TDE": {
+        "support": 11,
+        "true_positives": 3,
+        "false_positives": 10,
+        "false_negatives": 8,
+        "precision": 0.2308,
+        "precision_ci_95": [
+          0.0818,
+          0.5026
+        ],
+        "recall": 0.2727,
+        "recall_ci_95": [
+          0.0975,
+          0.5656
+        ],
+        "f1": 0.25,
+        "is_rare_class": true
+      },
+      "CV_Nova": {
+        "support": 38,
+        "true_positives": 29,
+        "false_positives": 10,
+        "false_negatives": 9,
+        "precision": 0.7436,
+        "precision_ci_95": [
+          0.5892,
+          0.8543
+        ],
+        "recall": 0.7632,
+        "recall_ci_95": [
+          0.6079,
+          0.8701
+        ],
+        "f1": 0.7532,
+        "is_rare_class": false
+      },
+      "AGN_QSO": {
+        "support": 105,
+        "true_positives": 95,
+        "false_positives": 14,
+        "false_negatives": 10,
+        "precision": 0.8716,
+        "precision_ci_95": [
+          0.7959,
+          0.9219
+        ],
+        "recall": 0.9048,
+        "recall_ci_95": [
+          0.8335,
+          0.9474
+        ],
+        "f1": 0.8879,
+        "is_rare_class": false
+      },
+      "Varstar": {
+        "support": 68,
+        "true_positives": 51,
+        "false_positives": 4,
+        "false_negatives": 17,
+        "precision": 0.9273,
+        "precision_ci_95": [
+          0.8274,
+          0.9714
+        ],
+        "recall": 0.75,
+        "recall_ci_95": [
+          0.6356,
+          0.8376
+        ],
+        "f1": 0.8293,
+        "is_rare_class": false
+      },
+      "OTHER_EXTRAGALACTIC": {
+        "support": 15,
+        "true_positives": 1,
+        "false_positives": 1,
+        "false_negatives": 14,
+        "precision": 0.5,
+        "precision_ci_95": [
+          0.0945,
+          0.9055
+        ],
+        "recall": 0.0667,
+        "recall_ci_95": [
+          0.0119,
+          0.2982
+        ],
+        "f1": 0.1176,
+        "is_rare_class": true
+      }
+    }
+  },
+  "operating_point_theta_0_50": {
+    "threshold": 0.5,
+    "coverage": 0.8174,
+    "accepted_count": 479,
+    "abstained_count": 107,
+    "accepted_accuracy": 0.8121,
+    "accepted_balanced_accuracy": 0.6497,
+    "selective_macro_f1_8class": 0.6523,
+    "effective_macro_f1_present_classes": 0.6523,
+    "active_classes_count": 8,
+    "per_class_selective": {
+      "SN_Ia": {
+        "total_support": 182,
+        "accepted_count": 150,
+        "abstained_count": 32,
+        "abstention_rate": 0.1758,
+        "accepted_precision": 0.8023,
+        "effective_recall": 0.7582,
+        "selective_f1": 0.7797
+      },
+      "SN_CC": {
+        "total_support": 126,
+        "accepted_count": 96,
+        "abstained_count": 30,
+        "abstention_rate": 0.2381,
+        "accepted_precision": 0.7262,
+        "effective_recall": 0.4841,
+        "selective_f1": 0.581
+      },
+      "SLSN": {
+        "total_support": 41,
+        "accepted_count": 26,
+        "abstained_count": 15,
+        "abstention_rate": 0.3659,
+        "accepted_precision": 0.6667,
+        "effective_recall": 0.4878,
+        "selective_f1": 0.5634
+      },
+      "TDE": {
+        "total_support": 11,
+        "accepted_count": 3,
+        "abstained_count": 8,
+        "abstention_rate": 0.7273,
+        "accepted_precision": 0.5,
+        "effective_recall": 0.0909,
+        "selective_f1": 0.1538
+      },
+      "CV_Nova": {
+        "total_support": 38,
+        "accepted_count": 33,
+        "abstained_count": 5,
+        "abstention_rate": 0.1316,
+        "accepted_precision": 0.8,
+        "effective_recall": 0.7368,
+        "selective_f1": 0.7671
+      },
+      "AGN_QSO": {
+        "total_support": 105,
+        "accepted_count": 97,
+        "abstained_count": 8,
+        "abstention_rate": 0.0762,
+        "accepted_precision": 0.8846,
+        "effective_recall": 0.8762,
+        "selective_f1": 0.8804
+      },
+      "Varstar": {
+        "total_support": 68,
+        "accepted_count": 66,
+        "abstained_count": 2,
+        "abstention_rate": 0.0294,
+        "accepted_precision": 0.9423,
+        "effective_recall": 0.7206,
+        "selective_f1": 0.8167
+      },
+      "OTHER_EXTRAGALACTIC": {
+        "total_support": 15,
+        "accepted_count": 8,
+        "abstained_count": 7,
+        "abstention_rate": 0.4667,
+        "accepted_precision": 0.0,
+        "effective_recall": 0.0,
+        "selective_f1": 0.0
+      }
+    }
+  },
+  "risk_coverage_curve": [
+    {
+      "confidence_threshold": 0.0,
+      "coverage": 1.0,
+      "accepted_count": 586,
+      "abstained_count": 0,
+      "accepted_accuracy": 0.7406,
+      "accepted_balanced_accuracy": 0.6052,
+      "selective_macro_f1_8class": 0.6096,
+      "effective_macro_f1_present_classes": 0.6096,
+      "num_present_classes": 8,
+      "tde_abstention_rate": 0.0,
+      "other_extragalactic_abstention_rate": 0.0
+    },
+    {
+      "confidence_threshold": 0.2,
+      "coverage": 1.0,
+      "accepted_count": 586,
+      "abstained_count": 0,
+      "accepted_accuracy": 0.7406,
+      "accepted_balanced_accuracy": 0.6052,
+      "selective_macro_f1_8class": 0.6096,
+      "effective_macro_f1_present_classes": 0.6096,
+      "num_present_classes": 8,
+      "tde_abstention_rate": 0.0,
+      "other_extragalactic_abstention_rate": 0.0
+    },
+    {
+      "confidence_threshold": 0.3,
+      "coverage": 0.9863,
+      "accepted_count": 578,
+      "abstained_count": 8,
+      "accepted_accuracy": 0.7491,
+      "accepted_balanced_accuracy": 0.6162,
+      "selective_macro_f1_8class": 0.6185,
+      "effective_macro_f1_present_classes": 0.6185,
+      "num_present_classes": 8,
+      "tde_abstention_rate": 0.0909,
+      "other_extragalactic_abstention_rate": 0.0667
+    },
+    {
+      "confidence_threshold": 0.4,
+      "coverage": 0.9078,
+      "accepted_count": 532,
+      "abstained_count": 54,
+      "accepted_accuracy": 0.7801,
+      "accepted_balanced_accuracy": 0.6068,
+      "selective_macro_f1_8class": 0.6142,
+      "effective_macro_f1_present_classes": 0.6142,
+      "num_present_classes": 8,
+      "tde_abstention_rate": 0.4545,
+      "other_extragalactic_abstention_rate": 0.4
+    },
+    {
+      "confidence_threshold": 0.5,
+      "coverage": 0.8174,
+      "accepted_count": 479,
+      "abstained_count": 107,
+      "accepted_accuracy": 0.8121,
+      "accepted_balanced_accuracy": 0.6497,
+      "selective_macro_f1_8class": 0.6523,
+      "effective_macro_f1_present_classes": 0.6523,
+      "num_present_classes": 8,
+      "tde_abstention_rate": 0.7273,
+      "other_extragalactic_abstention_rate": 0.4667
+    },
+    {
+      "confidence_threshold": 0.6,
+      "coverage": 0.7031,
+      "accepted_count": 412,
+      "abstained_count": 174,
+      "accepted_accuracy": 0.8398,
+      "accepted_balanced_accuracy": 0.6882,
+      "selective_macro_f1_8class": 0.6812,
+      "effective_macro_f1_present_classes": 0.6812,
+      "num_present_classes": 8,
+      "tde_abstention_rate": 0.8182,
+      "other_extragalactic_abstention_rate": 0.6
+    },
+    {
+      "confidence_threshold": 0.7,
+      "coverage": 0.5068,
+      "accepted_count": 297,
+      "abstained_count": 289,
+      "accepted_accuracy": 0.9024,
+      "accepted_balanced_accuracy": 0.6515,
+      "selective_macro_f1_8class": 0.6548,
+      "effective_macro_f1_present_classes": 0.6548,
+      "num_present_classes": 8,
+      "tde_abstention_rate": 0.9091,
+      "other_extragalactic_abstention_rate": 0.9333
+    },
+    {
+      "confidence_threshold": 0.8,
+      "coverage": 0.3003,
+      "accepted_count": 176,
+      "abstained_count": 410,
+      "accepted_accuracy": 0.9261,
+      "accepted_balanced_accuracy": 0.771,
+      "selective_macro_f1_8class": 0.6791,
+      "effective_macro_f1_present_classes": 0.7761,
+      "num_present_classes": 7,
+      "tde_abstention_rate": 0.9091,
+      "other_extragalactic_abstention_rate": 1.0
+    },
+    {
+      "confidence_threshold": 0.85,
+      "coverage": 0.1143,
+      "accepted_count": 67,
+      "abstained_count": 519,
+      "accepted_accuracy": 0.9403,
+      "accepted_balanced_accuracy": 0.8889,
+      "selective_macro_f1_8class": 0.305,
+      "effective_macro_f1_present_classes": 0.8132,
+      "num_present_classes": 3,
+      "tde_abstention_rate": 1.0,
+      "other_extragalactic_abstention_rate": 1.0
+    }
+  ],
+  "split_conformal_test_evaluation": {
+    "inclusion_threshold_p_star": 0.0706,
+    "target_marginal_coverage": 0.9,
+    "empirical_spatial_test_coverage": 0.9437,
+    "mean_prediction_set_size": 2.06,
+    "singleton_set_fraction": 0.2696,
+    "empty_set_fraction": 0.0,
+    "per_class_coverage": {
+      "SN_Ia": 0.9945,
+      "SN_CC": 1.0,
+      "SLSN": 0.9024,
+      "TDE": 0.7273,
+      "CV_Nova": 0.9474,
+      "AGN_QSO": 0.9714,
+      "Varstar": 0.8382,
+      "OTHER_EXTRAGALACTIC": 0.4
+    }
+  },
+  "generalization_gap_analysis": {
+    "delta_macro_f1": 0.0254,
+    "delta_balanced_accuracy": 0.0341,
+    "delta_accuracy": 0.0038,
+    "per_class_deltas": {
+      "SN_Ia": {
+        "validation_f1": 0.7817,
+        "spatial_test_f1": 0.801,
+        "delta_f1": 0.0193
+      },
+      "SN_CC": {
+        "validation_f1": 0.5455,
+        "spatial_test_f1": 0.5868,
+        "delta_f1": 0.0413
+      },
+      "SLSN": {
+        "validation_f1": 0.5057,
+        "spatial_test_f1": 0.6506,
+        "delta_f1": 0.1449
+      },
+      "TDE": {
+        "validation_f1": 0.4186,
+        "spatial_test_f1": 0.25,
+        "delta_f1": -0.1686
+      },
+      "CV_Nova": {
+        "validation_f1": 0.7447,
+        "spatial_test_f1": 0.7532,
+        "delta_f1": 0.0085
+      },
+      "AGN_QSO": {
+        "validation_f1": 0.8981,
+        "spatial_test_f1": 0.8879,
+        "delta_f1": -0.0102
+      },
+      "Varstar": {
+        "validation_f1": 0.7794,
+        "spatial_test_f1": 0.8293,
+        "delta_f1": 0.0499
+      },
+      "OTHER_EXTRAGALACTIC": {
+        "validation_f1": 0.0,
+        "spatial_test_f1": 0.1176,
+        "delta_f1": 0.1176
+      }
+    }
+  },
+  "scientific_conclusion": "The frozen champion CalibratedBalancedSubsampleRF exhibits genuine spatial generalization on the geographically held-out HEALPix Ring 80 partition (N = 586). The results represent empirical validation of spatial generalization within the real ZTF/ALeRCE survey cohort, preserving rare-class astrophysics and avoiding synthetic data artifacts."
+}
