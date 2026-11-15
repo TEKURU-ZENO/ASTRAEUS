@@ -14,7 +14,21 @@ from astraeus_data.corpus.sequence import TemporalSequence, ObservationRecord
 
 PASSBANDS_ALL_8 = ["u", "g", "r", "i", "z", "Y", "c", "o"]
 PASSBANDS_PRIMARY_6 = ["u", "g", "r", "i", "z", "Y"]
+
+# Legacy Synthetic Benchmark Taxonomy (Retired from headline real-world generalization; SYNTHETIC_SMOKE_ONLY)
 CLASSES_8 = ["SN_Ia", "SN_II", "SN_Ibc", "SLSN", "TDE", "FBOT", "VARIABLE_STAR", "ARTIFACT_DIPOLE"]
+
+# Real-Survey Cohort 8-Class Benchmark Taxonomy (ASTRAEUS Stage 2 / Sprint 2D)
+REAL_SURVEY_CLASSES_8 = [
+    "SN_Ia",
+    "SN_CC",
+    "SLSN",
+    "TDE",
+    "CV_Nova",
+    "AGN_QSO",
+    "Varstar",
+    "OTHER_EXTRAGALACTIC",
+]
 
 # Galactic extinction coefficients A_lambda / E(B-V) for Fitzpatrick 1999 (R_V = 3.1)
 EXTINCTION_COEFFS = {
@@ -39,12 +53,18 @@ class CommonFeatureClassifier:
     21-23: MW-dereddened peak colors: (g-r), (r-i), (c-o)
     24:    Early color slope d(g-r)/dt during early rise (mag/day)
     """
-    def __init__(self, ebv_mw: float = 0.02, calibration_mode: str = "temperature_scaled"):
+    def __init__(
+        self,
+        ebv_mw: float = 0.02,
+        calibration_mode: str = "temperature_scaled",
+        classes: Optional[List[str]] = None,
+    ):
         if calibration_mode not in ("temperature_scaled", "ovr_platt_legacy"):
             raise ValueError(f"Unsupported calibration_mode: {calibration_mode}")
         self.ebv_mw = ebv_mw
         self.calibration_mode = calibration_mode
-        self.num_classes = len(CLASSES_8)
+        self.classes: List[str] = list(classes) if classes is not None else list(CLASSES_8)
+        self.num_classes = len(self.classes)
         self.is_fitted = False
         # Legacy One-vs-Rest Platt scaling parameters (slope, intercept); retired from default inference
         self.platt_weights: np.ndarray = np.ones((self.num_classes, 2))
@@ -233,7 +253,7 @@ class CommonFeatureClassifier:
 
         self.val_size = int(len(y_val))
         self.val_per_class_support = {
-            CLASSES_8[c]: int(np.sum(y_val == c)) for c in range(self.num_classes)
+            self.classes[c]: int(np.sum(y_val == c)) for c in range(self.num_classes)
         }
 
         # 1-parameter global temperature scaling baseline over validation logits
@@ -622,6 +642,7 @@ class CommonFeatureClassifier:
         n_bins: int = 10,
         n_boot: int = 1000,
         seed: int = 42,
+        class_names: Optional[List[str]] = None,
     ) -> Dict[str, Any]:
         n = len(y_true)
         preds = np.argmax(probs, axis=1)
@@ -668,8 +689,9 @@ class CommonFeatureClassifier:
             boot_ece[b_idx] = cls._ece_from_arrays(confs[idx], correct[idx], n_bins=n_bins)
 
         # Class-wise reliability breakdown
+        resolved_class_names = class_names if class_names is not None else CLASSES_8
         per_class_reliability = {}
-        for c_idx, cls_name in enumerate(CLASSES_8):
+        for c_idx, cls_name in enumerate(resolved_class_names):
             y_bin = (y_true == c_idx).astype(np.float64)
             sup = int(np.sum(y_true == c_idx))
             p_c = probs[:, c_idx]

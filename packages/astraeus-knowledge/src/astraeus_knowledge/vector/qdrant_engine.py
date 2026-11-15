@@ -114,45 +114,39 @@ class AstraeusVectorEngine:
         norm_dt = min(dt_days, 3650.0) / 3650.0
         log_dt = math.log10(dt_days + 0.1) / 4.0
 
-        # 11-12: Survey coverage flags
+        # 10-14: Survey coverage & accessibility flags (purely observational infrastructure)
         has_msip = 1.0 if row.get("has_msip_alert") else 0.0
         has_dr24 = 1.0 if row.get("has_dr24_lc") else 0.0
         has_tns = 1.0 if row.get("has_independent_tns") else 0.0
-        survey_density = (has_msip + has_dr24 + has_tns) / 3.0
         forced_flag = 1.0 if row.get("has_forced_photometry") else 0.0
+        has_alerce = 1.0 if row.get("has_alerce_access") else 0.0
 
-        # 13-16: Physical Coarse Class Embedding (One-Hot Style + Astrometric Weight)
-        coarse = str(row.get("coarse_class", "UNCLASSIFIED")).upper()
-        is_sn = 1.0 if ("SN" in coarse or "SUPERNOVA" in coarse) else 0.0
-        is_agn = 1.0 if ("AGN" in coarse or "QSO" in coarse) else 0.0
-        is_var = 1.0 if ("VAR" in coarse or "STAR" in coarse or "ECL" in coarse) else 0.0
-        is_nuclear = 1.0 if ("TDE" in coarse or "NUCLEAR" in coarse) else 0.0
-
-        # 17-18: Evidence Tier Level & Quarantine Penalty
-        tier = str(row.get("evidence_tier", "L5"))
-        tier_map = {"L1": 1.0, "L2": 0.8, "L3": 0.6, "L4": 0.4, "L5": 0.2}
-        tier_val = tier_map.get(tier, 0.2)
-        quarantine_val = -1.0 if row.get("is_quarantined") else 1.0
-
-        # 19-20: Host Proximity & Redshift
-        has_cp = 1.0 if pd.notna(row.get("host_counterpart_id")) else 0.0
-        cp_proxy = 0.5 if has_cp > 0 else -0.5
-        redshift = float(row.get("host_redshift", 0.0)) if pd.notna(row.get("host_redshift")) else 0.0
-        norm_z = min(redshift, 4.0) / 4.0
-
-        # 21-24: Photometric Statistics Proxy
+        # 15-17: Photometric dynamics (cadence & ratios)
         det_ratio = n_det / max(1.0, (n_det + n_ul))
         clean_ratio = n_dr24 / max(1.0, (n_det + n_dr24))
         temporal_span = dt_days / max(1.0, n_det) if n_det > 0 else 0.0
         norm_span = min(temporal_span, 100.0) / 100.0
-        prior_score = 0.8 if is_sn > 0 else (0.5 if is_agn > 0 else 0.2)
 
+        # 18-19: Host counterpart association & proximity proxy (observable crossmatch)
+        has_cp = 1.0 if pd.notna(row.get("host_counterpart_id")) else 0.0
+        cp_proxy = 0.5 if has_cp > 0 else -0.5
+
+        # 20-21: Spatial HEALPix harmonic projection (order 32)
+        hp = float(row.get("healpix_nside32", 0))
+        hp_sin = math.sin(2.0 * math.pi * hp / 12288.0)
+        hp_cos = math.cos(2.0 * math.pi * hp / 12288.0)
+
+        # 22-23: Solar avoidance observing season annual phase & total photometric depth
+        annual_phase = ((first_mjd - 58000.0) % 365.25) / 365.25
+        log_total_obs = math.log10(n_det + n_ul + n_dr24 + 1.0) / 5.0
+
+        # Construct strictly target-leakage-free 24-dim physical observable vector
         raw_vec = np.array([
             cx, cy, cz, glon_proxy, glat_proxy,
             log_ndet, log_nul, log_ndr24, norm_dt, log_dt,
-            survey_density, forced_flag, is_sn, is_agn, is_var, is_nuclear,
-            tier_val, quarantine_val, cp_proxy, norm_z,
-            det_ratio, clean_ratio, norm_span, prior_score
+            has_msip, has_dr24, has_tns, forced_flag, has_alerce,
+            det_ratio, clean_ratio, norm_span, has_cp, cp_proxy,
+            hp_sin, hp_cos, annual_phase, log_total_obs
         ], dtype=float)
 
         norm = np.linalg.norm(raw_vec)
