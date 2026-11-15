@@ -56,6 +56,19 @@ from astraeus_data.real_survey.ztf_dr24_connector import (
     resolve_partition_from_healpix9,
     skycoord_to_healpix9,
 )
+from astraeus_data.real_survey.observation_feature_pipeline import (
+    ObservationConfig,
+    CanonicalObservation,
+    FEATURE_SPECIFICATION_32,
+    FEATURE_NAMES_32,
+    RealSurveyFeatureExtractor,
+    ObservationFeatureResult,
+    CandidateObservationLoader,
+    compute_heliocentric_time_correction_days,
+    reconcile_utc_mjd_to_hmjd,
+    reconcile_hmjd_to_utc_mjd,
+    certify_observation_configurations_coverage,
+)
 
 __all__ = [
     "AlerceZtfClient",
@@ -98,4 +111,15 @@ __all__ = [
     "row_to_tns_record",
     "skycoord_to_healpix9",
     "summarize_availability",
+    "ObservationConfig",
+    "CanonicalObservation",
+    "FEATURE_SPECIFICATION_32",
+    "FEATURE_NAMES_32",
+    "RealSurveyFeatureExtractor",
+    "ObservationFeatureResult",
+    "CandidateObservationLoader",
+    "compute_heliocentric_time_correction_days",
+    "reconcile_utc_mjd_to_hmjd",
+    "reconcile_hmjd_to_utc_mjd",
+    "certify_observation_configurations_coverage",
 ]

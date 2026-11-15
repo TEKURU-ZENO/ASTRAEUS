@@ -28,7 +28,8 @@ ASTRAEUS/
 │   ├── base_workstation.yaml          # Local RTX 5050 hardware budget & batch profiles
 │   └── data_splits_healpix.json       # Deterministic sky partitioning manifests
 └── experiments/
-    └── phase1_baselines/              # Baseline tracking, seed registries, MLflow configs
+    ├── archived_synthetic_smoke_benchmarks/ # RETIRED: Synthetic unit smoke tests (SYNTHETIC_SMOKE_ONLY)
+    └── real_survey_v1/                # Certified 10,000-candidate real-survey evaluation cohort
 ```
 
 ---

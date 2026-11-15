@@ -1,8 +1,10 @@
 """
-ASTRAEUS Phase 1: Sprint 4 Rare-Event Anomaly Discovery Benchmark.
-Implements the 4-population anomaly benchmark, model-aware physics fitting,
-split conformal calibration under dual settings, and telescope follow-up budget triage.
-Outputs: experiments/phase1_baselines/sprint4_benchmark_report.json
+=============================================================================
+SYNTHETIC_SMOKE_ONLY — NOT SCIENTIFIC EVIDENCE
+=============================================================================
+ASTRAEUS Phase 1: Sprint 4 Rare-Event Anomaly Discovery Benchmark (RETIRED).
+Implements synthetic injection benchmark harness. Retired as scientific evidence.
+Outputs: experiments/archived_synthetic_smoke_benchmarks/sprint4_benchmark_report.json
 """
 
 import json
@@ -21,9 +23,10 @@ from astraeus_bench.rare_event import (
 )
 
 
-def run_sprint4_experiment(output_path: str = "experiments/phase1_baselines/sprint4_benchmark_report.json"):
+def run_sprint4_experiment(output_path: str = "experiments/archived_synthetic_smoke_benchmarks/sprint4_benchmark_report.json"):
     print("=" * 80)
-    print("ASTRAEUS Phase 1: Sprint 4 Rare-Event Anomaly Discovery Benchmark")
+    print("SYNTHETIC_SMOKE_ONLY — NOT SCIENTIFIC EVIDENCE (ARCHIVED)")
+    print("ASTRAEUS Phase 1: Sprint 4 Rare-Event Anomaly Discovery Benchmark (Retired)")
     print("Populations: 1 (Common SNe), 2 (Peculiar FBOTs), 3 (Artifacts), 4 (Ambiguous)")
     print("Controlled Signal Injection Track: SNR in {3.0, 5.0, 10.0, 20.0}")
     print("=" * 80)

@@ -1,12 +1,10 @@
 """
-ASTRAEUS Phase 1: Sprint 5 Cross-Survey Zero-Shot Transfer & Consistency Benchmark.
-Executes the full cross-survey generalization audit across ZTF, Pan-STARRS1, and DECam:
-1. Spatial identity exclusion audit (preventing object leakage across surveys)
-2. Zero-shot transfer evaluation of frozen ZTF models on PS1 and DECam
-3. Experiment A: Cross-Survey Physical Parameter Consistency
-4. Experiment B: Cross-Survey Anomaly-Rank Stability
-5. Experiment C: Negative Transfer Detection & Calibrated Abstention
-Outputs: experiments/phase1_baselines/sprint5_transfer_report.json
+=============================================================================
+SYNTHETIC_SMOKE_ONLY — NOT SCIENTIFIC EVIDENCE
+=============================================================================
+ASTRAEUS Phase 1: Sprint 5 Cross-Survey Transfer Benchmark (RETIRED).
+Legacy synthetic cross-survey simulation harness. Retired as scientific evidence.
+Outputs: experiments/archived_synthetic_smoke_benchmarks/sprint5_transfer_report.json
 """
 
 import json
@@ -24,9 +22,10 @@ from astraeus_models.physics.engine import PhysicalModelEngine
 from astraeus_bench.cross_survey import CrossSurveyBenchmarkRunner, CrossSurveyBenchmarkReport
 
 
-def run_sprint5_experiment(output_path: str = "experiments/phase1_baselines/sprint5_transfer_report.json"):
+def run_sprint5_experiment(output_path: str = "experiments/archived_synthetic_smoke_benchmarks/sprint5_transfer_report.json"):
     print("=" * 85)
-    print("ASTRAEUS Phase 1: Sprint 5 Cross-Survey Zero-Shot Transfer & Consistency Benchmark")
+    print("SYNTHETIC_SMOKE_ONLY — NOT SCIENTIFIC EVIDENCE (ARCHIVED)")
+    print("ASTRAEUS Phase 1: Sprint 5 Cross-Survey Transfer Benchmark (Retired)")
     print("Surveys: ZTF (Reference In-Domain) -> Pan-STARRS1 (Zero-Shot) -> DECam (Zero-Shot)")
     print("Mandated Experiments: A (Physical Consistency), B (Rank Stability), C (Negative Transfer)")
     print("=" * 85)

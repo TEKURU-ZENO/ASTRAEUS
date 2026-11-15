@@ -1,8 +1,11 @@
 """
-ASTRAEUS Phase 1 Baseline Benchmark Execution Script.
-Executes head-to-head comparison between Feature-Engineered Baseline (Random Forest)
-and Learned Representation Baseline (ASTROMER) across segregated scientific tasks.
-Outputs: experiments/phase1_baselines/benchmark_results.json
+=============================================================================
+SYNTHETIC_SMOKE_ONLY — NOT SCIENTIFIC EVIDENCE
+=============================================================================
+ASTRAEUS Phase 1 Baseline Benchmark Execution Script (ARCHIVED / RETIRED).
+This script operates strictly on synthetic unit fixtures (N=18). Macro-F1 = 1.00
+on synthetic data is PERMANENTLY RETIRED as evidence of scientific performance.
+Outputs: experiments/archived_synthetic_smoke_benchmarks/benchmark_results.json
 """
 
 import json
@@ -14,9 +17,10 @@ from astraeus_data.synthetic import generate_synthetic_entity
 from astraeus_bench.astro_temporal import AstroTemporalBenchmark
 
 
-def run_experiment(output_json: str = "experiments/phase1_baselines/benchmark_results.json"):
+def run_experiment(output_json: str = "experiments/archived_synthetic_smoke_benchmarks/benchmark_results.json"):
     print("=" * 70)
-    print("ASTRAEUS Phase 1: AstroTemporal Baseline Benchmark")
+    print("SYNTHETIC_SMOKE_ONLY — NOT SCIENTIFIC EVIDENCE (ARCHIVED)")
+    print("ASTRAEUS Phase 1: AstroTemporal Baseline Benchmark (Retired)")
     print("Task: Segregated 3-Class Classification")
     print("Classes: ['rr_lyrae', 'supernova_ia', 'detector_artifact']")
     print("=" * 70)

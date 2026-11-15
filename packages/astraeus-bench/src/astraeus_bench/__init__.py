@@ -42,6 +42,35 @@ from astraeus_bench.stage2_temporal_benchmark import (
     Stage2BenchmarkReport,
     Stage2TemporalBenchmarkOrchestrator,
 )
+from astraeus_bench.real_survey_benchmark_protocol import (
+    REAL_SURVEY_CLASSES_8,
+    TRACK_COUNTS_COHORT_10K,
+    TRACK1_SPLIT_COUNTS,
+    TRACK1_SPATIAL_TEST_SUPPORT,
+    WilsonScoreInterval,
+    ClassEvaluationWithCI,
+    compute_wilson_score_interval,
+    verify_cohort_partition_invariants,
+    GOVERNANCE_STATEMENT,
+)
+
+ACTIVE_SCIENTIFIC_BENCHMARK_REGISTRY = {
+    "governance_lock": True,
+    "status": "FROZEN_PENDING_AUTHORIZATION",
+    "synthetic_benchmarks_allowed": False,
+    "governance_statement": GOVERNANCE_STATEMENT,
+    "cohort_path": "data/raw/real_survey_v1/cohort_manifest_10k.json",
+    "taxonomy": list(REAL_SURVEY_CLASSES_8),
+    "track1_labelled_support": 4135,
+    "track1_train_support": 2808,
+    "track1_val_support": 741,
+    "track1_spatial_test_support": 586,
+    "track2_unlabelled_support": 4365,
+    "track3_artifact_support": 1500,
+    "quarantined_support": 79,
+    "spatial_test_sealed": True,
+    "sprint_3_baselines_status": "FROZEN",
+}
 
 __version__ = "0.1.0"
 
@@ -73,4 +102,14 @@ __all__ = [
     "ModelTaskEvaluationSummary",
     "Stage2BenchmarkReport",
     "Stage2TemporalBenchmarkOrchestrator",
+    "REAL_SURVEY_CLASSES_8",
+    "TRACK_COUNTS_COHORT_10K",
+    "TRACK1_SPLIT_COUNTS",
+    "TRACK1_SPATIAL_TEST_SUPPORT",
+    "WilsonScoreInterval",
+    "ClassEvaluationWithCI",
+    "compute_wilson_score_interval",
+    "verify_cohort_partition_invariants",
+    "GOVERNANCE_STATEMENT",
+    "ACTIVE_SCIENTIFIC_BENCHMARK_REGISTRY",
 ]

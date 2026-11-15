@@ -2,9 +2,9 @@
 
 ## Benchmark Provenance & Status Notice
 
-- `experiments/phase1_baselines/` (`run_baseline_comparison.py`, `benchmark_results.json`) is
-  preserved **untouched** strictly as **`SYNTHETIC_SMOKE_ONLY`** (`N=78` synthetic curves across
-  `N=18` test examples; retired as evidence of astrophysical generalization).
+- `experiments/archived_synthetic_smoke_benchmarks/` (`run_baseline_comparison.py`, `benchmark_results.json`) is
+  isolated strictly as **`SYNTHETIC_SMOKE_ONLY — NOT SCIENTIFIC EVIDENCE`** (`N=78` synthetic curves across
+  `N=18` test examples; permanently retired as evidence of astrophysical generalization).
 - `experiments/real_survey_v1/` constructs the audited **10,000-candidate real-survey validation
   cohort** (`real_survey_taxonomy_v1.0`) enforcing Sprint 2B P0 invariants:
   - **P0.1 (`L1–L5`):** Strict separation of `L1` traceable spectroscopic TNS (`Class_ADS_bibcodes`)

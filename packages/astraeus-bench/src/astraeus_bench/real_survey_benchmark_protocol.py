@@ -38,6 +38,15 @@ REAL_SURVEY_CLASSES_8: List[str] = [
     "OTHER_EXTRAGALACTIC",
 ]
 
+# Mandatory Scientific Governance Lock
+GOVERNANCE_STATEMENT: str = (
+    "Synthetic benchmark results are excluded from all scientific performance claims, "
+    "model-selection decisions, and generalization assessments. Synthetic fixtures may be retained "
+    "solely for software verification and controlled unit testing. All scientific model performance "
+    "must be reported against the designated real-survey evaluation protocol, with the spatially held-out "
+    "test partition kept isolated until its authorized evaluation."
+)
+
 # Track Cohort Invariant Sizes
 TRACK_COUNTS_COHORT_10K = {
     "track1_labelled_astrophysical": 4135,

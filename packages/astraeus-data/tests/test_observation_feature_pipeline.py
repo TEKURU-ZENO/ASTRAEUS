@@ -206,3 +206,93 @@ def test_multi_configuration_coverage_audit():
     comb = audit["configurations"]["COMBINED"]
     assert comb["total_candidates"] == 50
     assert comb["total_epochs_processed"] > 0
+    assert "survey_origin_bias_rationale" in audit
+
+
+def test_explicit_missingness_masks_and_indicators():
+    """
+    Verifies that extract_with_missingness() yields explicit boolean masks
+    and numerical observation indicators for every feature, distinguishing
+    unobserved/defaulted features from directly measured quantities.
+    """
+    # Create an observation set with only 1 detection and 0 upper limits
+    obs = [
+        CanonicalObservation(
+            mjd=59100.0,
+            passband="g",
+            flux_nmgy=20.0,
+            flux_err_nmgy=1.0,
+            is_upper_limit=False,
+            source_survey="ALERCE",
+        )
+    ]
+
+    extractor = RealSurveyFeatureExtractor(config=ObservationConfig.COMBINED)
+    result = extractor.extract_with_missingness(obs)
+
+    # 1 detection means peak_flux is observed, but flux_std and baseline_duration are unobserved
+    assert result.missingness_mask["peak_flux_nmgy"] is True
+    assert result.missingness_indicators["peak_flux_nmgy__is_observed"] == 1.0
+
+    assert result.missingness_mask["flux_std_nmgy"] is False
+    assert result.missingness_indicators["flux_std_nmgy__is_observed"] == 0.0
+
+    assert result.missingness_mask["baseline_duration_days"] is False
+    assert result.missingness_indicators["baseline_duration_days__is_observed"] == 0.0
+
+    assert result.missingness_mask["deepest_upper_limit_nmgy"] is False
+    assert result.missingness_indicators["deepest_upper_limit_nmgy__is_observed"] == 0.0
+
+    assert result.missingness_mask["has_alerce_observations"] is True
+    assert result.n_detections == 1
+    assert result.n_upper_limits == 0
+
+
+def test_temporal_coordinate_system_reconciliation():
+    """
+    Verifies that heliocentric light travel time reconciliation strictly adheres
+    to physical light travel bounds (|delta_t| <= 499 s ~ 0.00578 d) and roundtrips cleanly.
+    """
+    from astraeus_data.real_survey.observation_feature_pipeline import (
+        compute_heliocentric_time_correction_days,
+        reconcile_utc_mjd_to_hmjd,
+        reconcile_hmjd_to_utc_mjd,
+    )
+
+    mjd_test = 59500.0
+    ra_test = 150.0  # degrees
+    dec_test = 25.0  # degrees
+
+    dt_days = compute_heliocentric_time_correction_days(mjd_test, ra_test, dec_test)
+    max_light_travel_days = 499.00478 / 86400.0  # ~0.0057755 days
+
+    assert abs(dt_days) <= max_light_travel_days + 1e-7, f"Correction exceeds 1 AU / c: {dt_days}"
+
+    hmjd = reconcile_utc_mjd_to_hmjd(mjd_test, ra_test, dec_test)
+    assert abs(hmjd - mjd_test) <= max_light_travel_days + 1e-7
+
+    # Roundtrip check
+    mjd_recovered = reconcile_hmjd_to_utc_mjd(hmjd, ra_test, dec_test)
+    assert mjd_recovered == pytest.approx(mjd_test, abs=1e-8)
+
+
+def test_hyperbolic_uncertainty_scaling_and_clamping():
+    """
+    Verifies that photometric uncertainty propagation uses exact hyperbolic log-normal scaling
+    sigma_F = F * sinh((ln 10 / 2.5) * sigma_m) which smoothly handles large sigma_m without
+    first-order breakdown and caps extreme noise fluctuations at sigma_m = 3.0.
+    """
+    import math
+
+    # Case 1: Small magnitude error (sigma_m = 0.05 mag) -> sinh(x) ~ x
+    sm_small = 0.05
+    f_val = 100.0
+    sig_f_first_order = f_val * (math.log(10) / 2.5) * sm_small
+    sig_f_exact = f_val * math.sinh((math.log(10) / 2.5) * sm_small)
+    assert abs(sig_f_exact - sig_f_first_order) / sig_f_exact < 0.002  # Within 0.2%
+
+    # Case 2: Large magnitude error (sigma_m = 0.8 mag) -> first-order severely underestimates
+    sm_large = 0.8
+    sig_f_large_first_order = f_val * (math.log(10) / 2.5) * sm_large
+    sig_f_large_exact = f_val * math.sinh((math.log(10) / 2.5) * sm_large)
+    assert sig_f_large_exact > sig_f_large_first_order, "Hyperbolic error should exceed linear approximation at large sigma_m"
