@@ -114,10 +114,10 @@ class AstraeusVectorEngine:
         norm_dt = min(dt_days, 3650.0) / 3650.0
         log_dt = math.log10(dt_days + 0.1) / 4.0
 
-        # 10-14: Survey coverage & accessibility flags (purely observational infrastructure)
+        # 10-14: Survey coverage & accessibility flags (purely observational infrastructure; zero TNS leakage)
         has_msip = 1.0 if row.get("has_msip_alert") else 0.0
         has_dr24 = 1.0 if row.get("has_dr24_lc") else 0.0
-        has_tns = 1.0 if row.get("has_independent_tns") else 0.0
+        alert_multiband = 1.0 if (n_det > 1 and has_msip > 0.0) else 0.0
         forced_flag = 1.0 if row.get("has_forced_photometry") else 0.0
         has_alerce = 1.0 if row.get("has_alerce_access") else 0.0
 
@@ -140,11 +140,11 @@ class AstraeusVectorEngine:
         annual_phase = ((first_mjd - 58000.0) % 365.25) / 365.25
         log_total_obs = math.log10(n_det + n_ul + n_dr24 + 1.0) / 5.0
 
-        # Construct strictly target-leakage-free 24-dim physical observable vector
+        # Construct strictly target-leakage-free and TNS-free 24-dim physical observable vector
         raw_vec = np.array([
             cx, cy, cz, glon_proxy, glat_proxy,
             log_ndet, log_nul, log_ndr24, norm_dt, log_dt,
-            has_msip, has_dr24, has_tns, forced_flag, has_alerce,
+            has_msip, has_dr24, alert_multiband, forced_flag, has_alerce,
             det_ratio, clean_ratio, norm_span, has_cp, cp_proxy,
             hp_sin, hp_cos, annual_phase, log_total_obs
         ], dtype=float)
@@ -208,16 +208,21 @@ class AstraeusVectorEngine:
         limit: int = 10,
         filter_tier: Optional[str] = None,
         filter_class: Optional[str] = None,
+        include_ground_truth: bool = False,
     ) -> List[Dict[str, Any]]:
         """
         Nearest neighbor search with optional metadata filtering.
+        By default (include_ground_truth=False), isolates inference queries from
+        ground-truth fields (coarse_class, fine_class, evidence_tier, is_quarantined).
         """
         query_filter = None
         must_conditions = []
         if filter_tier:
             must_conditions.append(FieldCondition(key="evidence_tier", match=MatchValue(value=filter_tier)))
+            include_ground_truth = True
         if filter_class:
             must_conditions.append(FieldCondition(key="coarse_class", match=MatchValue(value=filter_class)))
+            include_ground_truth = True
 
         if must_conditions:
             query_filter = Filter(must=must_conditions)
@@ -230,13 +235,30 @@ class AstraeusVectorEngine:
         )
 
         results = []
+        target_keys = {"coarse_class", "fine_class", "evidence_tier", "is_quarantined"}
         for p in res.points:
+            raw_payload = p.payload or {}
+            if include_ground_truth:
+                out_payload = dict(raw_payload)
+            else:
+                out_payload = {k: v for k, v in raw_payload.items() if k not in target_keys}
             results.append({
                 "point_id": p.id,
                 "score": float(p.score) if p.score is not None else 0.0,
-                "payload": p.payload,
+                "payload": out_payload,
             })
         return results
+
+    def get_inference_payload(self, point_id: int) -> Optional[Dict[str, Any]]:
+        """
+        Retrieves strictly inference-eligible metadata for a point,
+        guaranteeing zero target/label leakage.
+        """
+        cand = self.get_candidate(point_id)
+        if cand is None or "payload" not in cand:
+            return None
+        target_keys = {"coarse_class", "fine_class", "evidence_tier", "is_quarantined"}
+        return {k: v for k, v in cand["payload"].items() if k not in target_keys}
 
     def get_candidate(self, point_id: int) -> Optional[Dict[str, Any]]:
         """Retrieves a point and its payload by ID."""

@@ -718,9 +718,9 @@ class CommonFeatureClassifier:
 
     def compute_calibration_diagnostics(self, X: np.ndarray, y_true: np.ndarray, n_bins: int = 10) -> Dict[str, Any]:
         """Compares default 1-param global temperature scaling against retired 16-param OvR Platt and uncalibrated softmax."""
-        platt_summary = self._calibration_summary(self.predict_legacy_platt_proba(X), y_true, n_bins=n_bins)
-        temp_summary = self._calibration_summary(self.predict_temp_scaled_proba(X), y_true, n_bins=n_bins)
-        uncal_summary = self._calibration_summary(self.predict_uncalibrated_softmax(X), y_true, n_bins=n_bins)
+        platt_summary = self._calibration_summary(self.predict_legacy_platt_proba(X), y_true, n_bins=n_bins, class_names=self.classes)
+        temp_summary = self._calibration_summary(self.predict_temp_scaled_proba(X), y_true, n_bins=n_bins, class_names=self.classes)
+        uncal_summary = self._calibration_summary(self.predict_uncalibrated_softmax(X), y_true, n_bins=n_bins, class_names=self.classes)
         return {
             "n_eval": int(len(y_true)),
             "val_size": self.val_size,
@@ -786,7 +786,11 @@ class CommonFeatureClassifier:
         for k in range(n_splits):
             tr_mask = fold_ids != k
             te_mask = fold_ids == k
-            clf_k = CommonFeatureClassifier(ebv_mw=self.ebv_mw, calibration_mode="temperature_scaled")
+            clf_k = CommonFeatureClassifier(
+                ebv_mw=self.ebv_mw,
+                calibration_mode="temperature_scaled",
+                classes=self.classes,
+            )
             clf_k.fit(X_pool[tr_mask], y_pool[tr_mask], X_pool[te_mask], y_pool[te_mask])
             p_k = clf_k.predict_temp_scaled_proba(X_pool[te_mask])
             oof_probs[te_mask] = p_k
