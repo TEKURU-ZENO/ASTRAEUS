@@ -3,7 +3,7 @@
   "author": "Dev Mehta",
   "lead_investigator": "Dev Mehta",
   "date": "2026-11-16",
-  "milestone": "Phase 5 Final Closure (Workstreams 1-7)",
+  "milestone": "Phase 5 Scientific Reconciliation & Evidence Manifest",
   "governance_invariants": {
     "gate3_quarantine_test_objects": 586,
     "gate3_quarantine_test_healpix_pixels": 1808,
@@ -11,16 +11,16 @@
     "zero_touch_scientific_quarantine": "No Phase 5 scientific feature extraction, model development, tuning, inference or evaluation uses the sealed Gate 3 test observations."
   },
   "sealed_workstreams": {
-    "WS1": "Scientific Preflight & Protocol Freeze (COMPLETE)",
-    "WS2": "Survey Reconnaissance & Feasibility Audit (COMPLETE)",
-    "WS3": "Cross-Survey Identity & Provenance Resolution (COMPLETE)",
-    "WS3.1": "ATLAS Broker Acquisition Protocol (FROZEN)",
-    "WS4": "Photometric & Temporal Harmonization (VALIDATED)",
-    "WS5": "Zero-Shot & Domain Adaptation Experiments (COMPLETE)",
-    "WS6": "Uncertainty Calibration & Hypothesis Validation (COMPLETE)",
-    "WS7": "Scientific Audit & Manuscript Release (COMPLETE)"
+    "WS1": "Scientific Preflight & Protocol Freeze (CLOSED)",
+    "WS2": "Survey Feasibility & Astrometry (CLOSED AS FEASIBILITY WORK)",
+    "WS3": "Identity & Provenance Resolution (ENGINEERING COMPLETE; EMPIRICAL ASSOCIATIONS PENDING)",
+    "WS3.1": "ATLAS Broker Acquisition Protocol (PROTOCOL FROZEN)",
+    "WS4": "Photometric & Temporal Harmonization (REMEDIATION IMPLEMENTED; EMPIRICAL VALIDATION PENDING)",
+    "WS5": "Zero-Shot & Domain Adaptation (SYNTHETIC BENCHMARK ONLY)",
+    "WS6": "Uncertainty Calibration & Shift Detection (SYNTHETIC HARNESS RESULTS; EMPIRICAL CLAIMS PENDING)",
+    "WS7": "Scientific Audit & Manuscript Release (RECONCILED DRAFT COMPLETED; EVIDENCE GAPS AUDITED)"
   },
-  "scope": "26 core Phase 5 specification, implementation, data, and paper assets cryptographically verified",
+  "scope": "28 core Phase 5 specification, implementation, execution script, data, and paper assets cryptographically verified",
   "artifact_sha256_digests": {
     "PHASE5_SCIENTIFIC_PROTOCOL.md": "6570180232317dfe67224b9f4ab38bec7ec6a842aee4428540befd4ec26562d3",
     "PHASE5_STATISTICAL_ANALYSIS_PLAN.md": "c8f3a66f4e98f75b755b577179912e78aebe17483f36788ad57101fdc7ea9eab",
@@ -41,12 +41,14 @@
     "PHASE5_PHOTOMETRIC_HARMONIZATION_SPEC.md": "1b893b51c0fbddf695fd58a7ba317fe52d42167eab0a5953de8541baa0c7a59f",
     "PHASE5_HARMONIZATION_STATISTICAL_AND_GOVERNANCE_PLAN.md": "ad26c389b7a2c128d1b65ac9c30efcd95490929791f652287f35d774ec90ae29",
     "PHASE5_DOMAIN_ADAPTATION_EXPERIMENTS.md": "6965e9c245a79ed869175f18b9526af01cb263b656dd272f0c8ad9095a9cab17",
+    "run_phase5_domain_adaptation.py": "4827c6c259563da8ce1309a43374160bb4a1fcdcd783906534f3859cfad180fb",
     "phase5_domain_adaptation_results.parquet": "a1fdae237175b69ee5f7a98b39548461a2cc45d58d75d9966d1a62266f675810",
-    "phase5_domain_adaptation_summary.json": "d624a6be07d262a6144c1ba764448ed224f9407ff12d4ec47e2a1f008aaf1955",
-    "PHASE5_UNCERTAINTY_AND_ROBUSTNESS_REPORT.md": "ca75e4c660936138312bed74919163b8aef9ebd04578070537e8730e44cf9889",
-    "phase5_hypothesis_testing_results.json": "26c1d036205ec54d2d9e27f39814278e428fdd818f2369182c860edd058468e3",
+    "phase5_domain_adaptation_summary.json": "1f83487fedcfe9da13f461825d48c782ff2fcdc31138a9a5d1ff756edffd2a6e",
+    "PHASE5_UNCERTAINTY_AND_ROBUSTNESS_REPORT.md": "14d09644fd17919d497b1f9e9cac05cbfd1ae7df3001a99489f8698017ff7f48",
+    "run_phase5_uncertainty_and_validation.py": "341b453bf3360cb7edf1b0b83dc2e1fa0ba6be3a1958f5067d18ed8c87170b04",
+    "phase5_hypothesis_testing_results.json": "dc3128b089af81fd5be083fe21085f68c61e8135fb97f54ad979e6404f2bbfea",
     "phase5_uncertainty_metrics.parquet": "8ae0241f1dacd89727c686caecf8830f4204f6fe2857e89a530b1166dfb904db",
-    "PHASE5_RESEARCH_PAPER.md": "f8141ce00be21a3ca03b16c8b86ff73982a028ebb9ac94a89a029564966e3caa",
-    "PHASE5_FINAL_SCIENTIFIC_CLOSURE_REPORT.md": "c710651c282eb349456728e48152f97fb89d0b26a11ce048c1f053b0f501d8e4"
+    "PHASE5_RESEARCH_PAPER.md": "40a894b6f05fb666f2d0751e46e7cdcda435af1e8929352fa7a9ef056975b53c",
+    "PHASE5_FINAL_SCIENTIFIC_CLOSURE_REPORT.md": "ba3b96f2086df69f52bafdc9830d90fd79186e9415fc57d1868933364bb97229"
   }
 }

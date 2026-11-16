@@ -2,6 +2,7 @@
   "workstream": "WS6",
   "author": "Dev Mehta",
   "date": "2026-11-16",
+  "evaluation_context": "Synthetic Domain-Shift Simulation Benchmark",
   "conformal_calibration": {
     "target_coverage": 0.9,
     "q_hat": 0.812,
@@ -10,16 +11,19 @@
       0.8876698467115925,
       0.9819772792667908
     ],
-    "mean_set_size": 1.5402298850574712
+    "mean_set_size": 1.5402298850574712,
+    "exchangeability_qualification": "Standard split-conformal validity assumes exchangeability (P_cal = P_test). Under covariate shift, distribution-free guarantees are broken without domain-adaptive importance weights."
   },
   "hypothesis_h2_bootstrap": {
+    "point_estimate_delta_macro_f1": -0.040792585636819284,
     "mean_delta_macro_f1": -0.049721925389592546,
     "ci_95_bca": [
       -0.11710967254737084,
       0.0
     ],
     "p_value": 1.0,
-    "supported": false
+    "supported": false,
+    "qualification": "FALSIFIED in simulation benchmark: physical features underperformed raw representations by 4.08 percentage points (point estimate) and 4.97 percentage points (bootstrap mean)."
   },
   "mcnemar_paired_test": {
     "n_eval": 87,
@@ -28,18 +32,21 @@
     "n_phys_wrong_raw_correct": 3,
     "n_both_incorrect": 26,
     "discordant_total": 3,
-    "chi2_statistic": 1.3333333333333333
+    "chi2_statistic": 1.3333333333333333,
+    "exact_binomial_p": 0.25
   },
   "hypothesis_h4_shift_detection": {
-    "metric": "Mahalanobis Latent Distance",
+    "metric": "Mahalanobis Latent Distance (Simulation Harness)",
     "misclassification_auroc": 0.9530321046373365,
+    "exploratory_subset_auroc": 0.724,
     "falsification_threshold": 0.6,
-    "supported": true
+    "supported": true,
+    "qualification": "Evaluated within simulation harness; true empirical cross-survey AUROC remains unmeasured pending live survey data ingestion."
   },
   "hypothesis_h5_selective_abstention": {
     "risk_full_coverage": 0.3333333333333333,
     "risk_half_coverage": 0.06976744186046512,
-    "monotonic_risk_reduction": true,
+    "monotonic_risk_reduction": false,
     "risk_curve": [
       {
         "coverage": 0.1,
@@ -92,6 +99,7 @@
         "n_accepted": 87
       }
     ],
-    "supported": true
+    "supported": false,
+    "qualification": "Strict monotonicity is violated: risk decreases from 33.33% to 6.98% at c=0.50, but dips to 5.77% at c=0.60 before rising to 6.67% at c=0.70 due to small-sample discrete acceptance artifacts."
   }
 }

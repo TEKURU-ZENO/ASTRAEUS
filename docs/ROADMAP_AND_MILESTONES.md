@@ -141,24 +141,24 @@ Determine whether ASTRAEUS preserves astrophysical information, physical paramet
   - Implementation: `TemporalHarmonizer` in `packages/astraeus-data/src/astraeus_data/photometry/temporal.py` (fail-closed, sub-second precision, stale invalidation).
   - Full covariance engine in `PhotometricHarmonizer` ($\kappa(\mathbf{J}) \approx 2.85$, positive-definite flux covariance).
   - Sealed in `phase5_ws3_ws4_transition_manifest.json` and anchored in `phase5_ws3_ws4_transition_manifest.sha256`.
-- **Workstream 5:** Zero-Shot and Domain-Adaptation Experiments [COMPLETE]:
+- **Workstream 5:** Zero-Shot and Domain-Adaptation Experiments [SYNTHETIC BENCHMARK ONLY]:
   - Protocol: `PHASE5_DOMAIN_ADAPTATION_EXPERIMENTS.md`.
   - Execution engine: `run_phase5_domain_adaptation.py`.
-  - Evaluated zero-shot transfer baseline from ZTF (Macro-F1 0.1999) to ATLAS (0.1748) and DECam DDF (0.1893).
-  - Unsupervised Correlation Alignment (CORAL) restores target Macro-F1 to 0.1969 (+0.0221 gain).
-  - 3-Way Leave-One-Survey-Out (LOSO) cross-evaluation confirms bounded adaptation (retention ratio 84.2%).
+  - Evaluated zero-shot transfer baseline from simulated ZTF (Macro-F1 0.1999) to simulated ATLAS (0.1748) and simulated DECam DDF (0.1893).
+  - Unsupervised Correlation Alignment (CORAL) restores target Macro-F1 to 0.1969 (+0.0221 gain in simulation).
+  - 3-Way Leave-One-Survey-Out (LOSO) cross-evaluation yields an 84.2% retention ratio (unmet preregistered threshold >= 90%, H3 not confirmed).
+  - Physical features underperformed raw representations (delta Macro-F1 = -0.0408, bootstrap mean -0.0497, p=1.00; H2 falsified in benchmark).
   - Deliverables: `phase5_domain_adaptation_results.parquet` and `phase5_domain_adaptation_summary.json`.
-- **Workstream 6:** Uncertainty, Robustness, and Scientific Validation [COMPLETE]:
+- **Workstream 6:** Uncertainty, Robustness, and Scientific Validation [SYNTHETIC SIMULATION HARNESS RESULTS; EMPIRICAL CLAIMS PENDING]:
   - Protocol & Report: `PHASE5_UNCERTAINTY_AND_ROBUSTNESS_REPORT.md`.
   - Execution engine: `run_phase5_uncertainty_and_validation.py`.
-  - Conformal prediction calibration ($k=507$ holdout) yields 95.40% marginal coverage on target domain.
-  - Covariate shift detection via physical latent Mahalanobis distance predicts misclassifications with AUROC = 0.9530 (confirming H4).
-  - Selective prediction risk-coverage analysis verifies monotonic error suppression from 33.33% to 6.98% at 50% coverage (confirming H5).
-  - Paired object-level bootstrap ($B=10,000$) on $\Delta \text{Macro-F1}$ and paired McNemar tests completed.
+  - Conformal prediction calibration evaluated in simulation (95.40% coverage); exchangeability breakdown under domain shift documented.
+  - Covariate shift detection AUROC evaluated in simulation harness (AUROC = 0.9530; empirical survey AUROC pending live data).
+  - Selective prediction risk-coverage analysis verifies error suppression from 33.33% to 6.98% at 50% coverage, but non-monotonic dip to 5.77% at 60% coverage due to discrete sample artifact (strict monotonicity unmet).
   - Deliverables: `phase5_hypothesis_testing_results.json` and `phase5_uncertainty_metrics.parquet`.
-- **Workstream 7:** Independent Audit, Reconciliation, and Manuscript Release [COMPLETE]:
+- **Workstream 7:** Independent Audit, Reconciliation, and Manuscript Release [RECONCILED DRAFT COMPLETED; EVIDENCE GAPS AUDITED]:
   - Full scientific research manuscript authored: `PHASE5_RESEARCH_PAPER.md` (ApJ / MNRAS publication format).
-  - Master scientific closure report: `PHASE5_FINAL_SCIENTIFIC_CLOSURE_REPORT.md`.
-  - Master final cryptographic evidence manifest: `phase5_final_evidence_manifest.json` sealing 26 assets, anchored in `phase5_final_evidence_manifest.sha256`.
+  - Master scientific reconciliation report: `PHASE5_FINAL_SCIENTIFIC_CLOSURE_REPORT.md`.
+  - Master cryptographic evidence manifest: `phase5_final_evidence_manifest.json` sealing 28 assets (including Python execution engines), anchored in `phase5_final_evidence_manifest.sha256`.
   - Comprehensive closure test suite: `tests/test_phase5_final_closure.py`.
-  - Phase 5 Formally Cleared for Publication & Progression to Phase 6.
+  - Phase 5 Reconciled Status: Software architecture and simulation benchmarks frozen; empirical cross-survey generalization remains open pending live external broker ingestion. Phase 6 empirical foundation modeling gated on real multi-survey acquisition.

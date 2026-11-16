@@ -7,6 +7,7 @@
   "eval_size": 87,
   "unlabeled_adapt_size": 38,
   "labeled_adapt_size": 25,
+  "evaluation_context": "Synthetic Domain-Shift Simulation Benchmark",
   "experiments": {
     "exp5a_zero_shot": {
       "source_ztf_macro_f1": 0.19986075655604546,
@@ -20,7 +21,8 @@
       "physical_macro_f1": 0.17484909456740444,
       "raw_macro_f1": 0.21564168020422372,
       "delta_macro_f1": -0.040792585636819284,
-      "hypothesis_h2_supported": false
+      "hypothesis_h2_supported": false,
+      "qualification": "Physical features underperformed raw representations by 4.08 percentage points in simulation."
     },
     "exp5c_domain_adaptation": {
       "zero_shot_baseline": 0.17484909456740444,
@@ -32,7 +34,8 @@
       "baseline_decam_macro_f1": 0.18928833455612618,
       "ztf_to_atlas_to_decam_macro_f1": 0.15944055944055943,
       "retention_ratio": 0.8423158237111725,
-      "hypothesis_h3_supported": false
+      "hypothesis_h3_supported": false,
+      "qualification": "Retention ratio 84.2% misses the preregistered 90% threshold."
     }
   }
 }

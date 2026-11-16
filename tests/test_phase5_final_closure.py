@@ -1,7 +1,7 @@
 """
-ASTRAEUS Phase 5: Final Scientific Closure & Multi-Workstream Audit Test Suite.
-Verifies Workstreams 1 through 7 completion, domain adaptation, uncertainty calibration,
-governance invariants, and cryptographic manifest integrity.
+ASTRAEUS Phase 5: Scientific Reconciliation & Evidence Integrity Test Suite.
+Verifies Workstreams 1 through 7 reconciliation, honest hypothesis falsification testing,
+governance invariants, and cryptographic manifest integrity for all 28 assets.
 
 Author: Dev Mehta
 Lead Investigator & Mission Director, Project ASTRAEUS
@@ -26,8 +26,8 @@ def repo_root() -> Path:
 def test_phase5_final_manifest_cryptographic_seal(repo_root: Path):
     """
     MASTER AUDIT ASSERTION 1: Phase 5 Final Evidence Manifest Cryptographic Integrity.
-    Verifies that phase5_final_evidence_manifest.json exists and that all 26 sealed
-    specifications, data files, execution outputs, and manuscripts match their exact SHA-256 digests.
+    Verifies that phase5_final_evidence_manifest.json exists, seals all 28 assets
+    (including the two execution scripts), and matches the independent SHA-256 anchor.
     """
     p5_dir = repo_root / "experiments" / "phase5_cross_survey_generalization"
     manifest_path = p5_dir / "phase5_final_evidence_manifest.json"
@@ -49,9 +49,11 @@ def test_phase5_final_manifest_cryptographic_seal(repo_root: Path):
     assert data["governance_invariants"]["gate3_quarantine_test_objects"] == 586
     assert data["governance_invariants"]["gate3_quarantine_test_healpix_pixels"] == 1808
 
-    # Verify all 26 sealed assets
+    # Verify all 28 sealed assets (including execution scripts)
     hashes = data["artifact_sha256_digests"]
-    assert len(hashes) == 26
+    assert len(hashes) == 28, f"Expected 28 sealed assets, got {len(hashes)}"
+    assert "run_phase5_domain_adaptation.py" in hashes
+    assert "run_phase5_uncertainty_and_validation.py" in hashes
 
     for filename, expected_hash in hashes.items():
         fp = p5_dir / filename
@@ -64,7 +66,8 @@ def test_phase5_ws5_domain_adaptation_results(repo_root: Path):
     """
     MASTER AUDIT ASSERTION 2: Workstream 5 Domain Adaptation Verification.
     Verifies evaluation cohort size N_eval >= 85, CORAL covariance alignment gain,
-    and bounded adaptation retention under Leave-One-Survey-Out (LOSO) transfer.
+    falsification of H2 (physical features underperformed raw representations),
+    and unmet status of H3 (LOSO retention 84.2% < 90% threshold).
     """
     p5_dir = repo_root / "experiments" / "phase5_cross_survey_generalization"
     results_path = p5_dir / "phase5_domain_adaptation_results.parquet"
@@ -81,21 +84,27 @@ def test_phase5_ws5_domain_adaptation_results(repo_root: Path):
     assert len(df_results) >= 85, f"Evaluation split N={len(df_results)} violates power threshold N >= 85!"
     assert summary["eval_size"] >= 85
 
-    # 2. Experiment 5A & 5C: CORAL adaptation improves target Macro-F1 over zero-shot
+    # 2. Experiment 5C: CORAL adaptation improves target Macro-F1 over zero-shot in simulation
     zero_shot_f1 = summary["experiments"]["exp5c_domain_adaptation"]["zero_shot_baseline"]
     coral_f1 = summary["experiments"]["exp5c_domain_adaptation"]["coral_alignment"]
     assert coral_f1 >= zero_shot_f1, f"CORAL {coral_f1} failed to match zero-shot {zero_shot_f1}!"
 
-    # 3. Experiment 5D: Bounded LOSO transfer retention ratio
+    # 3. Experiment 5B: Falsification of Hypothesis H2
+    delta_f1 = summary["experiments"]["exp5b_physical_vs_raw"]["delta_macro_f1"]
+    assert delta_f1 < 0.0, f"Expected negative delta for physical vs raw in this benchmark, got {delta_f1}"
+    assert summary["experiments"]["exp5b_physical_vs_raw"]["hypothesis_h2_supported"] is False
+
+    # 4. Experiment 5D: Hypothesis H3 preregistered threshold unmet
     retention = summary["experiments"]["exp5d_loso_cross_survey"]["retention_ratio"]
-    assert retention > 0.70, f"Catastrophic negative transfer under LOSO: retention={retention}"
+    assert retention < 0.90, f"Expected retention < 0.90 boundary, got {retention}"
+    assert summary["experiments"]["exp5d_loso_cross_survey"]["hypothesis_h3_supported"] is False
 
 
 def test_phase5_ws6_conformal_calibration_and_shift_detection(repo_root: Path):
     """
     MASTER AUDIT ASSERTION 3: Workstream 6 Uncertainty, Conformal Coverage & Shift Robustness.
-    Verifies that empirical coverage satisfies >= 90%, shift detection AUROC > 0.60 (H4),
-    and selective prediction risk is strictly monotonic (H5).
+    Verifies that empirical coverage in simulation satisfies >= 90%, shift detection AUROC > 0.60 (H4),
+    and selective prediction risk curve non-monotonicity is accurately reported (H5 not strictly supported).
     """
     p5_dir = repo_root / "experiments" / "phase5_cross_survey_generalization"
     metrics_path = p5_dir / "phase5_uncertainty_metrics.parquet"
@@ -108,10 +117,11 @@ def test_phase5_ws6_conformal_calibration_and_shift_detection(repo_root: Path):
     with open(results_path, "r", encoding="utf-8") as f:
         res = json.load(f)
 
-    # 1. Conformal Coverage Check (target 90%)
+    # 1. Conformal Coverage Check in Simulation (target 90%)
     coverage = res["conformal_calibration"]["empirical_coverage"]
-    assert coverage >= 0.88, f"Conformal coverage {coverage*100:.1f}% below minimum tolerance!"
+    assert coverage >= 0.90, f"Conformal coverage {coverage*100:.1f}% below target 90%!"
     assert res["conformal_calibration"]["mean_set_size"] < 3.0
+    assert "exchangeability_qualification" in res["conformal_calibration"]
 
     # 2. Covariate Shift Detection AUROC (Hypothesis H4)
     auroc = res["hypothesis_h4_shift_detection"]["misclassification_auroc"]
@@ -122,7 +132,9 @@ def test_phase5_ws6_conformal_calibration_and_shift_detection(repo_root: Path):
     r_full = res["hypothesis_h5_selective_abstention"]["risk_full_coverage"]
     r_half = res["hypothesis_h5_selective_abstention"]["risk_half_coverage"]
     assert r_half < r_full, f"Risk at c=0.5 ({r_half}) not lower than c=1.0 ({r_full})!"
-    assert res["hypothesis_h5_selective_abstention"]["supported"] is True
+    # Strict monotonicity across all deciles is false due to 50% -> 60% dip
+    assert res["hypothesis_h5_selective_abstention"]["monotonic_risk_reduction"] is False
+    assert res["hypothesis_h5_selective_abstention"]["supported"] is False
 
 
 def test_phase5_research_paper_and_governance_invariants(repo_root: Path):
@@ -147,12 +159,14 @@ def test_phase5_research_paper_and_governance_invariants(repo_root: Path):
     assert "Zero-Touch Scientific Quarantine" in closure_text
     assert "CORAL" in paper_text
     assert "Conformal Prediction" in paper_text
+    assert "FALSIFIED IN BENCHMARK" in paper_text
+    assert "FALSIFIED IN BENCHMARK" in closure_text
 
 
-def test_phase5_all_workstreams_status_closed(repo_root: Path):
+def test_phase5_all_workstreams_reconciled_status(repo_root: Path):
     """
-    MASTER AUDIT ASSERTION 5: Full Workstream 1 through 7 Closure Verification.
-    Asserts all workstreams are documented as complete in the master manifest.
+    MASTER AUDIT ASSERTION 5: Reconciled Workstream 1 through 7 Status Verification.
+    Asserts workstreams are honestly classified in the master manifest.
     """
     p5_dir = repo_root / "experiments" / "phase5_cross_survey_generalization"
     manifest_path = p5_dir / "phase5_final_evidence_manifest.json"
@@ -164,4 +178,4 @@ def test_phase5_all_workstreams_status_closed(repo_root: Path):
     for ws_id in ["WS1", "WS2", "WS3", "WS3.1", "WS4", "WS5", "WS6", "WS7"]:
         assert ws_id in workstreams
         status_str = workstreams[ws_id]
-        assert any(k in status_str for k in ("COMPLETE", "VALIDATED", "FROZEN"))
+        assert any(k in status_str for k in ("CLOSED", "FROZEN", "PENDING", "BENCHMARK", "SYNTHETIC", "RECONCILED", "VALIDATED"))
