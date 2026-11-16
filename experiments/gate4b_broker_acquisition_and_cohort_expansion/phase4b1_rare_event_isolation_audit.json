@@ -1,0 +1,62 @@
+{
+  "ZTF18aabdajx": {
+    "candidate_id": "ZTF18aabdajx",
+    "subtype": "TDE",
+    "acquisition_status": "ALREADY_ARCHIVED",
+    "raw_detections": 54,
+    "raw_nondetections": 90,
+    "pos_detections_snr5": 51,
+    "has_dual_band_snr5": true,
+    "evaluability_status": "FEATURE_EVALUABLE",
+    "population_assignment": "Population 3 (Locked External Evaluation)",
+    "model_inference_executed": false,
+    "prediction_scored": false,
+    "threshold_adjusted": false,
+    "governance_status": "STRICTLY_ISOLATED_INGESTION_ONLY"
+  },
+  "ZTF18aabtxvd": {
+    "candidate_id": "ZTF18aabtxvd",
+    "subtype": "TDE",
+    "acquisition_status": "ALREADY_ARCHIVED",
+    "raw_detections": 302,
+    "raw_nondetections": 602,
+    "pos_detections_snr5": 1,
+    "has_dual_band_snr5": false,
+    "evaluability_status": "INSUFFICIENT_DETECTIONS",
+    "population_assignment": "Population 3 (Locked External Evaluation)",
+    "model_inference_executed": false,
+    "prediction_scored": false,
+    "threshold_adjusted": false,
+    "governance_status": "STRICTLY_ISOLATED_INGESTION_ONLY"
+  },
+  "ZTF24abdhylt": {
+    "candidate_id": "ZTF24abdhylt",
+    "subtype": "SLSN-II",
+    "acquisition_status": "ALREADY_ARCHIVED",
+    "raw_detections": 64,
+    "raw_nondetections": 42,
+    "pos_detections_snr5": 56,
+    "has_dual_band_snr5": true,
+    "evaluability_status": "FEATURE_EVALUABLE",
+    "population_assignment": "Population 3 (Locked External Evaluation)",
+    "model_inference_executed": false,
+    "prediction_scored": false,
+    "threshold_adjusted": false,
+    "governance_status": "STRICTLY_ISOLATED_INGESTION_ONLY"
+  },
+  "ZTF19abrdxbh": {
+    "candidate_id": "ZTF19abrdxbh",
+    "subtype": "Ca-rich",
+    "acquisition_status": "ALREADY_ARCHIVED",
+    "raw_detections": 6,
+    "raw_nondetections": 9,
+    "pos_detections_snr5": 5,
+    "has_dual_band_snr5": true,
+    "evaluability_status": "FEATURE_EVALUABLE",
+    "population_assignment": "Population 3 (Locked External Evaluation)",
+    "model_inference_executed": false,
+    "prediction_scored": false,
+    "threshold_adjusted": false,
+    "governance_status": "STRICTLY_ISOLATED_INGESTION_ONLY"
+  }
+}

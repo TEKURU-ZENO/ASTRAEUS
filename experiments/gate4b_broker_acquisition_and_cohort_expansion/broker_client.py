@@ -545,14 +545,49 @@ class AlerceBrokerClient:
         pos_det_snr5_r = 0
         neg_detections_count = 0
         invalid_sign_count = 0
+        unknown_passband_count = 0
+        malformed_photometry_count = 0
 
         for det in raw_detections:
-            mag = float(det.get("magpsf", float("nan")))
-            sig = float(det.get("sigmapsf", float("nan")))
+            # Safe type casting for raw photometry fields (Reviewer Qualification 3)
+            raw_mag = det.get("magpsf")
+            try:
+                mag = float(raw_mag) if raw_mag is not None else float("nan")
+            except (ValueError, TypeError):
+                mag = float("nan")
+                malformed_photometry_count += 1
+
+            raw_sig = det.get("sigmapsf")
+            try:
+                sig = float(raw_sig) if raw_sig is not None else float("nan")
+            except (ValueError, TypeError):
+                sig = float("nan")
+                malformed_photometry_count += 1
+
             diffpos = det.get("isdiffpos")
-            fid = int(det.get("fid", 0))
+
+            raw_fid = det.get("fid")
+            try:
+                fid = int(raw_fid) if raw_fid is not None else 0
+            except (ValueError, TypeError):
+                fid = 0
+
+            # Filter ID passband mapping: 1 -> 'g', 2 -> 'r', 3 -> 'i'
+            # Any unmapped or unknown fid is explicitly designated 'unknown' and quarantined
+            passband_map = {1: "g", 2: "r", 3: "i"}
+            passband = passband_map.get(fid, "unknown")
+            is_valid_passband = (passband in ("g", "r", "i"))
+            if not is_valid_passband:
+                unknown_passband_count += 1
 
             calib = compute_physical_flux_and_snr(mag, sig, diffpos)
+
+            # Ingestion-level safeguard: unknown passbands fail closed
+            if not is_valid_passband:
+                calib["is_valid_measurement"] = False
+                calib["is_positive_detection_snr5"] = False
+                note = calib.get("validation_note", "")
+                calib["validation_note"] = f"{note}_UNKNOWN_PASSBAND" if note else "FAIL_CLOSED_UNKNOWN_PASSBAND"
 
             if not calib["is_valid_sign"]:
                 invalid_sign_count += 1
@@ -566,21 +601,34 @@ class AlerceBrokerClient:
                     pos_det_snr5_r += 1
 
             parsed_detections.append({
-                "mjd": float(det.get("mjd", 0.0)),
+                "mjd": float(det.get("mjd", 0.0)) if isinstance(det.get("mjd"), (int, float)) else 0.0,
                 "fid": fid,
-                "passband": "g" if fid == 1 else ("r" if fid == 2 else "i"),
+                "passband": passband,
+                "is_valid_passband": is_valid_passband,
                 "magpsf": mag,
                 "sigmapsf": sig,
                 "isdiffpos_raw": diffpos,
-                "ra": float(det.get("ra", float("nan"))),
-                "dec": float(det.get("dec", float("nan"))),
+                "ra": float(det.get("ra", float("nan"))) if isinstance(det.get("ra"), (int, float)) else float("nan"),
+                "dec": float(det.get("dec", float("nan"))) if isinstance(det.get("dec"), (int, float)) else float("nan"),
                 **calib,
             })
 
         parsed_nondetections = []
         for nd in raw_nondetections:
-            fid = int(nd.get("fid", 0))
-            diffmaglim = float(nd.get("diffmaglim", float("nan")))
+            raw_fid = nd.get("fid")
+            try:
+                fid = int(raw_fid) if raw_fid is not None else 0
+            except (ValueError, TypeError):
+                fid = 0
+
+            passband_map = {1: "g", 2: "r", 3: "i"}
+            passband = passband_map.get(fid, "unknown")
+
+            raw_maglim = nd.get("diffmaglim")
+            try:
+                diffmaglim = float(raw_maglim) if raw_maglim is not None else float("nan")
+            except (ValueError, TypeError):
+                diffmaglim = float("nan")
 
             # 5-sigma limiting flux in nanomaggies: F_lim = 10^(-0.4 * (diffmaglim - 22.500))
             if math.isfinite(diffmaglim):
@@ -590,10 +638,17 @@ class AlerceBrokerClient:
                 ul_nmgy = float("nan")
                 ul_ujy = float("nan")
 
+            raw_mjd = nd.get("mjd")
+            try:
+                mjd_val = float(raw_mjd) if raw_mjd is not None else 0.0
+            except (ValueError, TypeError):
+                mjd_val = 0.0
+
             parsed_nondetections.append({
-                "mjd": float(nd.get("mjd", 0.0)),
+                "mjd": mjd_val,
                 "fid": fid,
-                "passband": "g" if fid == 1 else ("r" if fid == 2 else "i"),
+                "passband": passband,
+                "is_valid_passband": (passband in ("g", "r", "i")),
                 "diffmaglim": diffmaglim,
                 "limiting_flux_nmgy": ul_nmgy,
                 "limiting_flux_ujy": ul_ujy,
@@ -618,6 +673,8 @@ class AlerceBrokerClient:
             "total_raw_nondetections": len(raw_nondetections),
             "invalid_sign_detections_count": invalid_sign_count,
             "negative_detections_count": neg_detections_count,
+            "unknown_passband_count": unknown_passband_count,
+            "malformed_photometry_count": malformed_photometry_count,
             "n_det_snr5_g": pos_det_snr5_g,
             "n_det_snr5_r": pos_det_snr5_r,
             "n_det_snr5_total": total_snr5,

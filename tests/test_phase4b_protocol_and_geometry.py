@@ -585,3 +585,97 @@ def test_conformal_k507_specification_and_provenance():
     empirical_coverage = np.mean(synthetic_scores <= q_hat)
     assert empirical_coverage >= target_coverage
     assert math.isclose(empirical_coverage, 507 / 562, rel_tol=1e-5)
+
+
+def test_unknown_passband_and_malformed_photometry_quarantine():
+    """
+    INGESTION-LEVEL SAFEGUARD TEST (Reviewer Qualification 3):
+    Verifies that unexpected malformed values (string mag/sig) and unknown filter IDs
+    are safely quarantined at ingestion without raising unhandled exceptions or misclassifying.
+    """
+    client = AlerceBrokerClient()
+    raw_payload = {
+        "detections": [
+            {"mjd": 58000.0, "fid": 99, "magpsf": 18.0, "sigmapsf": 0.1, "isdiffpos": 1},  # Unknown filter 99
+            {"mjd": 58001.0, "fid": 1, "magpsf": "corrupt_str", "sigmapsf": 0.1, "isdiffpos": 1},  # Malformed mag string
+            {"mjd": 58002.0, "fid": 2, "magpsf": 17.5, "sigmapsf": "bad_sig", "isdiffpos": 1},  # Malformed sig string
+            {"mjd": 58003.0, "fid": 2, "magpsf": 17.5, "sigmapsf": 0.08, "isdiffpos": 1},  # Valid detection
+        ],
+        "non_detections": [
+            {"mjd": 58290.0, "fid": "invalid_fid", "diffmaglim": 20.5},
+            {"mjd": 58291.0, "fid": 1, "diffmaglim": "corrupt_lim"},
+        ],
+    }
+    parsed = client.parse_raw_lightcurve_payload(raw_payload)
+    assert parsed["unknown_passband_count"] == 1
+    assert parsed["malformed_photometry_count"] == 2
+    assert parsed["detections"][0]["is_valid_passband"] is False
+    assert parsed["detections"][0]["is_valid_measurement"] is False
+    assert parsed["detections"][0]["is_positive_detection_snr5"] is False
+    assert parsed["detections"][1]["is_valid_measurement"] is False
+    assert parsed["detections"][2]["is_valid_measurement"] is False
+    assert parsed["detections"][3]["is_valid_measurement"] is True
+    assert parsed["non_detections"][0]["is_valid_passband"] is False
+    assert math.isnan(parsed["non_detections"][1]["diffmaglim"])
+
+
+def test_phase4b1_pilot_acquisition_deliverables_and_integrity():
+    """
+    Verifies the complete deliverable suite for Phase 4B.1 Pilot Acquisition:
+    1. Acquisition ledger exists (CSV and Parquet) with exactly 35 candidates, all HTTP 200.
+    2. Integrity manifest confirms valid JSON and zero duplicates.
+    3. Photometric audit captures detections, non-detections, and passbands.
+    4. 5/5 designated local reference objects achieve identical feature reproducibility.
+    5. 4/4 rare transients are certified as ingestion-only in Population 3 with zero inference.
+    6. Operational report demonstrates 0 rate ceiling violations across all requests.
+    """
+    base_dir = Path("experiments/gate4b_broker_acquisition_and_cohort_expansion")
+    ledger_csv = base_dir / "phase4b1_pilot_acquisition_ledger.csv"
+    ledger_parquet = base_dir / "phase4b1_pilot_acquisition_ledger.parquet"
+    integrity_manifest = base_dir / "phase4b1_pilot_integrity_manifest.json"
+    photo_csv = base_dir / "phase4b1_photometric_audit.csv"
+    feat_json = base_dir / "phase4b1_feature_reproducibility_audit.json"
+    rare_json = base_dir / "phase4b1_rare_event_isolation_audit.json"
+    op_json = base_dir / "phase4b1_operational_report.json"
+
+    assert ledger_csv.exists()
+    assert ledger_parquet.exists()
+    assert integrity_manifest.exists()
+    assert photo_csv.exists()
+    assert feat_json.exists()
+    assert rare_json.exists()
+    assert op_json.exists()
+
+    df_ledger = pd.read_csv(ledger_csv)
+    assert len(df_ledger) == 35
+    assert set(df_ledger["http_status_code"]) == {200}
+    assert all(df_ledger["file_size_bytes"] > 0)
+    assert all(df_ledger["sha256_checksum"].str.len() == 64)
+
+    with open(integrity_manifest, "r", encoding="utf-8") as f:
+        iman = json.load(f)
+    assert iman["total_candidates_requested"] == 35
+    assert iman["successful_retrievals"] == 35
+    assert iman["failed_retrievals"] == 0
+    assert iman["duplicate_candidate_count"] == 0
+
+    with open(feat_json, "r", encoding="utf-8") as f:
+        fdat = json.load(f)
+    repro = fdat["reproducibility_audit_5_objects"]
+    assert len(repro) == 5
+    for zid, comp in repro.items():
+        assert comp["is_exact_feature_match"] is True
+
+    with open(rare_json, "r", encoding="utf-8") as f:
+        rdat = json.load(f)
+    assert len(rdat) == 4
+    for zid, r in rdat.items():
+        assert r["model_inference_executed"] is False
+        assert r["prediction_scored"] is False
+        assert r["threshold_adjusted"] is False
+        assert r["governance_status"] == "STRICTLY_ISOLATED_INGESTION_ONLY"
+
+    with open(op_json, "r", encoding="utf-8") as f:
+        odat = json.load(f)
+    assert odat["rate_ceiling_violations"] == 0
+    assert odat["total_requests"] == 35

@@ -1,0 +1,191 @@
+{
+  "operational_ceiling_req_per_sec": 4.0,
+  "operational_ceiling_min_interval_sec": 0.25,
+  "total_requests": 35,
+  "live_http_requests": 35,
+  "total_duration_sec": 66.95,
+  "effective_request_rate_per_sec": 0.5227781926811053,
+  "mean_request_duration_sec": 1.9137,
+  "min_inter_request_start_interval_sec": 1.46,
+  "median_inter_request_start_interval_sec": 1.72,
+  "max_inter_request_start_interval_sec": 3.98,
+  "rate_ceiling_violations": 0,
+  "total_retries_performed": 0,
+  "request_durations": [
+    {
+      "candidate_id": "ZTF18aasdted",
+      "req_duration_sec": 3.98,
+      "file_size_bytes": 61979
+    },
+    {
+      "candidate_id": "ZTF18abadjhx",
+      "req_duration_sec": 2.78,
+      "file_size_bytes": 24121
+    },
+    {
+      "candidate_id": "ZTF18abaxlpi",
+      "req_duration_sec": 1.53,
+      "file_size_bytes": 25268
+    },
+    {
+      "candidate_id": "ZTF18adbikdz",
+      "req_duration_sec": 1.59,
+      "file_size_bytes": 22152
+    },
+    {
+      "candidate_id": "ZTF19aanfnvl",
+      "req_duration_sec": 1.58,
+      "file_size_bytes": 11324
+    },
+    {
+      "candidate_id": "ZTF18abzpbpi",
+      "req_duration_sec": 1.74,
+      "file_size_bytes": 51928
+    },
+    {
+      "candidate_id": "ZTF19aalfsqm",
+      "req_duration_sec": 1.64,
+      "file_size_bytes": 4097
+    },
+    {
+      "candidate_id": "ZTF23aaihsvm",
+      "req_duration_sec": 1.46,
+      "file_size_bytes": 24283
+    },
+    {
+      "candidate_id": "ZTF18aabdajx",
+      "req_duration_sec": 1.72,
+      "file_size_bytes": 45956
+    },
+    {
+      "candidate_id": "ZTF18aabtxvd",
+      "req_duration_sec": 3.71,
+      "file_size_bytes": 265193
+    },
+    {
+      "candidate_id": "ZTF24abdhylt",
+      "req_duration_sec": 1.72,
+      "file_size_bytes": 48714
+    },
+    {
+      "candidate_id": "ZTF19abrdxbh",
+      "req_duration_sec": 1.75,
+      "file_size_bytes": 5009
+    },
+    {
+      "candidate_id": "ZTF22aahhvqj",
+      "req_duration_sec": 1.57,
+      "file_size_bytes": 34643
+    },
+    {
+      "candidate_id": "ZTF22aausixa",
+      "req_duration_sec": 2.52,
+      "file_size_bytes": 30461
+    },
+    {
+      "candidate_id": "ZTF19adajqcq",
+      "req_duration_sec": 2.94,
+      "file_size_bytes": 30288
+    },
+    {
+      "candidate_id": "ZTF25abvejtn",
+      "req_duration_sec": 2.19,
+      "file_size_bytes": 47375
+    },
+    {
+      "candidate_id": "ZTF24absxhcd",
+      "req_duration_sec": 1.53,
+      "file_size_bytes": 27697
+    },
+    {
+      "candidate_id": "ZTF21abuyyxi",
+      "req_duration_sec": 1.54,
+      "file_size_bytes": 19386
+    },
+    {
+      "candidate_id": "ZTF23aaqqdhs",
+      "req_duration_sec": 1.56,
+      "file_size_bytes": 18742
+    },
+    {
+      "candidate_id": "ZTF20aahjymt",
+      "req_duration_sec": 1.51,
+      "file_size_bytes": 14161
+    },
+    {
+      "candidate_id": "ZTF20acxznai",
+      "req_duration_sec": 1.46,
+      "file_size_bytes": 14062
+    },
+    {
+      "candidate_id": "ZTF20abawntz",
+      "req_duration_sec": 2.03,
+      "file_size_bytes": 10234
+    },
+    {
+      "candidate_id": "ZTF19acxniuc",
+      "req_duration_sec": 1.49,
+      "file_size_bytes": 5051
+    },
+    {
+      "candidate_id": "ZTF17aacpbmv",
+      "req_duration_sec": 1.77,
+      "file_size_bytes": 13770
+    },
+    {
+      "candidate_id": "ZTF18aaaibml",
+      "req_duration_sec": 1.65,
+      "file_size_bytes": 17396
+    },
+    {
+      "candidate_id": "ZTF18aaeipng",
+      "req_duration_sec": 1.73,
+      "file_size_bytes": 34870
+    },
+    {
+      "candidate_id": "ZTF18aaewdgq",
+      "req_duration_sec": 1.95,
+      "file_size_bytes": 6185
+    },
+    {
+      "candidate_id": "ZTF18aaszvfn",
+      "req_duration_sec": 2.46,
+      "file_size_bytes": 32097
+    },
+    {
+      "candidate_id": "ZTF18abqtnbk",
+      "req_duration_sec": 1.94,
+      "file_size_bytes": 9376
+    },
+    {
+      "candidate_id": "ZTF19aatfqzb",
+      "req_duration_sec": 1.85,
+      "file_size_bytes": 28372
+    },
+    {
+      "candidate_id": "ZTF19abcejfo",
+      "req_duration_sec": 1.95,
+      "file_size_bytes": 50697
+    },
+    {
+      "candidate_id": "ZTF19abhcefa",
+      "req_duration_sec": 1.49,
+      "file_size_bytes": 9640
+    },
+    {
+      "candidate_id": "ZTF19acxxwrs",
+      "req_duration_sec": 1.6,
+      "file_size_bytes": 22127
+    },
+    {
+      "candidate_id": "ZTF21aakilyd",
+      "req_duration_sec": 1.53,
+      "file_size_bytes": 12291
+    },
+    {
+      "candidate_id": "ZTF22aasxgjp",
+      "req_duration_sec": 1.52,
+      "file_size_bytes": 23057
+    }
+  ]
+}

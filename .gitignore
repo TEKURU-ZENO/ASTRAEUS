@@ -73,6 +73,7 @@ checkpoints/
 *.sqlite
 *.sqlite3
 *.zip
+*.lock
 
 # Node / Web UI
 node_modules/
