@@ -35,10 +35,16 @@ class CanonicalObservationRecordV2(BaseModel):
     t_native: float                     # Native exposure midpoint as reported by archive
     native_time_scale: str              # 'UTC', 'TAI', 'TDB', or 'TT'
     exposure_midpoint_convention: str   # 'MIDPOINT', 'START_PLUS_HALF_EXPTIME', 'SHUTTER_OPEN'
-    t_converted_bmjd: Optional[float]   # Barycentric Modified Julian Date (TDB scale), or None
+    t_converted_bmjd: Optional[float]   # Barycentric Modified Julian Date (TDB scale), strictly None unless converted
     converted_time_scale: Optional[str] # 'BMJD_TDB' if barycentric conversion succeeded, else None
     time_conversion_method: str         # e.g. 'ASTROPY_BARYCORR_V1' or 'NATIVE_UNCONVERTED'
+    t_obs_bmjd: Optional[float]         # Deprecated alias. Strictly None unless barycentric correction was performed
     t_err_days: float                   # Timing uncertainty or half-exposure duration
+
+    @property
+    def observation_time(self) -> float:
+        """Returns t_converted_bmjd if computed; falls back to t_native without false BMJD claims."""
+        return self.t_converted_bmjd if self.t_converted_bmjd is not None else self.t_native
 
     ra_deg: float                       # ICRS Right Ascension [0, 360)
     dec_deg: float                      # ICRS Declination [-90, +90]

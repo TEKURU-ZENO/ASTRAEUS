@@ -114,7 +114,7 @@ class RubinAlertInterfaceAdapter:
             t_converted_bmjd=None,  # Explicitly None until barycentric ephemeris applied
             converted_time_scale=None,
             time_conversion_method="NATIVE_UNCONVERTED",
-            t_obs_bmjd=midpoint_mjd_tai,  # Backwards compatibility
+            t_obs_bmjd=None,  # Strictly None when uncomputed
             t_err_days=0.00035,  # 30-second visit
             ra_deg=ra,
             dec_deg=dec,

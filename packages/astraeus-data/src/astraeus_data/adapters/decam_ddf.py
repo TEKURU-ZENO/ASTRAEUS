@@ -121,7 +121,7 @@ class DecamDdfPhotometryAdapter:
             t_converted_bmjd=None,
             converted_time_scale=None,
             time_conversion_method="NATIVE_UNCONVERTED",
-            t_obs_bmjd=mjd,
+            t_obs_bmjd=None,  # Strictly None when uncomputed
             t_err_days=0.0010,  # ~90s exposure
             ra_deg=ra,
             dec_deg=dec,

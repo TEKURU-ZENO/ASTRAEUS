@@ -162,22 +162,40 @@ class PhotometricHarmonizer:
                 "Per ASTRAEUS-P5-HARMON-002, negative difference flux must be retained in its native passband."
             )
 
+        # Enforce SNR >= 3.0 threshold
+        snr_g = flux_g_ujy / flux_g_err_ujy
+        snr_r = flux_r_ujy / flux_r_err_ujy
+        if snr_g < 3.0 or snr_r < 3.0:
+            raise ValueError(
+                f"Insufficient SNR for empirical color transformation (SNR_g={snr_g:.2f}, SNR_r={snr_r:.2f}). "
+                "Minimum SNR >= 3.0 required per ASTRAEUS-P5-HARMON-002."
+            )
+
         g_mag, g_err = cls.flux_ujy_to_mag(flux_g_ujy, flux_g_err_ujy)
         r_mag, r_err = cls.flux_ujy_to_mag(flux_r_ujy, flux_r_err_ujy)
         if g_mag is None or r_mag is None or g_err is None or r_err is None:
             raise ValueError("Failed to convert positive flux to AB magnitude.")
 
         g_r = g_mag - r_mag
-        if not (-0.5 <= g_r <= 2.5):
-            raise ValueError(f"Color (g - r) = {g_r:.3f} is outside empirical polynomial validity domain [-0.5, 2.5].")
+        if not (-0.4 <= g_r <= 2.0):
+            raise ValueError(
+                f"Color (g - r) = {g_r:.3f} is outside empirical polynomial validity domain [-0.4, 2.0] "
+                "per ASTRAEUS-P5-HARMON-002."
+            )
 
-        g_r_err = np.sqrt(g_err**2 + r_err**2)
+        # Exact transformation polynomials:
+        # c = 0.593 * g + 0.407 * r + 0.016
+        # o = 0.222 * g + 0.778 * r - 0.035
+        c_mag = 0.593 * g_mag + 0.407 * r_mag + 0.016
+        o_mag = 0.222 * g_mag + 0.778 * r_mag - 0.035
 
-        c_mag = g_mag - 0.407 * g_r + 0.016
-        c_err = np.sqrt(g_err**2 + (0.407 * g_r_err)**2 + 0.015**2)
-
-        o_mag = r_mag + 0.222 * g_r - 0.035
-        o_err = np.sqrt(r_err**2 + (0.222 * g_r_err)**2 + 0.015**2)
+        # Exact first-order error propagation on independent input variables:
+        # Var(c) = 0.593^2 * Var(g) + 0.407^2 * Var(r) + Var(model)
+        # Var(o) = 0.222^2 * Var(g) + 0.778^2 * Var(r) + Var(model)
+        c_var = (0.593 ** 2) * (g_err ** 2) + (0.407 ** 2) * (r_err ** 2) + (0.015 ** 2)
+        o_var = (0.222 ** 2) * (g_err ** 2) + (0.778 ** 2) * (r_err ** 2) + (0.015 ** 2)
+        c_err = np.sqrt(c_var)
+        o_err = np.sqrt(o_var)
 
         flux_c, flux_c_err = cls.mag_to_flux_ujy(c_mag, c_err)
         flux_o, flux_o_err = cls.mag_to_flux_ujy(o_mag, o_err)
@@ -185,6 +203,19 @@ class PhotometricHarmonizer:
             "ATLAS_c": (flux_c, flux_c_err),
             "ATLAS_o": (flux_o, flux_o_err),
         }
+
+    @classmethod
+    def compute_atlas_cross_filter_covariance(
+        cls,
+        g_err_mag: float,
+        r_err_mag: float,
+    ) -> float:
+        """
+        Computes analytical magnitude covariance between transformed ATLAS_c and ATLAS_o
+        arising from shared (g, r) measurements:
+          Cov(c, o) = (0.593 * 0.222) * Var(g) + (0.407 * 0.778) * Var(r)
+        """
+        return float(0.593 * 0.222 * (g_err_mag ** 2) + 0.407 * 0.778 * (r_err_mag ** 2))
 
     @classmethod
     def atlas_to_ztf_flux(
@@ -196,7 +227,7 @@ class PhotometricHarmonizer:
     ) -> Dict[str, Tuple[float, float]]:
         """
         Transforms synchronous ATLAS (c, o) fluxes to ZTF (g, r) fluxes by inverting
-        the Tonry et al. (2018) color equations with uncertainty propagation.
+        the Tonry et al. (2018) color matrix with exact covariance propagation.
         """
         if flux_c_ujy <= 0.0 or flux_o_ujy <= 0.0:
             raise ValueError(
@@ -204,20 +235,31 @@ class PhotometricHarmonizer:
                 "Per ASTRAEUS-P5-HARMON-002, negative difference flux must be retained in its native passband."
             )
 
+        snr_c = flux_c_ujy / flux_c_err_ujy
+        snr_o = flux_o_ujy / flux_o_err_ujy
+        if snr_c < 3.0 or snr_o < 3.0:
+            raise ValueError(
+                f"Insufficient SNR for empirical color transformation (SNR_c={snr_c:.2f}, SNR_o={snr_o:.2f}). "
+                "Minimum SNR >= 3.0 required per ASTRAEUS-P5-HARMON-002."
+            )
+
         c_mag, c_err = cls.flux_ujy_to_mag(flux_c_ujy, flux_c_err_ujy)
         o_mag, o_err = cls.flux_ujy_to_mag(flux_o_ujy, flux_o_err_ujy)
         if c_mag is None or o_mag is None or c_err is None or o_err is None:
             raise ValueError("Failed to convert positive flux to AB magnitude.")
 
-        c_o = c_mag - o_mag
-        g_r = (c_o - 0.051) / 0.371
-        g_r_err = np.sqrt(c_err**2 + o_err**2) / 0.371
+        # Inverted linear system:
+        # [g, r]^T = A^-1 * ([c, o]^T - [0.016, -0.035]^T)
+        # A^-1 = [[ 2.097035, -1.097035],
+        #         [-0.598383,  1.598383]]
+        g_mag = 2.097035 * c_mag - 1.097035 * o_mag - 0.07195
+        r_mag = -0.598383 * c_mag + 1.598383 * o_mag + 0.06551
 
-        g_mag = c_mag + 0.407 * g_r - 0.016
-        g_err = np.sqrt(c_err**2 + (0.407 * g_r_err)**2 + 0.020**2)
-
-        r_mag = o_mag - 0.222 * g_r + 0.035
-        r_err = np.sqrt(o_err**2 + (0.222 * g_r_err)**2 + 0.020**2)
+        # Error propagation from independent c and o:
+        g_var = (2.097035 ** 2) * (c_err ** 2) + (1.097035 ** 2) * (o_err ** 2) + (0.020 ** 2)
+        r_var = (0.598383 ** 2) * (c_err ** 2) + (1.598383 ** 2) * (o_err ** 2) + (0.020 ** 2)
+        g_err = np.sqrt(g_var)
+        r_err = np.sqrt(r_var)
 
         flux_g, flux_g_err = cls.mag_to_flux_ujy(g_mag, g_err)
         flux_r, flux_r_err = cls.mag_to_flux_ujy(r_mag, r_err)

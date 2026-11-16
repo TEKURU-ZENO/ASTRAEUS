@@ -75,19 +75,26 @@ class CrossSurveyMatcher:
         query_id: str,
         query_ra: float,
         query_dec: float,
-        query_pos_err_arcsec: float,
-        candidates: List[SurveyCandidate],
-        local_density_sq_arcsec: Optional[float] = None
+        query_pos_err_arcsec: float = 0.05,
+        candidates: Optional[List[SurveyCandidate]] = None,
+        local_density_sq_arcsec: Optional[float] = None,
+        query_dec_err_arcsec: Optional[float] = None,
     ) -> CrossSurveyAssociation:
         """
         Calculates competing-hypothesis Bayesian association probabilities under:
           H_j: candidate j is the physical counterpart
           H_0: no candidate in search region is the physical counterpart
+
+        Implements full 2D Gaussian astrometric likelihood with covariance:
+          Sigma_j = Sigma_query + Sigma_cand,j (utilizing both RA and Dec uncertainties)
         """
+        if candidates is None:
+            candidates = []
+
         # Prior odds factor for the no-counterpart hypothesis: (1 - Q) / Q
         prior_null_factor = (1.0 - self.q_prior) / self.q_prior
 
-        # Default local extragalactic background density ~ 0.005 sources / arcsec^2
+        # Local background source density (sources / arcsec^2)
         rho = local_density_sq_arcsec or 0.005
 
         if not candidates:
@@ -103,18 +110,39 @@ class CrossSurveyMatcher:
                 competing_candidates_count=0,
             )
 
-        # Filter candidates within search radius and evaluate likelihoods
+        # 2D Astrometric error modeling
+        sigma_alpha_query = query_pos_err_arcsec
+        sigma_dec_query = query_dec_err_arcsec if query_dec_err_arcsec is not None else query_pos_err_arcsec
+
+        # Filter candidates within search radius and evaluate 2D likelihoods
         evaluated_candidates: List[Tuple[SurveyCandidate, float, float]] = []  # (cand, sep, lr)
         for cand in candidates:
-            sep = self.angular_separation_arcsec(query_ra, query_dec, cand.ra_deg, cand.dec_deg)
+            mean_dec_rad = np.radians(0.5 * (query_dec + cand.dec_deg))
+            dx_arcsec = (cand.ra_deg - query_ra) * np.cos(mean_dec_rad) * 3600.0
+            dy_arcsec = (cand.dec_deg - query_dec) * 3600.0
+            sep = np.sqrt(dx_arcsec ** 2 + dy_arcsec ** 2)
+
             if sep > self.max_search_radius_arcsec:
                 continue
 
-            sigma_tot = np.sqrt(query_pos_err_arcsec ** 2 + cand.ra_err_arcsec ** 2 + 1e-4)
-            # Positional Gaussian likelihood: f(r) = (1 / 2*pi*sigma^2) * exp(-r^2 / 2*sigma^2)
-            f_r = (1.0 / (2.0 * np.pi * (sigma_tot ** 2))) * np.exp(-0.5 * (sep / sigma_tot) ** 2)
+            # 2x2 Astrometric Covariance Matrix: Sigma = Sigma_query + Sigma_cand
+            var_x = (sigma_alpha_query ** 2) + (cand.ra_err_arcsec ** 2) + 1e-6
+            var_y = (sigma_dec_query ** 2) + (cand.dec_err_arcsec ** 2) + 1e-6
+            cov_xy = 0.0  # Off-diagonal covariance (uncorrelated astrometric reductions)
+            det_sigma = (var_x * var_y) - (cov_xy ** 2)
 
-            # Likelihood ratio: ell_j = f(r) / rho
+            # Mahalanobis distance squared: Delta_x^T Sigma^-1 Delta_x
+            mahalanobis_sq = (
+                (dx_arcsec ** 2) * var_y +
+                (dy_arcsec ** 2) * var_x -
+                (2.0 * cov_xy * dx_arcsec * dy_arcsec)
+            ) / max(det_sigma, 1e-8)
+
+            # 2D Positional Gaussian likelihood:
+            # p(Delta_x | H_j) = (1 / 2*pi*sqrt(det_Sigma)) * exp(-0.5 * mahalanobis_sq)
+            f_r = (1.0 / (2.0 * np.pi * np.sqrt(max(det_sigma, 1e-8)))) * np.exp(-0.5 * mahalanobis_sq)
+
+            # Likelihood ratio: ell_j = p(Delta_x | H_j) / rho
             lr = f_r / max(rho, 1e-6)
             evaluated_candidates.append((cand, sep, lr))
 

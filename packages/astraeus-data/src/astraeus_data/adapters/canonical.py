@@ -45,12 +45,29 @@ class CanonicalObservationRecord(BaseModel):
     t_native: float = Field(..., description="Native exposure timestamp as reported by the provider archive.")
     native_time_scale: str = Field(default="UTC", description="'UTC', 'TAI', 'TDB', or 'TT'.")
     exposure_midpoint_convention: str = Field(default="MIDPOINT", description="'MIDPOINT', 'START_PLUS_HALF_EXPTIME', 'SHUTTER_OPEN'.")
-    t_converted_bmjd: Optional[float] = Field(default=None, description="Barycentric Modified Julian Date (TDB scale), or None if uncomputed.")
-    converted_time_scale: Optional[str] = Field(default=None, description="'BMJD_TDB' if barycentric conversion succeeded, else None.")
-    time_conversion_method: str = Field(default="NATIVE_UNCONVERTED", description="e.g. 'ASTROPY_BARYCORR_V1' or 'NATIVE_UNCONVERTED'.")
-    t_obs_bmjd: float = Field(..., description="Barycentric or calibrated observation date (for backwards compatibility).")
+    t_converted_bmjd: Optional[float] = Field(
+        default=None,
+        description="Barycentric Modified Julian Date (TDB scale), strictly None unless barycentric correction was computed."
+    )
+    converted_time_scale: Optional[str] = Field(
+        default=None,
+        description="'BMJD_TDB' if barycentric conversion succeeded, else None."
+    )
+    time_conversion_method: str = Field(
+        default="NATIVE_UNCONVERTED",
+        description="e.g. 'ASTROPY_BARYCORR_V1' or 'NATIVE_UNCONVERTED'."
+    )
+    t_obs_bmjd: Optional[float] = Field(
+        default=None,
+        description="Deprecated alias for t_converted_bmjd. Strictly None unless barycentric correction is applied."
+    )
     t_pub_utc: Optional[datetime] = Field(default=None, description="ISO 8601 UTC timestamp when packet was published.")
     t_err_days: float = Field(default=0.0001, description="Exposure duration / timing uncertainty in days.")
+
+    @property
+    def observation_time(self) -> float:
+        """Returns the best available time coordinate (t_converted_bmjd if computed, else t_native)."""
+        return self.t_converted_bmjd if self.t_converted_bmjd is not None else self.t_native
 
     ra_deg: float = Field(..., ge=0.0, lt=360.0, description="ICRS Right Ascension in degrees.")
     dec_deg: float = Field(..., ge=-90.0, le=90.0, description="ICRS Declination in degrees.")

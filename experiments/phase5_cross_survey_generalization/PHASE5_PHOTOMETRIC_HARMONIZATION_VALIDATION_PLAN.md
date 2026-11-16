@@ -54,11 +54,14 @@ flowchart TD
 - **Applicability:** Candidates with synchronous detections ($F > 0$, $\mathrm{SNR} \ge 3$) where the measured color satisfies the polynomial validity range:
   $$-0.4 \le (g - r) \le 2.0$$
 - **Transformation Model (Tonry et al. 2018; Smith et al. 2020):**
-  $$c_{\mathrm{ATLAS}} = g_{\mathrm{ZTF}} - 0.407 (g - r) + 0.016$$
-  $$o_{\mathrm{ATLAS}} = r_{\mathrm{ZTF}} + 0.222 (g - r) - 0.035$$
-- **Propagated Variance:**
-  $$\sigma_{c}^2 = \sigma_{g}^2 + (0.407)^2 (\sigma_g^2 + \sigma_r^2) + \sigma_{\mathrm{model}}^2$$
+  $$c_{\mathrm{ATLAS}} = 0.593\,g_{\mathrm{ZTF}} + 0.407\,r_{\mathrm{ZTF}} + 0.016$$
+  $$o_{\mathrm{ATLAS}} = 0.222\,g_{\mathrm{ZTF}} + 0.778\,r_{\mathrm{ZTF}} - 0.035$$
+- **Exact First-Order Propagated Variance:**
+  $$\sigma_{c}^2 = (0.593)^2 \sigma_g^2 + (0.407)^2 \sigma_r^2 + \sigma_{\mathrm{model}, c}^2$$
+  $$\sigma_{o}^2 = (0.222)^2 \sigma_g^2 + (0.778)^2 \sigma_r^2 + \sigma_{\mathrm{model}, o}^2$$
   where $\sigma_{\mathrm{model}} = 0.015\,\mathrm{mag}$ accounts for transformation model scatter.
+- **Analytical Magnitude Cross-Filter Covariance:**
+  $$\operatorname{Cov}(c, o) = (0.593 \times 0.222)\,\sigma_g^2 + (0.407 \times 0.778)\,\sigma_r^2 \approx 0.132\,\sigma_g^2 + 0.317\,\sigma_r^2 > 0$$
 
 ### 2.3 State 3: Native Passband Untransformed (`NATIVE_UNTRANSFORMED`)
 - **Applicability:** All non-positive difference flux measurements ($F \le 0.0\,\mu\mathrm{Jy}$), non-detections, and epochs without valid synchronous color.
@@ -82,5 +85,6 @@ flowchart TD
 
 When downstream models ingest transformed multi-band photometry:
 1. **Zero-Point Covariance:** Observations taken on the same night or detector quadrant share common zero-point calibration error $\sigma_{\mathrm{ZP}}$. These epochs must record a common `photometric_group_id`.
-2. **Coupled Errors:** When both $c_{\mathrm{ATLAS}}$ and $o_{\mathrm{ATLAS}}$ are derived from the same pair of $(g_{\mathrm{ZTF}}, r_{\mathrm{ZTF}})$ measurements, their transformed errors are mathematically correlated. Downstream sequence models must account for the $2 \times 2$ covariance matrix:
-   $$\operatorname{Cov}(c, o) = \mathbb{E}[(c - \mu_c)(o - \mu_o)] = -0.407 \times 0.222 \, \sigma_{g-r}^2 \approx -0.090 \, (\sigma_g^2 + \sigma_r^2)$$
+2. **Coupled Errors:** When both $c_{\mathrm{ATLAS}}$ and $o_{\mathrm{ATLAS}}$ are derived from the same pair of $(g_{\mathrm{ZTF}}, r_{\mathrm{ZTF}})$ measurements, their transformed errors are mathematically correlated with positive covariance:
+   $$\operatorname{Cov}(c, o) = (0.593 \times 0.222)\,\sigma_g^2 + (0.407 \times 0.778)\,\sigma_r^2 \approx 0.132\,\sigma_g^2 + 0.317\,\sigma_r^2$$
+   Downstream sequence models must account for this non-zero covariance matrix rather than treating transformed passbands as statistically independent.

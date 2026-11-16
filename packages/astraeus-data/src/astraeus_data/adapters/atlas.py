@@ -134,7 +134,7 @@ class AtlasForcedPhotometryAdapter:
             t_converted_bmjd=None,  # Set when high-accuracy barycentric ephemeris available
             converted_time_scale=None,
             time_conversion_method="NATIVE_UNCONVERTED",
-            t_obs_bmjd=mjd,
+            t_obs_bmjd=None,  # Strictly None when uncomputed
             t_err_days=0.00035,  # 30-second exposure ~ 0.00035 days
             ra_deg=ra,
             dec_deg=dec,

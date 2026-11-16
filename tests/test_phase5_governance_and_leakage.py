@@ -109,7 +109,8 @@ def test_phase5_champion_model_frozen_hash(repo_root: Path):
 def test_phase5_canonical_observation_contract_v2():
     """
     CONTRACT TEST v2.0: CanonicalObservationRecord preserves physical time scales,
-    natively preserves negative difference flux, and fails closed on non-positive uncertainty.
+    natively preserves negative difference flux, strictly keeps t_obs_bmjd=None unless converted,
+    and fails closed on non-positive uncertainty.
     """
     # 1. Negative flux observation (unbiased forced photometry subtraction residual)
     rec = CanonicalObservationRecord(
@@ -121,7 +122,7 @@ def test_phase5_canonical_observation_contract_v2():
         t_converted_bmjd=None,
         converted_time_scale=None,
         time_conversion_method="NATIVE_UNCONVERTED",
-        t_obs_bmjd=59000.123,
+        t_obs_bmjd=None,  # Strictly None unless barycentric conversion executed
         ra_deg=150.0,
         dec_deg=2.0,
         survey_id="ATLAS",
@@ -138,15 +139,40 @@ def test_phase5_canonical_observation_contract_v2():
     assert rec.measured_flux_ujy == -12.5
     assert rec.is_positive_detection_snr5 is False
     assert rec.native_time_scale == "UTC"
+    assert rec.t_obs_bmjd is None
+    assert rec.t_converted_bmjd is None
+    assert rec.observation_time == 59000.123
     assert rec.transformation_state == TransformationState.NATIVE_PASSBAND_UNTRANSFORMED
 
-    # 2. Assert fail-closed validation on non-positive uncertainty
+    # 2. Converted barycentric timestamp reflects in observation_time property
+    rec_converted = CanonicalObservationRecord(
+        astraeus_id="ASTRAEUS-EVT-00000001",
+        survey_obs_id="ATLAS_59000123_c_bary",
+        t_native=59000.123,
+        native_time_scale="UTC",
+        t_converted_bmjd=59000.128,
+        converted_time_scale="BMJD_TDB",
+        time_conversion_method="ASTROPY_BARYCORR_V1",
+        t_obs_bmjd=59000.128,
+        ra_deg=150.0,
+        dec_deg=2.0,
+        survey_id="ATLAS",
+        native_passband="ATLAS_c",
+        obs_type=ObservationType.DIFFERENCE_FORCED,
+        measured_flux_ujy=25.0,
+        measurement_sigma_ujy=2.0,
+        is_positive_detection_snr5=True,
+        provenance_hash="bcde" * 16,
+    )
+    assert rec_converted.observation_time == 59000.128
+
+    # 3. Assert fail-closed validation on non-positive uncertainty
     with pytest.raises(ValueError):
         CanonicalObservationRecord(
             astraeus_id="ASTRAEUS-EVT-00000001",
             survey_obs_id="BAD_OBS",
             t_native=59000.0,
-            t_obs_bmjd=59000.0,
+            t_obs_bmjd=None,
             ra_deg=150.0,
             dec_deg=2.0,
             survey_id="ATLAS",
@@ -325,8 +351,8 @@ def test_phase5_stable_entity_registry():
 def test_phase5_identity_pilot_deliverables_and_four_tier_yield(repo_root: Path):
     """
     DELIVERABLES & FOUR-TIER YIELD TEST:
-    Asserts Workstream 3 deliverables exist, adhere to the 4-tier yield accounting,
-    and verify calibration monotonicity.
+    Asserts Workstream 3 deliverables exist, adhere to the reclassified synthetic simulation
+    4-tier yield accounting, verify spectroscopic metadata attribution, and verify calibration monotonicity.
     """
     p5_dir = repo_root / "experiments" / "phase5_cross_survey_generalization"
 
@@ -336,30 +362,46 @@ def test_phase5_identity_pilot_deliverables_and_four_tier_yield(repo_root: Path)
     with open(rep_path, "r", encoding="utf-8") as f:
         rep = json.load(f)
 
-    # Asserts 4-tier yield separation
+    # Asserts 4-tier yield separation and simulation benchmark reclassification
     yields = rep["four_tier_yield_accounting"]
     assert yields["tier1_geometric_footprint_eligible"] == 150
-    assert yields["tier2_modeled_visibility_yield"] == 150
-    assert yields["tier3_observed_retrieval_secure_matches"] == 142
-    assert yields["tier4_feature_evaluable_yield"] == 142
-    assert yields["ambiguous_conflict_count"] == 8
+    assert yields["tier2_brightness_screened"] == 150
+    assert yields["synthetic_simulation_secure_matches"] == 142
+    assert yields["synthetic_simulation_injected_conflicts"] == 8
+    assert yields["actual_atlas_retrievals"] == 0
+    assert yields["actual_feature_evaluable_yield"] == 0
+    assert yields["accounting_classification"] == "SYNTHETIC_MATCHER_SIMULATION_BENCHMARK"
+    assert rep["pilot_nature"] == "SYNTHETIC_MATCHER_SIMULATION_BENCHMARK"
+    assert rep["empirical_retrieval_status"] == "PENDING_LIVE_BROKER_PILOT_EXECUTION"
 
     # 2. Ledgers
     id_parquet = p5_dir / "phase5_cross_survey_identity_ledger.parquet"
     ev_parquet = p5_dir / "phase5_spectroscopic_evidence_ledger.parquet"
     cf_parquet = p5_dir / "phase5_identity_conflict_ledger.parquet"
+    reg_parquet = p5_dir / "phase5_entity_registry.parquet"
 
     assert id_parquet.exists()
     assert ev_parquet.exists()
     assert cf_parquet.exists()
+    assert reg_parquet.exists()
 
     df_id = pd.read_parquet(id_parquet)
     df_ev = pd.read_parquet(ev_parquet)
     df_cf = pd.read_parquet(cf_parquet)
+    df_reg = pd.read_parquet(reg_parquet)
 
     assert len(df_id) == 150
     assert len(df_ev) == 150
     assert len(df_cf) == 8
+    assert len(df_reg) == 150
+
+    # Verify Spectroscopic Evidence Tier & Metadata Qualification
+    assert df_ev["evidence_tier"].iloc[0] == "PROVISIONAL_S2_UNVERIFIED_SPECTRAL_CHAIN"
+    assert df_ev["spectroscopic_instrument"].iloc[0] == "UNVERIFIED_INDIVIDUAL_INSTRUMENT_METADATA_BTS_ARCHIVE"
+    assert df_ev["verification_status"].iloc[0] == "PROVISIONAL_TRACEABLE_TO_IAU_TNS"
+
+    # Verify Registry contains no premature ATLAS association
+    assert df_reg["atlas_id"].isna().all() or (df_reg["atlas_id"] == "").all() or (df_reg["atlas_id"] == None).all()
 
     # 3. Calibration report
     calib_path = p5_dir / "phase5_match_calibration_report.json"
@@ -368,3 +410,140 @@ def test_phase5_identity_pilot_deliverables_and_four_tier_yield(repo_root: Path)
         calib = json.load(f)
     assert calib["offset_monotonicity_verified"] is True
     assert calib["negative_control_rejection_rate"] == 1.0
+
+
+def test_phase5_astrometric_2d_covariance_anisotropic():
+    """
+    ASTROMETRIC 2D COVARIANCE TEST:
+    Verifies that CrossSurveyMatcher uses the full 2D Gaussian astrometric covariance matrix
+    with anisotropic uncertainties (sigma_ra != sigma_dec) and Mahalanobis distance.
+    """
+    matcher = CrossSurveyMatcher(completeness_prior_q=0.90, max_search_radius_arcsec=5.0)
+
+    query_ra = 180.0
+    query_dec = 0.0  # On celestial equator: cos(dec) = 1.0
+    sigma_ra = 0.05   # Arcsec
+    sigma_dec = 0.20  # Arcsec (significant Dec elongation)
+
+    # Candidate A: offset 0.10 arcsec in RA, 0.00 arcsec in Dec
+    # Total error along RA: sqrt(0.05^2 + 0.05^2) = 0.0707" -> Mahalanobis distance = (0.10 / 0.0707)^2 = 2.00
+    cand_ra_offset = SurveyCandidate(
+        catalog_name="ATLAS",
+        source_id="CAND_RA_OFFSET",
+        ra_deg=query_ra + (0.10 / 3600.0),
+        dec_deg=query_dec,
+        ra_err_arcsec=0.05,
+        dec_err_arcsec=0.05,
+        mag=18.0,
+        filter_band="ATLAS_o",
+    )
+
+    # Candidate B: offset 0.00 arcsec in RA, 0.10 arcsec in Dec
+    # Total error along Dec: sqrt(0.20^2 + 0.05^2) = 0.2062" -> Mahalanobis distance = (0.10 / 0.2062)^2 = 0.235
+    cand_dec_offset = SurveyCandidate(
+        catalog_name="ATLAS",
+        source_id="CAND_DEC_OFFSET",
+        ra_deg=query_ra,
+        dec_deg=query_dec + (0.10 / 3600.0),
+        ra_err_arcsec=0.05,
+        dec_err_arcsec=0.05,
+        mag=18.0,
+        filter_band="ATLAS_o",
+    )
+
+    res_a = matcher.match_source(
+        "QUERY_ANISO_RA",
+        query_ra,
+        query_dec,
+        query_pos_err_arcsec=sigma_ra,
+        query_dec_err_arcsec=sigma_dec,
+        candidates=[cand_ra_offset],
+    )
+
+    res_b = matcher.match_source(
+        "QUERY_ANISO_DEC",
+        query_ra,
+        query_dec,
+        query_pos_err_arcsec=sigma_ra,
+        query_dec_err_arcsec=sigma_dec,
+        candidates=[cand_dec_offset],
+    )
+
+    # Because Dec error is much larger, the same 0.10" offset in Dec is much more consistent with H1
+    # than in RA. Therefore, Cand B must have a higher likelihood ratio and posterior than Cand A!
+    assert res_b.likelihood_ratio > res_a.likelihood_ratio
+    assert res_b.posterior_match_probability > res_a.posterior_match_probability
+
+
+def test_phase5_harmonization_analytical_covariance_positive():
+    """
+    HARMONIZATION COVARIANCE & DOMAIN BOUND TEST:
+    Verifies that compute_atlas_cross_filter_covariance produces strictly positive analytical covariance
+    matching first-order propagation on independent g and r variances, and enforces [-0.4, 2.0] bounds.
+    """
+    sigma_g = 0.03
+    sigma_r = 0.02
+    cov = PhotometricHarmonizer.compute_atlas_cross_filter_covariance(sigma_g, sigma_r)
+    expected_cov = (0.593 * 0.222) * (sigma_g ** 2) + (0.407 * 0.778) * (sigma_r ** 2)
+
+    assert cov > 0.0
+    assert np.isclose(cov, expected_cov, atol=1e-8)
+
+    # Test domain limits: (g - r) must be in [-0.4, 2.0]
+    # Inverted fluxes for extreme colors:
+    # m = -2.5*log10(F) + 23.9 -> F = 10^((23.9 - m)/2.5)
+    # Color = -2.5*log10(Fg / Fr) = 2.5*log10(Fr / Fg)
+    # If Fr = 1000, Fg = 1 -> color = 2.5 * 3 = 7.5 mag (out of domain)
+    with pytest.raises(ValueError, match="outside empirical polynomial validity domain"):
+        PhotometricHarmonizer.ztf_to_atlas_flux(flux_g_ujy=10.0, flux_r_ujy=1000.0, flux_g_err_ujy=1.0, flux_r_err_ujy=10.0)
+
+    # If Fg has SNR < 3.0:
+    with pytest.raises(ValueError, match="Insufficient SNR"):
+        PhotometricHarmonizer.ztf_to_atlas_flux(flux_g_ujy=2.0, flux_r_ujy=10.0, flux_g_err_ujy=1.0, flux_r_err_ujy=1.0)
+
+
+def test_phase5_stable_entity_registry_persistence_and_association(tmp_path: Path):
+    """
+    DURABLE REGISTRY TEST:
+    Verifies that StableEntityRegistry can be serialized to and loaded from Parquet,
+    preserves indexing across surveys, and supports attaching validated associations.
+    """
+    reg = StableEntityRegistry()
+    ent1 = reg.register_entity(
+        reference_ra_deg=200.0,
+        reference_dec_deg=10.0,
+        iau_name="SN 2021gde",
+        ztf_id="ZTF21aaagde",
+        atlas_id=None,
+    )
+    assert ent1.astraeus_id == "ASTRAEUS-EVT-00000001"
+    assert ent1.atlas_id is None
+
+    # Attach empirical association post-verification
+    reg.attach_survey_association(
+        entity_id=ent1.astraeus_id,
+        survey="ATLAS",
+        target_id="ATLAS_SRC_999001",
+        status="SECURELY_ASSOCIATED",
+    )
+    assert ent1.atlas_id == "ATLAS_SRC_999001"
+    assert "ATLAS" in ent1.associated_surveys
+    assert ent1.identity_status == "SECURELY_ASSOCIATED"
+
+    # Save to parquet and reload
+    pq_path = tmp_path / "test_registry.parquet"
+    reg.save_to_parquet(pq_path)
+    assert pq_path.exists()
+
+    loaded_reg = StableEntityRegistry.load_from_parquet(pq_path)
+    reloaded_ent = loaded_reg.get_by_id(ent1.astraeus_id)
+    assert reloaded_ent is not None
+    assert reloaded_ent.iau_name == "SN 2021gde"
+    assert reloaded_ent.ztf_id == "ZTF21aaagde"
+    assert reloaded_ent.atlas_id == "ATLAS_SRC_999001"
+    assert "ATLAS" in reloaded_ent.associated_surveys
+    assert reloaded_ent.identity_status == "SECURELY_ASSOCIATED"
+
+    # Check ATLAS index
+    assert loaded_reg._atlas_index["ATLAS_SRC_999001"] == ent1.astraeus_id
+

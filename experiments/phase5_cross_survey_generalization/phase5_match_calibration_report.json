@@ -2,44 +2,44 @@
   "spatial_offset_response": [
     {
       "offset_arcsec": 0.0,
-      "posterior_match_prob": 0.9999724093823056,
-      "posterior_null_prob": 2.7590617694426216e-05,
-      "likelihood_ratio": 3151.5830315226794,
+      "posterior_match_prob": 0.9999726798176054,
+      "posterior_null_prob": 2.732018239467788e-05,
+      "likelihood_ratio": 3182.780583779529,
       "match_status": "SECURE_MATCH"
     },
     {
       "offset_arcsec": 0.5,
-      "posterior_match_prob": 0.394010368341237,
-      "posterior_null_prob": 0.6059896316587629,
-      "likelihood_ratio": 0.056538543516534284,
+      "posterior_match_prob": 0.3707929449107722,
+      "posterior_null_prob": 0.6292070550892278,
+      "likelihood_ratio": 0.05124364788039031,
       "match_status": "AMBIGUOUS_MATCH"
     },
     {
       "offset_arcsec": 1.0,
-      "posterior_match_prob": 3.7539635343068115e-15,
-      "posterior_null_prob": 0.9999999999999962,
-      "likelihood_ratio": 3.264316116788543e-16,
+      "posterior_match_prob": 2.459449430521745e-15,
+      "posterior_null_prob": 0.9999999999999976,
+      "likelihood_ratio": 2.1386516787145648e-16,
       "match_status": "NO_RELIABLE_MATCH"
     },
     {
       "offset_arcsec": 1.8,
-      "posterior_match_prob": 1.1186138419425685e-57,
+      "posterior_match_prob": 2.780126871562954e-58,
       "posterior_null_prob": 1.0,
-      "likelihood_ratio": 9.727076886457113e-59,
+      "likelihood_ratio": 2.417501627446046e-59,
       "match_status": "NO_RELIABLE_MATCH"
     },
     {
       "offset_arcsec": 2.5,
-      "posterior_match_prob": 8.028292507893997e-115,
+      "posterior_match_prob": 5.424229001297322e-116,
       "posterior_null_prob": 1.0,
-      "likelihood_ratio": 6.98112391990782e-116,
+      "likelihood_ratio": 4.7167208706933216e-117,
       "match_status": "NO_RELIABLE_MATCH"
     },
     {
       "offset_arcsec": 3.5,
-      "posterior_match_prob": 9.912972622440519e-229,
+      "posterior_match_prob": 4.9927307096019044e-231,
       "posterior_null_prob": 1.0,
-      "likelihood_ratio": 8.619976193426534e-230,
+      "likelihood_ratio": 4.341504964871219e-232,
       "match_status": "NO_RELIABLE_MATCH"
     },
     {

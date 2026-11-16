@@ -100,7 +100,7 @@ def run_identity_matching_pilot():
             reference_dec_deg=float(row["dec_deg"]),
             iau_name=str(row["iau_id"]),
             ztf_id=str(row["ztf_id"]),
-            atlas_id=f"ATLAS_{str(row['ztf_id'])}",
+            atlas_id=None,  # NEVER attach an ATLAS ID prior to real empirical association!
             discovery_mjd=float(row.get("peakt", 58000.0)),
             spectral_class=str(row["astraeus_class"]),
             raw_spectral_type=str(row.get("raw_type", "Unknown")),
@@ -115,10 +115,10 @@ def run_identity_matching_pilot():
             "ztf_id": entity.ztf_id,
             "reported_class": entity.spectral_class,
             "raw_reported_subtype": entity.raw_spectral_type,
-            "evidence_tier": "PROVISIONAL_S2",
-            "spectroscopic_instrument": "SEDM/P200/Keck",
+            "evidence_tier": "PROVISIONAL_S2_UNVERIFIED_SPECTRAL_CHAIN",
+            "spectroscopic_instrument": "UNVERIFIED_INDIVIDUAL_INSTRUMENT_METADATA_BTS_ARCHIVE",
             "redshift": entity.host_galaxy_redshift,
-            "verification_status": "TRACEABLE_TO_IAU_TNS",
+            "verification_status": "PROVISIONAL_TRACEABLE_TO_IAU_TNS",
         })
 
     print(f"  ✓ Registered {len(df_cohort)} entities in StableEntityRegistry (ASTRAEUS-EVT-00000001 to 00000150).")
@@ -281,24 +281,28 @@ def run_identity_matching_pilot():
     print(f"    - Offset response strictly monotonic: {is_strictly_monotonic}")
     print(f"    - Negative control rejection rate: {calib_results['negative_control_rejection_rate']:.1%}")
 
-    # 4. Four-Tier Yield Accounting
+    # 4. Four-Tier Yield Accounting & Simulation Benchmark Classification
+    # Note: This pilot is a synthetic simulation benchmark to validate the Bayesian matcher
+    # under known astrometric scatter (sigma ~ 0.08") and competing sources. It does NOT represent
+    # live external broker retrievals of 142 ATLAS light curves.
     tier1_count = len(df_cohort)  # 150/150 in footprint (dec >= -45)
-    tier2_count = int((df_cohort["peakmag"] <= 19.2).sum())  # Modeled >= 8 detections
-    # Tier 3: Securely matched in identity pilot (excluding ambiguous conflicts)
-    tier3_count = int((df_identity["match_status"] == "SECURE_MATCH").sum())
-    # Tier 4: Feature-evaluable secure matches
-    tier4_count = int(tier3_count)  # Matches possessing clean photometry
+    tier2_count = int((df_cohort["peakmag"] <= 19.2).sum())  # Brightness screened: Modeled >= 8 detections
+    sim_secure_count = int((df_identity["match_status"] == "SECURE_MATCH").sum())  # 142
+    sim_conflict_count = len(df_conflict)  # 8
 
     yield_accounting = {
         "tier1_geometric_footprint_eligible": tier1_count,
         "tier1_fraction": float(tier1_count / len(df_cohort)),
-        "tier2_modeled_visibility_yield": tier2_count,
+        "tier2_brightness_screened": tier2_count,
         "tier2_fraction": float(tier2_count / len(df_cohort)),
-        "tier3_observed_retrieval_secure_matches": tier3_count,
-        "tier3_fraction": float(tier3_count / len(df_cohort)),
-        "tier4_feature_evaluable_yield": tier4_count,
-        "tier4_fraction": float(tier4_count / len(df_cohort)),
-        "ambiguous_conflict_count": len(df_conflict),
+        "synthetic_simulation_secure_matches": sim_secure_count,
+        "synthetic_simulation_secure_fraction": float(sim_secure_count / len(df_cohort)),
+        "synthetic_simulation_injected_conflicts": sim_conflict_count,
+        "actual_atlas_retrievals": 0,
+        "actual_atlas_retrieval_fraction": 0.0,
+        "actual_feature_evaluable_yield": 0,
+        "actual_feature_evaluable_fraction": 0.0,
+        "accounting_classification": "SYNTHETIC_MATCHER_SIMULATION_BENCHMARK",
     }
 
     # 5. Output Deliverables
@@ -307,11 +311,13 @@ def run_identity_matching_pilot():
     identity_csv = P5_DIR / "phase5_cross_survey_identity_ledger.csv"
     evidence_parquet = P5_DIR / "phase5_spectroscopic_evidence_ledger.parquet"
     conflict_parquet = P5_DIR / "phase5_identity_conflict_ledger.parquet"
+    registry_parquet = P5_DIR / "phase5_entity_registry.parquet"
 
     df_identity.to_parquet(identity_parquet, index=False)
     df_identity.to_csv(identity_csv, index=False)
     df_evidence.to_parquet(evidence_parquet, index=False)
     df_conflict.to_parquet(conflict_parquet, index=False)
+    registry.save_to_parquet(registry_parquet)
 
     # Calibration report
     calib_path = P5_DIR / "phase5_match_calibration_report.json"
@@ -326,10 +332,12 @@ def run_identity_matching_pilot():
         "date": "2026-11-16",
         "workstream": "Workstream 3 — Identity and Provenance Resolution",
         "governance_status": "GATE3_QUARANTINE_RESPECTED_ZERO_TOUCH",
+        "pilot_nature": "SYNTHETIC_MATCHER_SIMULATION_BENCHMARK",
+        "empirical_retrieval_status": "PENDING_LIVE_BROKER_PILOT_EXECUTION",
         "reconciliation_findings_addressed": [
-            "P5-01: Four-Tier Yield Accounting enforced",
-            "P5-02: Competing-Hypothesis Bayesian Matcher implemented",
-            "P5-03: Stable Entity Registry implemented",
+            "P5-01: Four-Tier Yield Accounting enforced (Synthetic Matcher Simulation)",
+            "P5-02: Competing-Hypothesis Bayesian Matcher implemented with 2D Astrometric Covariance",
+            "P5-03: Durable Stable Entity Registry implemented with Parquet serialization",
             "P5-08: Fail-closed adapter rules applied",
             "P5-09: Rare-class power limits explicitly noted",
         ],
@@ -343,12 +351,13 @@ def run_identity_matching_pilot():
             "median_secure_posterior_probability": float(df_identity[df_identity["match_status"] == "SECURE_MATCH"]["posterior_match_probability"].median()),
         },
         "spectroscopic_evidence_summary": {
-            "evidence_tier": "PROVISIONAL_S2",
+            "evidence_tier": "PROVISIONAL_S2_UNVERIFIED_SPECTRAL_CHAIN",
             "traceable_classifications_count": len(df_evidence),
             "traceability_rate": 1.0,
+            "instrument_attribution": "UNVERIFIED_INDIVIDUAL_INSTRUMENT_METADATA_BTS_ARCHIVE",
         },
         "calibration_audit_verdict": "BAYESIAN_MATCHER_CALIBRATED_AND_VERIFIED",
-        "next_action": "RECONCILIATION_COMPLETE_READY_FOR_HARMONIZATION_VALIDATION",
+        "next_action": "SYNTHETIC_BENCHMARK_COMPLETE_PROCEED_TO_LIVE_ATLAS_PILOT_SPECIFICATION",
     }
 
     report_path = P5_DIR / "phase5_identity_matching_pilot_report.json"
@@ -359,6 +368,7 @@ def run_identity_matching_pilot():
     print(f"    - {identity_parquet.name} ({len(df_identity)} rows)")
     print(f"    - {evidence_parquet.name} ({len(df_evidence)} rows)")
     print(f"    - {conflict_parquet.name} ({len(df_conflict)} rows)")
+    print(f"    - {registry_parquet.name} ({len(registry._entities)} registered entities)")
     print(f"    - {calib_path.name}")
     print(f"    - {report_path.name}")
     print("[ASTRAEUS Phase 5 Identity Matching Pilot] Complete.")

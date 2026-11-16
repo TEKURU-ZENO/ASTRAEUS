@@ -68,7 +68,7 @@ Under this hierarchy:
 
 Bulk execution across the full 7,614 admitted candidates remains **on hold**. 
 
-Workstream 3 will execute as a **Controlled Identity-Matching & Acquisition Pilot** restricted to the $N=150$ curated candidate cohort:
+Workstream 3 was executed as a **Controlled Identity-Matching & Bayesian Calibration Simulation Benchmark** restricted to the $N=150$ curated candidate cohort:
 1. **Mathematical Validation:** Execute the competing-hypothesis Bayesian matcher with rigorous background normalization.
 2. **Probability Calibration:** Validate match posterior probabilities against artificial spatial perturbations ($0.5'', 1.0'', 2.5'', 5.0''$) and negative control coordinates ($> 30''$).
 3. **Stable Identity Registration:** Register all 150 events in a persistent entity registry decoupling event identity from measurement coordinates.
@@ -76,8 +76,55 @@ Workstream 3 will execute as a **Controlled Identity-Matching & Acquisition Pilo
    - `phase5_cross_survey_identity_ledger.parquet`
    - `phase5_spectroscopic_evidence_ledger.parquet`
    - `phase5_identity_conflict_ledger.parquet`
+   - `phase5_entity_registry.parquet`
    - `phase5_match_calibration_report.json`
    - `phase5_identity_matching_pilot_report.json`
+
+---
+
+## 5. Reconciliation of Commit 6349e23 Review Findings (Audit v2)
+
+Following an independent scientific review of commit `6349e23`, six mandatory corrections were identified and formally reconciled:
+
+### 5.1 Reclassification of Pilot as Synthetic Matcher Simulation Benchmark
+- **Finding:** The reported 142 secure matches in the initial run were simulated (using synthetic Gaussian astrometric noise $\sigma \approx 0.08''$ and injected competing candidates at index mod 20), rather than real empirical retrievals from the ATLAS broker.
+- **Remediation:** The pilot is explicitly reclassified as a **Synthetic Matcher Simulation Benchmark** (`SYNTHETIC_MATCHER_SIMULATION_BENCHMARK`).
+- **Four-Tier Yield Accounting:**
+  - `tier1_geometric_footprint_eligible: 150` (100.0%)
+  - `tier2_brightness_screened: 150` (100.0%)
+  - `synthetic_simulation_secure_matches: 142` (94.7%)
+  - `synthetic_simulation_injected_conflicts: 8` (5.3%)
+  - `actual_atlas_retrievals: 0` (0.0%)
+  - `actual_feature_evaluable_yield: 0` (0.0%)
+
+### 5.2 Full 2D Gaussian Astrometric Covariance Implementation
+- **Finding:** The initial matcher implementation used an isotropic circular error approximation $\sigma = \sqrt{\sigma_{\mathrm{query}}^2 + \sigma_{\mathrm{cand}}^2}$, failing to utilize distinct RA and Dec uncertainties.
+- **Remediation:** Upgraded `CrossSurveyMatcher` to use the full 2D covariance matrix $\Sigma = \Sigma_{\mathrm{query}} + \Sigma_{\mathrm{cand}}$ and Mahalanobis distance in the local tangent plane:
+  $$\Delta x = (\alpha - \alpha_0) \cos\left(\frac{\delta_0 + \delta}{2}\right) \times 3600'', \quad \Delta y = (\delta - \delta_0) \times 3600''$$
+  $$D_{\mathrm{M}}^2 = \frac{\Delta x^2}{\sigma_{\alpha, \mathrm{tot}}^2} + \frac{\Delta y^2}{\sigma_{\delta, \mathrm{tot}}^2}$$
+  $$p(\Delta\mathbf{x} \mid H_j) = \frac{1}{2\pi \sqrt{\det \Sigma}} \exp\left(-\frac{1}{2} D_{\mathrm{M}}^2\right)$$
+
+### 5.3 Durable Parquet Persistence for Stable Entity Registry
+- **Finding:** The entity registry was in-memory only, lacked Parquet serialization, and attached artificial `atlas_id` strings prior to actual empirical association.
+- **Remediation:** Added `save_to_parquet()` and `load_from_parquet()` methods to `StableEntityRegistry`, created indexes across all surveys (`_ztf_index`, `_iau_index`, `_atlas_index`, `_decam_index`, `_ps1_index`), and enforced that `atlas_id` remains `None` at initial registration until empirical association is confirmed via `attach_survey_association()`. The durable registry is persisted at `phase5_entity_registry.parquet`.
+
+### 5.4 Contract v2.0 Timestamp Semantics & Deprecation of `t_obs_bmjd`
+- **Finding:** Unconverted timestamps were stored in `t_obs_bmjd`, falsely implying barycentric conversion precision.
+- **Remediation:** Updated `CanonicalObservationRecord` so that `t_obs_bmjd: Optional[float] = None`, and added `@property def observation_time` which cleanly returns `t_converted_bmjd` if computed, and falls back to `t_native` without making false BMJD claims.
+
+### 5.5 Exact Positive Harmonization Cross-Filter Covariance
+- **Finding:** The initial documentation stated that the cross-filter covariance $\operatorname{Cov}(c, o)$ was negative.
+- **Remediation:** Re-derived exact first-order error propagation on independent input variables $g$ and $r$:
+  $$c = 0.593\,g + 0.407\,r + 0.016 \implies \sigma_c^2 = 0.593^2 \sigma_g^2 + 0.407^2 \sigma_r^2 + \sigma_{\mathrm{model}, c}^2$$
+  $$o = 0.222\,g + 0.778\,r - 0.035 \implies \sigma_o^2 = 0.222^2 \sigma_g^2 + 0.778^2 \sigma_r^2 + \sigma_{\mathrm{model}, o}^2$$
+  $$\operatorname{Cov}(c, o) = (0.593 \times 0.222) \sigma_g^2 + (0.407 \times 0.778) \sigma_r^2 \approx 0.132 \sigma_g^2 + 0.317 \sigma_r^2 > 0$$
+  Implemented `compute_atlas_cross_filter_covariance()` in `PhotometricHarmonizer` and enforced validity domain $[-0.4, 2.0]$ with $\mathrm{SNR} \ge 3.0$.
+
+### 5.6 Spectroscopic Evidence Tier Qualification
+- **Finding:** Spectroscopic evidence was recorded as `PROVISIONAL_S2` with placeholder instrument strings without disclaiming archival provenance.
+- **Remediation:** Reclassified evidence records to `evidence_tier = "PROVISIONAL_S2_UNVERIFIED_SPECTRAL_CHAIN"` with `spectroscopic_instrument = "UNVERIFIED_INDIVIDUAL_INSTRUMENT_METADATA_BTS_ARCHIVE"` and `verification_status = "PROVISIONAL_TRACEABLE_TO_IAU_TNS"`.
+
+---
 
 **Certification:**  
 **Dev Mehta**  

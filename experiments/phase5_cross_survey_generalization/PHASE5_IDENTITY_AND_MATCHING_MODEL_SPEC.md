@@ -46,14 +46,21 @@ Let $Q \in (0, 1)$ denote the prior probability that the true counterpart of the
   where $K_{\mathrm{expected}} = \rho_{\mathrm{local}} \Omega + Q$. In the standard Sutherland & Saunders formulation, the relative prior ratio between any counterpart candidate and the background is governed by $Q / (1 - Q)$.
 
 ### 2.3 Astrometric Likelihood Model:
-Under hypothesis $H_j$, the positional displacement $\Delta\mathbf{x}_j = \mathbf{x}_j - \mathbf{x}_{\mathrm{query}}$ follows a two-dimensional Gaussian distribution governed by the combined astrometric covariance matrix:
-$$\Sigma_j = \Sigma_{\mathrm{query}} + \Sigma_{\mathrm{cand}, j}$$
-$$\det \Sigma_j = (\sigma_{\alpha, \mathrm{tot}} \cos \delta_0)^2 \, \sigma_{\delta, \mathrm{tot}}^2 - \sigma_{\alpha\delta}^2$$
+Under hypothesis $H_j$, the positional displacement $\Delta\mathbf{x}_j = (\Delta x_j, \Delta y_j)^T$ in the local tangent plane is computed as:
+$$\Delta x_j = (\alpha_j - \alpha_0) \cos\left(\frac{\delta_0 + \delta_j}{2}\right) \times 3600''$$
+$$\Delta y_j = (\delta_j - \delta_0) \times 3600''$$
 
-The positional likelihood is:
-$$p(\Delta\mathbf{x}_j \mid H_j) = \frac{1}{2\pi \sqrt{\det \Sigma_j}} \exp\left(-\frac{1}{2} \Delta\mathbf{x}_j^T \Sigma_j^{-1} \Delta\mathbf{x}_j\right)$$
+This displacement follows a two-dimensional Gaussian distribution governed by the combined astrometric covariance matrix:
+$$\Sigma_j = \Sigma_{\mathrm{query}} + \Sigma_{\mathrm{cand}, j} = \begin{pmatrix} \sigma_{\alpha, \mathrm{query}}^2 + \sigma_{\alpha, \mathrm{cand}, j}^2 & 0 \\ 0 & \sigma_{\delta, \mathrm{query}}^2 + \sigma_{\delta, \mathrm{cand}, j}^2 \end{pmatrix}$$
+$$\det \Sigma_j = \left(\sigma_{\alpha, \mathrm{query}}^2 + \sigma_{\alpha, \mathrm{cand}, j}^2\right) \left(\sigma_{\delta, \mathrm{query}}^2 + \sigma_{\delta, \mathrm{cand}, j}^2\right)$$
 
-In the isotropic limit where $\sigma_j^2 = \sigma_{\mathrm{query}}^2 + \sigma_{\mathrm{cand}, j}^2$ and angular separation is $\psi_j = \|\Delta\mathbf{x}_j\|$:
+The Mahalanobis distance squared is:
+$$D_{\mathrm{M}, j}^2 = \Delta\mathbf{x}_j^T \Sigma_j^{-1} \Delta\mathbf{x}_j = \frac{\Delta x_j^2}{\sigma_{\alpha, \mathrm{query}}^2 + \sigma_{\alpha, \mathrm{cand}, j}^2} + \frac{\Delta y_j^2}{\sigma_{\delta, \mathrm{query}}^2 + \sigma_{\delta, \mathrm{cand}, j}^2}$$
+
+The 2D astrometric likelihood is:
+$$p(\Delta\mathbf{x}_j \mid H_j) = \frac{1}{2\pi \sqrt{\det \Sigma_j}} \exp\left(-\frac{1}{2} D_{\mathrm{M}, j}^2\right)$$
+
+In the isotropic limit where $\sigma_{\alpha} = \sigma_{\delta} = \sigma_j$ and angular separation is $\psi_j = \|\Delta\mathbf{x}_j\|$:
 $$p(\psi_j \mid H_j) = \frac{1}{2\pi \sigma_j^2} \exp\left(-\frac{\psi_j^2}{2\sigma_j^2}\right)$$
 
 ### 2.4 Background Likelihood Model:
@@ -132,6 +139,9 @@ The match probabilities $P(H_j \mid D)$ must be empirically calibrated. An algor
    - Inject a synthetic competing source at separation $1.0''$.
    - Confirm that candidate probabilities drop proportionally and status flips from `SECURE_MATCH` to `AMBIGUOUS_MATCH`.
 
+### 5.1 Synthetic Matcher Simulation Benchmark
+The initial 150-candidate execution is formally classified as an algorithmic simulation benchmark. Controlled astrometric perturbations ($\sigma \approx 0.08''$) and 8 competing counterpart conflicts were synthesized to validate candidate competition, null-hypothesis normalization, and probability monotonicity. This synthetic benchmark demonstrates mathematical and algorithmic soundness; it does NOT constitute real empirical retrieval of 142 ATLAS light curves. Real empirical retrievals remain governed by the Four-Tier Yield framework and will be executed under an authorized live broker pilot.
+
 ---
 
 ## 6. Stable Entity Registry Architecture
@@ -143,13 +153,13 @@ ASTRAEUS Persistent Entity Record
 ├── astraeus_id:           ASTRAEUS-EVT-00000001 (Sequential/UUID Permanent Key)
 ├── iau_name:              SN 2020adv
 ├── ztf_id:                ZTF17aadlxmv
-├── atlas_id:              ATLAS20adv
+├── atlas_id:              None (Prohibited until empirical association)
 ├── decam_id:              None
-├── ps1_id:                PS1-20adv
+├── ps1_id:                None
 ├── discovery_mjd:         58863.2
 ├── reference_ra_deg:      127.44829
 ├── reference_dec_deg:     33.90633
-├── identity_status:       SECURELY_ASSOCIATED
+├── identity_status:       REGISTERED
 └── Entity Relationships:
     ├── Host Galaxy:       SDSS J082947.59+335422.8 (z = 0.062)
     └── Observations:      [OBS-0001, OBS-0002, ..., OBS-0054]
@@ -159,3 +169,5 @@ ASTRAEUS Persistent Entity Record
 1. **Permanent Internal Key:** Once assigned, `ASTRAEUS-EVT-XXXXX` is immutable. Refining the coordinate from new Gaia or HST astrometry updates `reference_ra_deg` but **never** alters `astraeus_id`.
 2. **Coordinate Hashes as Secondary Candidate Keys:** Hashed spatial keys (e.g. `ASTRAEUS-P5-261116-XXXXXXXX`) are treated strictly as non-unique spatial indexing hashes, never as primary keys.
 3. **Decoupling Entities from Exposures:** An event is an astrophysical transient phenomenon. An exposure is an instrumental observation at an epoch. An event possesses many observations across surveys.
+4. **Durable Parquet Persistence:** The entity registry supports serialization and deserialization via `save_to_parquet` and `load_from_parquet`, maintaining in-memory indexes across all primary survey identifiers (`_ztf_index`, `_iau_index`, `_atlas_index`, `_decam_index`, `_ps1_index`).
+5. **Prohibition of Premature External Survey Association:** During initial transient registration, external survey identifiers (e.g. `atlas_id`) must remain `None`. Association is strictly applied via `attach_survey_association()` only after an empirical association decision is verified.
