@@ -1,10 +1,10 @@
 """
-ASTRAEUS Phase 5: Canonical Observation Record Model.
+ASTRAEUS Phase 5: Canonical Observation Record Model (Contract v2.0).
 
 Author: Dev Mehta
 Lead Investigator & Mission Director, Project ASTRAEUS
 Date: November 16, 2026
-Document Reference: ASTRAEUS-P5-ARCH-001
+Document Reference: ASTRAEUS-P5-ARCH-002
 """
 
 from enum import Enum
@@ -17,37 +17,66 @@ class ObservationType(str, Enum):
     DIFFERENCE_FORCED = "DIFFERENCE_FORCED"
     DIFFERENCE_ALERT = "DIFFERENCE_ALERT"
     TOTAL_STACK = "TOTAL_STACK"
+    CATALOG_APER = "CATALOG_APER"
+    UPPER_LIMIT_THRESHOLD = "UPPER_LIMIT_THRESHOLD"
+    MISSING_MEASUREMENT = "MISSING_MEASUREMENT"
+
+
+class TransformationState(str, Enum):
+    NATIVE_PASSBAND_UNTRANSFORMED = "NATIVE_PASSBAND_UNTRANSFORMED"
+    EMPIRICAL_COLOR_TRANSFORMED = "EMPIRICAL_COLOR_TRANSFORMED"
+    SED_SUPPORTED_TRANSFORMED = "SED_SUPPORTED_TRANSFORMED"
+    NON_TRANSFORMABLE = "NON_TRANSFORMABLE"
 
 
 class CanonicalObservationRecord(BaseModel):
     """
-    Standardized, survey-agnostic astrophysical observation event.
-    Preserves negative difference fluxes, decouples astrophysical observation
-    time from operational publication time, and guarantees full cryptographic provenance.
+    Standardized, survey-agnostic astrophysical observation event (Contract v2.0).
+    Preserves negative difference fluxes, enforces complete physical timestamp semantics,
+    guarantees fail-closed data validation, and maintains cryptographic provenance.
     """
-    # Unique Internal Identifiers
-    astraeus_id: str = Field(..., description="Canonical transient object identifier (ASTRAEUS-P5-YYMMDD-XXXXXXXX).")
+    # 1. Identity & Provenance
+    astraeus_id: str = Field(..., description="Canonical persistent entity ID (ASTRAEUS-EVT-XXXXX or lookup key).")
     survey_obs_id: str = Field(..., description="Native provider observation identifier.")
+    survey_id: str = Field(..., description="'ZTF', 'ATLAS', 'DECam', 'PS1', or 'Rubin'.")
+    provenance_hash: str = Field(..., description="SHA-256 digest of original raw provider payload or row.")
 
-    # Spatio-Temporal Coordinates
-    t_obs_bmjd: float = Field(..., description="Barycentric Modified Julian Date (TDB scale) at exposure midpoint.")
+    # 2. Spatio-Temporal Coordinates & Physical Time Scales
+    t_native: float = Field(..., description="Native exposure timestamp as reported by the provider archive.")
+    native_time_scale: str = Field(default="UTC", description="'UTC', 'TAI', 'TDB', or 'TT'.")
+    exposure_midpoint_convention: str = Field(default="MIDPOINT", description="'MIDPOINT', 'START_PLUS_HALF_EXPTIME', 'SHUTTER_OPEN'.")
+    t_converted_bmjd: Optional[float] = Field(default=None, description="Barycentric Modified Julian Date (TDB scale), or None if uncomputed.")
+    converted_time_scale: Optional[str] = Field(default=None, description="'BMJD_TDB' if barycentric conversion succeeded, else None.")
+    time_conversion_method: str = Field(default="NATIVE_UNCONVERTED", description="e.g. 'ASTROPY_BARYCORR_V1' or 'NATIVE_UNCONVERTED'.")
+    t_obs_bmjd: float = Field(..., description="Barycentric or calibrated observation date (for backwards compatibility).")
     t_pub_utc: Optional[datetime] = Field(default=None, description="ISO 8601 UTC timestamp when packet was published.")
-    t_err_days: float = Field(default=0.0001, description="Exposure duration / timing uncertainty.")
+    t_err_days: float = Field(default=0.0001, description="Exposure duration / timing uncertainty in days.")
 
     ra_deg: float = Field(..., ge=0.0, lt=360.0, description="ICRS Right Ascension in degrees.")
     dec_deg: float = Field(..., ge=-90.0, le=90.0, description="ICRS Declination in degrees.")
     astrometric_sigma_arcsec: float = Field(default=0.05, gt=0.0, description="1-sigma astrometric uncertainty.")
 
-    # Photometric Measurements
-    survey_id: str = Field(..., description="'ZTF', 'ATLAS', 'DECam', 'PS1', or 'Rubin'.")
+    # 3. Photometric Measurement & Semantics
     native_passband: str = Field(..., description="Native survey passband (e.g. 'ZTF_g', 'ATLAS_c', 'r_DECam').")
-    obs_type: ObservationType = Field(default=ObservationType.DIFFERENCE_FORCED, description="Observation type.")
+    obs_type: ObservationType = Field(default=ObservationType.DIFFERENCE_FORCED, description="Observation construction type.")
     
     # Crucial invariant: flux can be negative in forced/difference photometry
     measured_flux_ujy: float = Field(..., description="Standardized flux density in microJanskys (AB Z0 = 23.900).")
-    measurement_sigma_ujy: float = Field(..., gt=0.0, description="1-sigma heteroscedastic uncertainty in microJanskys.")
+    measurement_sigma_ujy: float = Field(..., gt=0.0, description="1-sigma heteroscedastic uncertainty in microJanskys (must be strictly > 0).")
     upper_limit_ujy: Optional[float] = Field(default=None, description="5-sigma limiting flux for non-detections.")
     is_positive_detection_snr5: bool = Field(..., description="True if flux > 0 and flux / sigma >= 5.0.")
+
+    # 4. Calibration & Transformation
+    zero_point_ab: Optional[float] = Field(default=23.900, description="Zero-point magnitude on AB system.")
+    zero_point_err: Optional[float] = Field(default=None, description="Zero-point calibration uncertainty.")
+    photometric_group_id: Optional[str] = Field(default=None, description="Group ID for shared calibration covariance.")
+    transformation_state: TransformationState = Field(
+        default=TransformationState.NATIVE_PASSBAND_UNTRANSFORMED,
+        description="Harmonization transformation state."
+    )
     
-    quality_bitmask: int = Field(default=0, description="Survey-specific image subtraction quality flags (0 = clean).")
-    provenance_hash: str = Field(..., description="SHA-256 digest of original raw provider payload or row.")
+    # 5. Quality & Fail-Closed Status
+    native_flags: int = Field(default=0, description="Native survey reduction bitmask.")
+    quality_bitmask: int = Field(default=0, description="Standardized quality bitmask (0 = clean).")
+    is_clean: bool = Field(default=True, description="True if observation passed all provider quality cuts.")
+    quarantine_reason: Optional[str] = Field(default=None, description="Reason if quarantined; None if clean.")

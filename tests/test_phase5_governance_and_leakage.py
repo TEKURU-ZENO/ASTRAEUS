@@ -1,5 +1,5 @@
 """
-ASTRAEUS Phase 5: Governance, Zero-Touch Quarantine & Multi-Survey Adapter Verification Suite.
+ASTRAEUS Phase 5: Governance, Zero-Touch Quarantine, Adapter Fail-Closed & Bayesian Matcher Verification Suite.
 
 Author: Dev Mehta
 Lead Investigator & Mission Director, Project ASTRAEUS
@@ -7,12 +7,14 @@ Date: November 16, 2026
 Milestone: Phase 5 Cross-Survey Generalization & Domain Robustness
 
 Tests:
-1. Gate 3 Quarantine Zero-Touch & Geometric Spatial Footprint Disjointness (1,808 test pixels, 586 objects).
+1. Gate 3 Quarantine Zero-Touch & Geometric Footprint Disjointness (1,808 test pixels, 586 objects).
 2. Champion Model Frozen Hash Immutability (466c2752808be01e...).
-3. Canonical Observation Record Contract (negative flux preservation, timing decoupling).
-4. Survey Adapters Verification (ATLAS, DECam DDF, Rubin LSST).
-5. Photometric Harmonizer Multi-Survey Extension (ATLAS & Rubin filters, color transformations).
-6. Phase 5 Feasibility Pilot Deliverables Integrity (150 candidates, FEASIBILITY_ESTABLISHED).
+3. Canonical Observation Record Contract v2.0 (timestamp semantics, fail-closed uncertainties).
+4. Survey Adapters Fail-Closed Verification (ATLAS, DECam DDF, Rubin LSST).
+5. Photometric Harmonizer Negative Flux Rejection (strict ban on unphysical linear fallback).
+6. Competing-Hypothesis Bayesian Matcher (H0 vs Hj normalization, candidate competition).
+7. Stable Entity Registry (permanent IDs, decoupling entity from coordinates).
+8. Workstream 3 Identity Pilot Deliverables & Four-Tier Yield Accounting.
 """
 
 from __future__ import annotations
@@ -29,6 +31,7 @@ from astropy_healpix import HEALPix
 from astraeus_data.adapters import (
     CanonicalObservationRecord,
     ObservationType,
+    TransformationState,
     AtlasForcedPhotometryAdapter,
     DecamDdfPhotometryAdapter,
     RubinAlertInterfaceAdapter,
@@ -38,6 +41,12 @@ from astraeus_data.photometry.harmonization import (
     HarmonizedPhotometricEpoch,
     SURVEY_FILTER_METADATA,
 )
+from astraeus_data.crossmatch.cross_survey_matcher import (
+    CrossSurveyMatcher,
+    SurveyCandidate,
+    CrossSurveyMatchStatus,
+)
+from astraeus_data.registry import StableEntityRegistry, StableEntityRecord
 
 EXPECTED_HEALPIX_CONFIG_HASH = "234bb08c482824648607fa8f874477d0225717c18263b0f16ea276dd1e12417b"
 EXPECTED_SPRINT4H_MANIFEST_HASH = "1ddbf733cc52f6fe5a36a7a9854e780a59d2cadc3b4b153aaadf970a3b377761"
@@ -97,15 +106,21 @@ def test_phase5_champion_model_frozen_hash(repo_root: Path):
     assert champ_sha.lower() == EXPECTED_CHAMPION_HASH.lower()
 
 
-def test_phase5_canonical_observation_contract():
+def test_phase5_canonical_observation_contract_v2():
     """
-    CONTRACT TEST 1: CanonicalObservationRecord preserves negative difference fluxes,
-    validates uncertainty propagation, and correctly flags 5-sigma detections.
+    CONTRACT TEST v2.0: CanonicalObservationRecord preserves physical time scales,
+    natively preserves negative difference flux, and fails closed on non-positive uncertainty.
     """
     # 1. Negative flux observation (unbiased forced photometry subtraction residual)
-    neg_rec = CanonicalObservationRecord(
-        astraeus_id="ASTRAEUS-P5-261116-A1B2C3D4",
+    rec = CanonicalObservationRecord(
+        astraeus_id="ASTRAEUS-EVT-00000001",
         survey_obs_id="ATLAS_59000123_c",
+        t_native=59000.123,
+        native_time_scale="UTC",
+        exposure_midpoint_convention="MIDPOINT",
+        t_converted_bmjd=None,
+        converted_time_scale=None,
+        time_conversion_method="NATIVE_UNCONVERTED",
         t_obs_bmjd=59000.123,
         ra_deg=150.0,
         dec_deg=2.0,
@@ -116,172 +131,240 @@ def test_phase5_canonical_observation_contract():
         measurement_sigma_ujy=8.0,
         upper_limit_ujy=40.0,
         is_positive_detection_snr5=False,
+        zero_point_ab=23.900,
+        transformation_state=TransformationState.NATIVE_PASSBAND_UNTRANSFORMED,
         provenance_hash="abcd" * 16,
     )
-    assert neg_rec.measured_flux_ujy == -12.5
-    assert neg_rec.is_positive_detection_snr5 is False
-    assert neg_rec.upper_limit_ujy == 40.0
+    assert rec.measured_flux_ujy == -12.5
+    assert rec.is_positive_detection_snr5 is False
+    assert rec.native_time_scale == "UTC"
+    assert rec.transformation_state == TransformationState.NATIVE_PASSBAND_UNTRANSFORMED
 
-    # 2. Positive 5-sigma detection
-    pos_rec = CanonicalObservationRecord(
-        astraeus_id="ASTRAEUS-P5-261116-A1B2C3D4",
-        survey_obs_id="ATLAS_59010456_o",
-        t_obs_bmjd=59010.456,
-        ra_deg=150.0,
-        dec_deg=2.0,
-        survey_id="ATLAS",
-        native_passband="ATLAS_o",
-        obs_type=ObservationType.DIFFERENCE_FORCED,
-        measured_flux_ujy=120.0,
-        measurement_sigma_ujy=15.0,
-        upper_limit_ujy=75.0,
-        is_positive_detection_snr5=True,
-        provenance_hash="1234" * 16,
-    )
-    assert pos_rec.measured_flux_ujy == 120.0
-    assert pos_rec.is_positive_detection_snr5 is True
+    # 2. Assert fail-closed validation on non-positive uncertainty
+    with pytest.raises(ValueError):
+        CanonicalObservationRecord(
+            astraeus_id="ASTRAEUS-EVT-00000001",
+            survey_obs_id="BAD_OBS",
+            t_native=59000.0,
+            t_obs_bmjd=59000.0,
+            ra_deg=150.0,
+            dec_deg=2.0,
+            survey_id="ATLAS",
+            native_passband="ATLAS_c",
+            obs_type=ObservationType.DIFFERENCE_FORCED,
+            measured_flux_ujy=10.0,
+            measurement_sigma_ujy=-1.0,  # Invalid negative sigma!
+            is_positive_detection_snr5=False,
+            provenance_hash="1234" * 16,
+        )
 
 
-def test_phase5_survey_adapters():
+def test_phase5_survey_adapters_fail_closed():
     """
-    ADAPTER TEST: Verifies ATLAS, DECam DDF, and Rubin LSST adapters.
+    ADAPTER FAIL-CLOSED TEST: Verifies ATLAS, DECam DDF, and Rubin adapters
+    reject unknown filters and non-positive uncertainties without silent defaults.
     """
-    # 1. ATLAS adapter parsing
-    atlas_row_clean = {
+    # 1. ATLAS: Rejects unknown filter
+    bad_atlas_filter = {
         "MJD": 59123.456,
-        "m": None,
-        "uJy": -8.5,
-        "duJy": 7.2,
+        "uJy": 10.0,
+        "duJy": 2.0,
+        "filt": "unknown_filter",
+        "chin": 1.2,
+    }
+    assert AtlasForcedPhotometryAdapter.parse_record(bad_atlas_filter, "ASTRAEUS-EVT-00000001", 150.0, 2.0) is None
+
+    # ATLAS: Rejects non-positive uncertainty
+    bad_atlas_err = {
+        "MJD": 59123.456,
+        "uJy": 10.0,
+        "duJy": -0.5,
         "filt": "c",
-        "chin": 1.15,
-        "RA": 160.5,
-        "Dec": 25.4,
+        "chin": 1.2,
     }
-    rec_atlas = AtlasForcedPhotometryAdapter.parse_record(
-        atlas_row_clean,
-        astraeus_id="ASTRAEUS-P5-261116-00000001",
-        ra_fallback=160.5,
-        dec_fallback=25.4,
-    )
+    assert AtlasForcedPhotometryAdapter.parse_record(bad_atlas_err, "ASTRAEUS-EVT-00000001", 150.0, 2.0) is None
+
+    # ATLAS: Valid record parses cleanly with UTC scale
+    good_atlas = {
+        "MJD": 59123.456,
+        "uJy": -5.0,
+        "duJy": 2.5,
+        "filt": "c",
+        "chin": 1.1,
+    }
+    rec_atlas = AtlasForcedPhotometryAdapter.parse_record(good_atlas, "ASTRAEUS-EVT-00000001", 150.0, 2.0)
     assert rec_atlas is not None
-    assert rec_atlas.survey_id == "ATLAS"
     assert rec_atlas.native_passband == "ATLAS_c"
-    assert rec_atlas.measured_flux_ujy == -8.5
-    assert rec_atlas.measurement_sigma_ujy == 7.2
-    assert rec_atlas.is_positive_detection_snr5 is False
+    assert rec_atlas.native_time_scale == "UTC"
+    assert rec_atlas.measured_flux_ujy == -5.0
 
-    # Rejected on chin > 3.0 cut
-    atlas_row_bad = dict(atlas_row_clean, chin=4.5)
-    rec_bad = AtlasForcedPhotometryAdapter.parse_record(
-        atlas_row_bad,
-        astraeus_id="ASTRAEUS-P5-261116-00000001",
-        ra_fallback=160.5,
-        dec_fallback=25.4,
-    )
-    assert rec_bad is None
-
-    # 2. DECam DDF adapter parsing
-    decam_row = {
-        "mjd": 59200.789,
-        "mag": 21.5,
-        "mag_err": 0.04,
-        "filter": "i",
-        "ra": 150.1,
-        "dec": 2.2,
-        "flags": 0,
+    # 2. DECam: Rejects unknown filter (no default to r_DECam!)
+    bad_decam_filter = {
+        "mjd": 59200.0,
+        "flux_ujy": 15.0,
+        "flux_err_ujy": 2.0,
+        "filter": "nonexistent_band",
     }
-    rec_decam = DecamDdfPhotometryAdapter.parse_record(
-        decam_row,
-        astraeus_id="ASTRAEUS-P5-261116-00000002",
-        ra_fallback=150.1,
-        dec_fallback=2.2,
-    )
-    assert rec_decam is not None
-    assert rec_decam.survey_id == "DECam"
-    assert rec_decam.native_passband == "i_DECam"
-    assert rec_decam.measured_flux_ujy > 0.0
+    assert DecamDdfPhotometryAdapter.parse_record(bad_decam_filter, "ASTRAEUS-EVT-00000002", 150.0, 2.0) is None
 
-    # 3. Rubin LSST adapter parsing (nanoJansky to microJansky)
-    rubin_dia_source = {
-        "midpointMjdTai": 59300.111,
+    # 3. Rubin: Preserves TAI time scale and converts nJy to uJy
+    rubin_alert = {
+        "midpointMjdTai": 59300.5,
         "filterName": "r",
         "ra": 53.1,
         "dec": -27.8,
-        "psfFlux": 2500.0,      # 2500 nJy = 2.5 uJy
-        "psfFluxErr": 250.0,    # 250 nJy = 0.25 uJy
-        "flags": 0,
+        "psfFlux": 3500.0,      # 3500 nJy = 3.5 uJy
+        "psfFluxErr": 350.0,    # 350 nJy = 0.35 uJy
     }
-    rec_rubin = RubinAlertInterfaceAdapter.parse_dia_source(
-        rubin_dia_source,
-        astraeus_id="ASTRAEUS-P5-261116-00000003",
-        ra_fallback=53.1,
-        dec_fallback=-27.8,
-    )
+    rec_rubin = RubinAlertInterfaceAdapter.parse_dia_source(rubin_alert, "ASTRAEUS-EVT-00000003", 53.1, -27.8)
     assert rec_rubin is not None
-    assert rec_rubin.survey_id == "Rubin"
-    assert rec_rubin.native_passband == "r_LSST"
-    assert np.isclose(rec_rubin.measured_flux_ujy, 2.5, atol=1e-5)
-    assert np.isclose(rec_rubin.measurement_sigma_ujy, 0.25, atol=1e-5)
-    assert rec_rubin.is_positive_detection_snr5 is True  # SNR = 10.0
+    assert rec_rubin.native_time_scale == "TAI"
+    assert np.isclose(rec_rubin.measured_flux_ujy, 3.5, atol=1e-5)
+    assert np.isclose(rec_rubin.measurement_sigma_ujy, 0.35, atol=1e-5)
 
 
-def test_phase5_photometric_harmonizer_atlas_conversions():
+def test_phase5_photometric_harmonizer_rejection_of_negative_flux_interpolation():
     """
-    HARMONIZATION TEST: Verifies ATLAS filter metadata and bidirectional color conversions.
+    HARMONIZATION TEST: Proves strict ban on linear interpolation of negative difference flux.
     """
-    assert "ATLAS_c" in SURVEY_FILTER_METADATA
-    assert "ATLAS_o" in SURVEY_FILTER_METADATA
-    assert "r_LSST" in SURVEY_FILTER_METADATA
+    # 1. Non-positive flux must raise ValueError per ASTRAEUS-P5-HARMON-002
+    with pytest.raises(ValueError, match="Non-positive difference flux cannot be transformed"):
+        PhotometricHarmonizer.ztf_to_atlas_flux(-10.0, 15.0, 2.0, 2.0)
 
-    # Passband matching
-    best_atlas_c, delta_c = PhotometricHarmonizer.find_nearest_passband("ZTF_g", "ATLAS")
-    assert best_atlas_c == "ATLAS_c"
-    best_atlas_o, delta_o = PhotometricHarmonizer.find_nearest_passband("ZTF_r", "ATLAS")
-    assert best_atlas_o == "ATLAS_o"
+    with pytest.raises(ValueError, match="Non-positive difference flux cannot be transformed"):
+        PhotometricHarmonizer.atlas_to_ztf_flux(15.0, -5.0, 2.0, 2.0)
 
-    # Forward ZTF (g, r) to ATLAS (c, o)
-    fg, fr = 100.0, 120.0  # uJy
-    atlas_out = PhotometricHarmonizer.ztf_to_atlas_flux(fg, fr, 2.0, 2.5)
-    assert "ATLAS_c" in atlas_out and "ATLAS_o" in atlas_out
-    fc, fc_err = atlas_out["ATLAS_c"]
-    fo, fo_err = atlas_out["ATLAS_o"]
-    assert fc > 0.0 and fc_err > 0.0
-    assert fo > 0.0 and fo_err > 0.0
+    # 2. Positive fluxes in valid color range transform accurately
+    fg, fr = 100.0, 120.0
+    out = PhotometricHarmonizer.ztf_to_atlas_flux(fg, fr, 2.0, 2.5)
+    assert "ATLAS_c" in out and "ATLAS_o" in out
+    fc, fo = out["ATLAS_c"][0], out["ATLAS_o"][0]
 
-    # Invert back to ZTF (g, r)
-    ztf_back = PhotometricHarmonizer.atlas_to_ztf_flux(fc, fo, fc_err, fo_err)
-    assert "ZTF_g" in ztf_back and "ZTF_r" in ztf_back
-    fg_rec, _ = ztf_back["ZTF_g"]
-    fr_rec, _ = ztf_back["ZTF_r"]
-    # Reconstructed fluxes should match original within 5%
-    assert np.isclose(fg_rec, fg, rtol=0.05)
-    assert np.isclose(fr_rec, fr, rtol=0.05)
+    # Invert back to ZTF
+    ztf_back = PhotometricHarmonizer.atlas_to_ztf_flux(fc, fo, out["ATLAS_c"][1], out["ATLAS_o"][1])
+    assert np.isclose(ztf_back["ZTF_g"][0], fg, rtol=0.05)
+    assert np.isclose(ztf_back["ZTF_r"][0], fr, rtol=0.05)
 
 
-def test_phase5_feasibility_pilot_deliverables(repo_root: Path):
+def test_phase5_competing_hypothesis_bayesian_matcher():
     """
-    DELIVERABLES TEST: Asserts feasibility pilot deliverables exist and meet certification standards.
+    BAYESIAN MATCHER TEST: Verifies competing hypothesis mathematics (H0 vs Hj) and normalization.
+    """
+    matcher = CrossSurveyMatcher(completeness_prior_q=0.90, max_search_radius_arcsec=5.0)
+
+    # 1. Single close candidate (0.05 arcsec offset)
+    cand_close = SurveyCandidate(
+        catalog_name="ATLAS",
+        source_id="CAND_CLOSE",
+        ra_deg=100.00001,
+        dec_deg=10.00001,
+        ra_err_arcsec=0.05,
+        dec_err_arcsec=0.05,
+        mag=18.0,
+        filter_band="ATLAS_o",
+    )
+    res_single = matcher.match_source("QUERY_1", 100.0, 10.0, 0.05, [cand_close])
+    assert res_single.match_status == CrossSurveyMatchStatus.SECURE_MATCH
+    assert res_single.posterior_match_probability >= 0.95
+    # Normalization: P(H1) + P(H0) == 1.0
+    assert np.isclose(res_single.posterior_match_probability + res_single.posterior_no_counterpart_probability, 1.0, atol=1e-5)
+
+    # 2. Candidate competition: two candidates within 0.12 arcsec
+    cand_comp1 = SurveyCandidate(
+        catalog_name="ATLAS",
+        source_id="COMP_1",
+        ra_deg=100.00002,
+        dec_deg=10.0,
+        ra_err_arcsec=0.05,
+        dec_err_arcsec=0.05,
+        mag=18.0,
+        filter_band="ATLAS_o",
+    )
+    cand_comp2 = SurveyCandidate(
+        catalog_name="ATLAS",
+        source_id="COMP_2",
+        ra_deg=100.0,
+        dec_deg=10.00002,
+        ra_err_arcsec=0.05,
+        dec_err_arcsec=0.05,
+        mag=18.1,
+        filter_band="ATLAS_o",
+    )
+    res_comp = matcher.match_source("QUERY_2", 100.0, 10.0, 0.05, [cand_comp1, cand_comp2])
+    # When two candidates compete closely, status must be AMBIGUOUS_MATCH
+    assert res_comp.match_status == CrossSurveyMatchStatus.AMBIGUOUS_MATCH
+    assert res_comp.competing_candidates_count == 2
+    # Neither candidate can achieve >= 0.90
+    assert res_comp.posterior_match_probability < 0.90
+
+
+def test_phase5_stable_entity_registry():
+    """
+    REGISTRY TEST: Verifies permanent entity registration and decoupling from coordinates.
+    """
+    registry = StableEntityRegistry()
+    ent1 = registry.register_entity(
+        reference_ra_deg=120.5,
+        reference_dec_deg=35.2,
+        iau_name="SN 2020abc",
+        ztf_id="ZTF20aaaxyz",
+        spectral_class="SN_Ia",
+    )
+    assert ent1.astraeus_id == "ASTRAEUS-EVT-00000001"
+    assert ent1.iau_name == "SN 2020abc"
+
+    # Registering same ZTF ID returns identical permanent entity
+    ent2 = registry.register_entity(
+        reference_ra_deg=120.50005,  # Slightly refined coordinate
+        reference_dec_deg=35.20002,
+        ztf_id="ZTF20aaaxyz",
+    )
+    assert ent2.astraeus_id == ent1.astraeus_id
+
+
+def test_phase5_identity_pilot_deliverables_and_four_tier_yield(repo_root: Path):
+    """
+    DELIVERABLES & FOUR-TIER YIELD TEST:
+    Asserts Workstream 3 deliverables exist, adhere to the 4-tier yield accounting,
+    and verify calibration monotonicity.
     """
     p5_dir = repo_root / "experiments" / "phase5_cross_survey_generalization"
 
     # 1. Report JSON
-    report_path = p5_dir / "phase5_feasibility_pilot_report.json"
-    assert report_path.exists()
-    with open(report_path, "r", encoding="utf-8") as f:
+    rep_path = p5_dir / "phase5_identity_matching_pilot_report.json"
+    assert rep_path.exists()
+    with open(rep_path, "r", encoding="utf-8") as f:
         rep = json.load(f)
 
-    assert rep["pilot_disposition"] == "FEASIBILITY_ESTABLISHED"
-    assert rep["author"] == "Dev Mehta"
-    assert rep["feasibility_results"]["curated_cohort_size"] == 150
-    assert rep["feasibility_results"]["atlas_feasibility"]["eligible_declination_fraction"] == 1.0
-    assert rep["feasibility_results"]["atlas_feasibility"]["unbiased_negative_flux_retention"] is True
-    assert rep["feasibility_results"]["spectroscopic_traceability"]["iau_name_traceability_rate"] == 1.0
+    # Asserts 4-tier yield separation
+    yields = rep["four_tier_yield_accounting"]
+    assert yields["tier1_geometric_footprint_eligible"] == 150
+    assert yields["tier2_modeled_visibility_yield"] == 150
+    assert yields["tier3_observed_retrieval_secure_matches"] == 142
+    assert yields["tier4_feature_evaluable_yield"] == 142
+    assert yields["ambiguous_conflict_count"] == 8
 
-    # 2. Cohort tables
-    parquet_path = p5_dir / "phase5_feasibility_pilot_cohort.parquet"
-    assert parquet_path.exists()
-    df = pd.read_parquet(parquet_path)
-    assert len(df) == 150
-    assert "astraeus_id" in df.columns
-    assert "iau_id" in df.columns
-    assert "astraeus_class" in df.columns
+    # 2. Ledgers
+    id_parquet = p5_dir / "phase5_cross_survey_identity_ledger.parquet"
+    ev_parquet = p5_dir / "phase5_spectroscopic_evidence_ledger.parquet"
+    cf_parquet = p5_dir / "phase5_identity_conflict_ledger.parquet"
+
+    assert id_parquet.exists()
+    assert ev_parquet.exists()
+    assert cf_parquet.exists()
+
+    df_id = pd.read_parquet(id_parquet)
+    df_ev = pd.read_parquet(ev_parquet)
+    df_cf = pd.read_parquet(cf_parquet)
+
+    assert len(df_id) == 150
+    assert len(df_ev) == 150
+    assert len(df_cf) == 8
+
+    # 3. Calibration report
+    calib_path = p5_dir / "phase5_match_calibration_report.json"
+    assert calib_path.exists()
+    with open(calib_path, "r", encoding="utf-8") as f:
+        calib = json.load(f)
+    assert calib["offset_monotonicity_verified"] is True
+    assert calib["negative_control_rejection_rate"] == 1.0

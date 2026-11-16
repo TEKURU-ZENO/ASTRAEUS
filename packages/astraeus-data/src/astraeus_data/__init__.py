@@ -63,6 +63,7 @@ from astraeus_data.adapters import (
     DecamDdfPhotometryAdapter,
     RubinAlertInterfaceAdapter,
 )
+from astraeus_data.registry import StableEntityRecord, StableEntityRegistry
 from astraeus_data.corpus import (
     ReferenceObjectRecord,
     ReferenceCorpusBuilder,
@@ -115,6 +116,8 @@ __all__ = [
     "AtlasForcedPhotometryAdapter",
     "DecamDdfPhotometryAdapter",
     "RubinAlertInterfaceAdapter",
+    "StableEntityRecord",
+    "StableEntityRegistry",
     "ReferenceObjectRecord",
     "ReferenceCorpusBuilder",
     "ReferenceCorpusAuditor",

@@ -1,0 +1,41 @@
+{
+  "document_identifier": "ASTRAEUS-P5-XMATCH-REPORT-001",
+  "author": "Dev Mehta",
+  "lead_investigator": "Dev Mehta",
+  "date": "2026-11-16",
+  "workstream": "Workstream 3 \u2014 Identity and Provenance Resolution",
+  "governance_status": "GATE3_QUARANTINE_RESPECTED_ZERO_TOUCH",
+  "reconciliation_findings_addressed": [
+    "P5-01: Four-Tier Yield Accounting enforced",
+    "P5-02: Competing-Hypothesis Bayesian Matcher implemented",
+    "P5-03: Stable Entity Registry implemented",
+    "P5-08: Fail-closed adapter rules applied",
+    "P5-09: Rare-class power limits explicitly noted"
+  ],
+  "four_tier_yield_accounting": {
+    "tier1_geometric_footprint_eligible": 150,
+    "tier1_fraction": 1.0,
+    "tier2_modeled_visibility_yield": 150,
+    "tier2_fraction": 1.0,
+    "tier3_observed_retrieval_secure_matches": 142,
+    "tier3_fraction": 0.9466666666666667,
+    "tier4_feature_evaluable_yield": 142,
+    "tier4_fraction": 0.9466666666666667,
+    "ambiguous_conflict_count": 8
+  },
+  "identity_matching_summary": {
+    "total_candidates_processed": 150,
+    "secure_matches_count": 142,
+    "probable_matches_count": 0,
+    "ambiguous_matches_count": 8,
+    "no_reliable_matches_count": 0,
+    "median_secure_posterior_probability": 0.999957923001398
+  },
+  "spectroscopic_evidence_summary": {
+    "evidence_tier": "PROVISIONAL_S2",
+    "traceable_classifications_count": 150,
+    "traceability_rate": 1.0
+  },
+  "calibration_audit_verdict": "BAYESIAN_MATCHER_CALIBRATED_AND_VERIFIED",
+  "next_action": "RECONCILIATION_COMPLETE_READY_FOR_HARMONIZATION_VALIDATION"
+}

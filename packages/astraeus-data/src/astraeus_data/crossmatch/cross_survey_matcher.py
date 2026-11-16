@@ -1,7 +1,12 @@
 """
-ASTRAEUS Cross-Survey Bayesian Counterpart Matcher & Identity Exclusion Module.
-Implements Sutherland & Saunders (1992) likelihood ratio matching across ZTF, Pan-STARRS1,
-and DECam, handles ambiguous associations, and enforces cross-survey training/test object exclusion.
+ASTRAEUS Cross-Survey Competing-Hypothesis Bayesian Matcher Module (v2.0).
+
+Author: Dev Mehta
+Lead Investigator & Mission Director, Project ASTRAEUS
+Date: November 16, 2026
+Document Reference: ASTRAEUS-P5-XMATCH-002
+Implements Sutherland & Saunders (1992) and Budavári & Szalay (2008) competing-hypothesis
+Bayesian counterpart association with normalized background likelihood and no-counterpart hypothesis (H0).
 """
 
 from typing import Dict, Any, List, Optional, Tuple
@@ -9,17 +14,16 @@ from enum import Enum
 import numpy as np
 from pydantic import BaseModel, Field
 
-from astraeus_core.coordinates import CelestialCoordinates
-
 
 class CrossSurveyMatchStatus(str, Enum):
     SECURE_MATCH = "SECURE_MATCH"
+    PROBABLE_MATCH = "PROBABLE_MATCH"
     AMBIGUOUS_MATCH = "AMBIGUOUS_MATCH"
     NO_RELIABLE_MATCH = "NO_RELIABLE_MATCH"
 
 
 class SurveyCandidate(BaseModel):
-    catalog_name: str       # 'Pan-STARRS1', 'DECam', 'ZTF'
+    catalog_name: str       # 'ATLAS', 'DECam', 'Pan-STARRS1', 'ZTF'
     source_id: str
     ra_deg: float
     dec_deg: float
@@ -35,20 +39,24 @@ class CrossSurveyAssociation(BaseModel):
     match_status: CrossSurveyMatchStatus
     separation_arcsec: float = 999.0
     posterior_match_probability: float = 0.0
+    posterior_no_counterpart_probability: float = 1.0
+    likelihood_ratio: float = 0.0
     chance_coincidence_probability: float = 1.0
     local_source_density_per_sq_arcsec: float = 0.0
+    competing_candidates_count: int = 0
     is_training_overlap_quarantined: bool = False
     details: Dict[str, Any] = Field(default_factory=dict)
 
 
 class CrossSurveyMatcher:
     """
-    Bayesian cross-matcher and identity audit engine.
+    Competing-Hypothesis Bayesian counterpart matcher and identity audit engine.
+    Enforces normalized background likelihood and candidate competition under H0, H1, ..., HK.
     """
 
-    def __init__(self, completeness_prior_q: float = 0.90, exclusion_radius_arcsec: float = 3.0):
+    def __init__(self, completeness_prior_q: float = 0.90, max_search_radius_arcsec: float = 5.0):
         self.q_prior = completeness_prior_q
-        self.exclusion_radius_arcsec = exclusion_radius_arcsec
+        self.max_search_radius_arcsec = max_search_radius_arcsec
 
     @staticmethod
     def angular_separation_arcsec(ra1: float, dec1: float, ra2: float, dec2: float) -> float:
@@ -72,97 +80,104 @@ class CrossSurveyMatcher:
         local_density_sq_arcsec: Optional[float] = None
     ) -> CrossSurveyAssociation:
         """
-        Calculates Bayesian likelihood ratio match probabilities for survey candidates.
+        Calculates competing-hypothesis Bayesian association probabilities under:
+          H_j: candidate j is the physical counterpart
+          H_0: no candidate in search region is the physical counterpart
         """
+        # Prior odds factor for the no-counterpart hypothesis: (1 - Q) / Q
+        prior_null_factor = (1.0 - self.q_prior) / self.q_prior
+
+        # Default local extragalactic background density ~ 0.005 sources / arcsec^2
+        rho = local_density_sq_arcsec or 0.005
+
         if not candidates:
             return CrossSurveyAssociation(
                 query_entity_id=query_id,
                 match_status=CrossSurveyMatchStatus.NO_RELIABLE_MATCH,
                 separation_arcsec=999.0,
                 posterior_match_probability=0.0,
+                posterior_no_counterpart_probability=1.0,
+                likelihood_ratio=0.0,
                 chance_coincidence_probability=1.0,
+                local_source_density_per_sq_arcsec=rho,
+                competing_candidates_count=0,
             )
 
-        # Estimate local source density if not provided:
-        # typical extragalactic field density ~ 0.005 sources / arcsec^2 (18,000 / sq deg)
-        rho = local_density_sq_arcsec or 0.005
-
-        evaluated: List[Tuple[SurveyCandidate, float, float, float]] = [] # (cand, sep, lr, post)
+        # Filter candidates within search radius and evaluate likelihoods
+        evaluated_candidates: List[Tuple[SurveyCandidate, float, float]] = []  # (cand, sep, lr)
         for cand in candidates:
             sep = self.angular_separation_arcsec(query_ra, query_dec, cand.ra_deg, cand.dec_deg)
-            if sep > 10.0:
+            if sep > self.max_search_radius_arcsec:
                 continue
 
             sigma_tot = np.sqrt(query_pos_err_arcsec ** 2 + cand.ra_err_arcsec ** 2 + 1e-4)
             # Positional Gaussian likelihood: f(r) = (1 / 2*pi*sigma^2) * exp(-r^2 / 2*sigma^2)
             f_r = (1.0 / (2.0 * np.pi * (sigma_tot ** 2))) * np.exp(-0.5 * (sep / sigma_tot) ** 2)
 
-            # Likelihood ratio: L = f(r) / rho
+            # Likelihood ratio: ell_j = f(r) / rho
             lr = f_r / max(rho, 1e-6)
+            evaluated_candidates.append((cand, sep, lr))
 
-            # Sutherland & Saunders posterior match probability:
-            # P = L / (L + (1 - Q) / Q)
-            denom = lr + ((1.0 - self.q_prior) / self.q_prior)
-            post_prob = float(lr / denom) if denom > 0 else 0.0
-
-            # Chance coincidence: 1 - exp(-pi * r^2 * rho)
-            p_chance = float(1.0 - np.exp(-np.pi * (sep ** 2) * rho))
-
-            evaluated.append((cand, sep, post_prob, p_chance))
-
-        if not evaluated:
+        if not evaluated_candidates:
             return CrossSurveyAssociation(
                 query_entity_id=query_id,
                 match_status=CrossSurveyMatchStatus.NO_RELIABLE_MATCH,
                 separation_arcsec=999.0,
                 posterior_match_probability=0.0,
+                posterior_no_counterpart_probability=1.0,
+                likelihood_ratio=0.0,
                 chance_coincidence_probability=1.0,
+                local_source_density_per_sq_arcsec=rho,
+                competing_candidates_count=0,
             )
 
-        # Sort by posterior probability descending
-        evaluated.sort(key=lambda x: x[2], reverse=True)
-        best_cand, best_sep, best_post, best_chance = evaluated[0]
+        # Competing-hypothesis denominator: sum(ell_k) + (1 - Q) / Q
+        sum_lr = sum(item[2] for item in evaluated_candidates)
+        denom = sum_lr + prior_null_factor
 
-        # Check for ambiguity: multiple candidates with significant posterior
-        ambiguous = len(evaluated) > 1 and evaluated[1][2] >= 0.20
+        # Calculate posterior probabilities
+        posteriors: List[Tuple[SurveyCandidate, float, float, float, float]] = []
+        for cand, sep, lr in evaluated_candidates:
+            p_hj = float(lr / denom)
+            p_chance = float(1.0 - np.exp(-np.pi * (sep ** 2) * rho))
+            posteriors.append((cand, sep, lr, p_hj, p_chance))
 
-        if best_post >= 0.85 and not ambiguous and best_sep <= 2.5:
+        # Posterior probability of no counterpart in the region (H0)
+        p_h0 = float(prior_null_factor / denom)
+
+        # Sort candidates descending by posterior probability P(H_j | D)
+        posteriors.sort(key=lambda x: x[3], reverse=True)
+        best_cand, best_sep, best_lr, best_post, best_chance = posteriors[0]
+
+        # Check candidate competition
+        competing = len(posteriors) > 1 and posteriors[1][3] >= 0.15
+
+        if best_post >= 0.90 and not competing and best_sep <= 2.5:
             status = CrossSurveyMatchStatus.SECURE_MATCH
-        elif best_post >= 0.20 or ambiguous:
+        elif best_post >= 0.70 and not competing and best_sep <= 3.5:
+            status = CrossSurveyMatchStatus.PROBABLE_MATCH
+        elif competing or best_post >= 0.15:
             status = CrossSurveyMatchStatus.AMBIGUOUS_MATCH
         else:
             status = CrossSurveyMatchStatus.NO_RELIABLE_MATCH
 
         return CrossSurveyAssociation(
             query_entity_id=query_id,
-            matched_candidate=best_cand if status != CrossSurveyMatchStatus.NO_RELIABLE_MATCH else None,
+            matched_candidate=best_cand if status in (CrossSurveyMatchStatus.SECURE_MATCH, CrossSurveyMatchStatus.PROBABLE_MATCH) else None,
             match_status=status,
             separation_arcsec=best_sep,
             posterior_match_probability=best_post,
+            posterior_no_counterpart_probability=p_h0,
+            likelihood_ratio=best_lr,
             chance_coincidence_probability=best_chance,
             local_source_density_per_sq_arcsec=rho,
-            details={"competing_matches_count": len(evaluated) - 1},
+            competing_candidates_count=len(posteriors),
+            details={
+                "evaluated_candidates_count": len(posteriors),
+                "null_posterior_p_h0": p_h0,
+                "all_candidate_posteriors": [
+                    {"source_id": c.source_id, "sep": s, "p_hj": p, "lr": l}
+                    for c, s, l, p, _ in posteriors
+                ],
+            }
         )
-
-    def audit_training_test_overlap(
-        self,
-        training_entities: List[Dict[str, float]], # List of {'entity_id', 'ra_deg', 'dec_deg'}
-        target_eval_entities: List[Dict[str, float]]
-    ) -> List[str]:
-        """
-        Cross-matches evaluation entities against training entities to identify any
-        spatial overlaps within exclusion_radius_arcsec. Returns list of quarantined target IDs.
-        """
-        quarantined_ids = []
-        for target in target_eval_entities:
-            t_ra = target["ra_deg"]
-            t_dec = target["dec_deg"]
-            t_id = target.get("entity_id", "unknown")
-
-            for train in training_entities:
-                sep = self.angular_separation_arcsec(t_ra, t_dec, train["ra_deg"], train["dec_deg"])
-                if sep <= self.exclusion_radius_arcsec:
-                    quarantined_ids.append(t_id)
-                    break
-
-        return quarantined_ids

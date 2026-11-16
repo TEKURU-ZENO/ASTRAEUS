@@ -156,38 +156,34 @@ class PhotometricHarmonizer:
           (c - g) = -0.407 * (g - r) + 0.016
           (o - r) =  0.222 * (g - r) - 0.035
         """
-        if flux_g_ujy > 0.0 and flux_r_ujy > 0.0:
-            g_mag, g_err = cls.flux_ujy_to_mag(flux_g_ujy, flux_g_err_ujy)
-            r_mag, r_err = cls.flux_ujy_to_mag(flux_r_ujy, flux_r_err_ujy)
-            if g_mag is not None and r_mag is not None and g_err is not None and r_err is not None:
-                g_r = g_mag - r_mag
-                g_r_err = np.sqrt(g_err**2 + r_err**2)
+        if flux_g_ujy <= 0.0 or flux_r_ujy <= 0.0:
+            raise ValueError(
+                "Non-positive difference flux cannot be transformed across filters via empirical color polynomials. "
+                "Per ASTRAEUS-P5-HARMON-002, negative difference flux must be retained in its native passband."
+            )
 
-                c_mag = g_mag - 0.407 * g_r + 0.016
-                c_err = np.sqrt(g_err**2 + (0.407 * g_r_err)**2 + 0.015**2)
+        g_mag, g_err = cls.flux_ujy_to_mag(flux_g_ujy, flux_g_err_ujy)
+        r_mag, r_err = cls.flux_ujy_to_mag(flux_r_ujy, flux_r_err_ujy)
+        if g_mag is None or r_mag is None or g_err is None or r_err is None:
+            raise ValueError("Failed to convert positive flux to AB magnitude.")
 
-                o_mag = r_mag + 0.222 * g_r - 0.035
-                o_err = np.sqrt(r_err**2 + (0.222 * g_r_err)**2 + 0.015**2)
+        g_r = g_mag - r_mag
+        if not (-0.5 <= g_r <= 2.5):
+            raise ValueError(f"Color (g - r) = {g_r:.3f} is outside empirical polynomial validity domain [-0.5, 2.5].")
 
-                flux_c, flux_c_err = cls.mag_to_flux_ujy(c_mag, c_err)
-                flux_o, flux_o_err = cls.mag_to_flux_ujy(o_mag, o_err)
-                return {
-                    "ATLAS_c": (flux_c, flux_c_err),
-                    "ATLAS_o": (flux_o, flux_o_err),
-                }
+        g_r_err = np.sqrt(g_err**2 + r_err**2)
 
-        # Fallback linear effective wavelength interpolation for non-positive / difference flux
-        w_c_g = (6390.0 - 5330.0) / (6390.0 - 4770.0)  # ~0.654
-        w_c_r = 1.0 - w_c_g
-        flux_c = w_c_g * flux_g_ujy + w_c_r * flux_r_ujy
-        err_c = np.sqrt((w_c_g * flux_g_err_ujy)**2 + (w_c_r * flux_r_err_ujy)**2 + (0.05 * abs(flux_c))**2)
+        c_mag = g_mag - 0.407 * g_r + 0.016
+        c_err = np.sqrt(g_err**2 + (0.407 * g_r_err)**2 + 0.015**2)
 
-        flux_o = 0.25 * flux_g_ujy + 0.75 * flux_r_ujy
-        err_o = np.sqrt((0.25 * flux_g_err_ujy)**2 + (0.75 * flux_r_err_ujy)**2 + (0.05 * abs(flux_o))**2)
+        o_mag = r_mag + 0.222 * g_r - 0.035
+        o_err = np.sqrt(r_err**2 + (0.222 * g_r_err)**2 + 0.015**2)
 
+        flux_c, flux_c_err = cls.mag_to_flux_ujy(c_mag, c_err)
+        flux_o, flux_o_err = cls.mag_to_flux_ujy(o_mag, o_err)
         return {
-            "ATLAS_c": (float(flux_c), float(err_c)),
-            "ATLAS_o": (float(flux_o), float(err_o)),
+            "ATLAS_c": (flux_c, flux_c_err),
+            "ATLAS_o": (flux_o, flux_o_err),
         }
 
     @classmethod
@@ -202,36 +198,30 @@ class PhotometricHarmonizer:
         Transforms synchronous ATLAS (c, o) fluxes to ZTF (g, r) fluxes by inverting
         the Tonry et al. (2018) color equations with uncertainty propagation.
         """
-        if flux_c_ujy > 0.0 and flux_o_ujy > 0.0:
-            c_mag, c_err = cls.flux_ujy_to_mag(flux_c_ujy, flux_c_err_ujy)
-            o_mag, o_err = cls.flux_o_ujy_to_mag(flux_o_ujy, flux_o_err_ujy) if hasattr(cls, "flux_o_ujy_to_mag") else cls.flux_ujy_to_mag(flux_o_ujy, flux_o_err_ujy)
-            if c_mag is not None and o_mag is not None and c_err is not None and o_err is not None:
-                # c - o = (g - r) * (1 - 0.407 - 0.222) + 0.016 + 0.035 = 0.371 * (g - r) + 0.051
-                c_o = c_mag - o_mag
-                g_r = (c_o - 0.051) / 0.371
-                g_r_err = np.sqrt(c_err**2 + o_err**2) / 0.371
+        if flux_c_ujy <= 0.0 or flux_o_ujy <= 0.0:
+            raise ValueError(
+                "Non-positive difference flux cannot be transformed across filters via empirical color polynomials. "
+                "Per ASTRAEUS-P5-HARMON-002, negative difference flux must be retained in its native passband."
+            )
 
-                g_mag = c_mag + 0.407 * g_r - 0.016
-                g_err = np.sqrt(c_err**2 + (0.407 * g_r_err)**2 + 0.020**2)
+        c_mag, c_err = cls.flux_ujy_to_mag(flux_c_ujy, flux_c_err_ujy)
+        o_mag, o_err = cls.flux_ujy_to_mag(flux_o_ujy, flux_o_err_ujy)
+        if c_mag is None or o_mag is None or c_err is None or o_err is None:
+            raise ValueError("Failed to convert positive flux to AB magnitude.")
 
-                r_mag = o_mag - 0.222 * g_r + 0.035
-                r_err = np.sqrt(o_err**2 + (0.222 * g_r_err)**2 + 0.020**2)
+        c_o = c_mag - o_mag
+        g_r = (c_o - 0.051) / 0.371
+        g_r_err = np.sqrt(c_err**2 + o_err**2) / 0.371
 
-                flux_g, flux_g_err = cls.mag_to_flux_ujy(g_mag, g_err)
-                flux_r, flux_r_err = cls.mag_to_flux_ujy(r_mag, r_err)
-                return {
-                    "ZTF_g": (flux_g, flux_g_err),
-                    "ZTF_r": (flux_r, flux_r_err),
-                }
+        g_mag = c_mag + 0.407 * g_r - 0.016
+        g_err = np.sqrt(c_err**2 + (0.407 * g_r_err)**2 + 0.020**2)
 
-        # Fallback linear approximation
-        flux_g = 1.25 * flux_c_ujy - 0.25 * flux_o_ujy
-        err_g = np.sqrt((1.25 * flux_c_err_ujy)**2 + (0.25 * flux_o_err_ujy)**2 + (0.05 * abs(flux_g))**2)
+        r_mag = o_mag - 0.222 * g_r + 0.035
+        r_err = np.sqrt(o_err**2 + (0.222 * g_r_err)**2 + 0.020**2)
 
-        flux_r = 0.15 * flux_c_ujy + 0.85 * flux_o_ujy
-        err_r = np.sqrt((0.15 * flux_c_err_ujy)**2 + (0.85 * flux_o_err_ujy)**2 + (0.05 * abs(flux_r))**2)
-
+        flux_g, flux_g_err = cls.mag_to_flux_ujy(g_mag, g_err)
+        flux_r, flux_r_err = cls.mag_to_flux_ujy(r_mag, r_err)
         return {
-            "ZTF_g": (float(flux_g), float(err_g)),
-            "ZTF_r": (float(flux_r), float(err_r)),
+            "ZTF_g": (flux_g, flux_g_err),
+            "ZTF_r": (flux_r, flux_r_err),
         }
