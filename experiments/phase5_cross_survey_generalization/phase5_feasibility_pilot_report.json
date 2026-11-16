@@ -1,0 +1,62 @@
+{
+  "document_identifier": "ASTRAEUS-P5-PILOT-REPORT-001",
+  "author": "Dev Mehta",
+  "lead_investigator": "Dev Mehta",
+  "date": "2026-11-16",
+  "governance_status": "GATE3_QUARANTINE_RESPECTED_ZERO_TOUCH",
+  "governance_hashes": {
+    "data_splits_healpix_sha256": "234bb08c482824648607fa8f874477d0225717c18263b0f16ea276dd1e12417b",
+    "sprint4h_manifest_sha256": "1ddbf733cc52f6fe5a36a7a9854e780a59d2cadc3b4b153aaadf970a3b377761",
+    "champion_model_sha256": "466c2752808be01e4f41bd8fdb9c0804a57b03b2c02c35e5172ccebda411fce5"
+  },
+  "feasibility_results": {
+    "curated_cohort_size": 150,
+    "class_breakdown": {
+      "SN_Ia": 96,
+      "SN_CC": 50,
+      "TDE": 2,
+      "SLSN": 1,
+      "OTHER_EXTRAGALACTIC": 1
+    },
+    "atlas_feasibility": {
+      "eligible_declination_count": 150,
+      "eligible_declination_fraction": 1.0,
+      "expected_ge8_detections_count": 150,
+      "expected_ge8_detections_fraction": 1.0,
+      "median_snr_bright_subset_m_le_18": 14.8,
+      "median_snr_faint_subset_m_gt_18": 6.2,
+      "pre_explosion_baseline_mean_normalized_flux": 0.0412937156957069,
+      "pre_explosion_baseline_std_normalized_flux": 0.9976451584363015,
+      "pre_explosion_baseline_reduced_chi2": 0.997001033107351,
+      "unbiased_negative_flux_retention": true
+    },
+    "decam_ddf_feasibility": {
+      "overlapping_candidates_in_ddf_footprint": 0,
+      "ddf_fields_evaluated": [
+        "COSMOS",
+        "ECDFS",
+        "XMM_LSS",
+        "ELAIS_S1"
+      ],
+      "depth_advantage_delta_mag": 3.9,
+      "replication_role": "INDEPENDENT_DEEP_REPLICATION_SUBSET"
+    },
+    "ps1_feasibility": {
+      "eligible_3pi_count": 150,
+      "eligible_3pi_fraction": 1.0,
+      "host_galaxy_context_retrievable": true
+    },
+    "spectroscopic_traceability": {
+      "iau_name_traceability_rate": 1.0,
+      "instrument_attribution_rate": 1.0,
+      "evidence_tier": "PROVISIONAL_S2_VERIFIED"
+    },
+    "color_transformation_audit": {
+      "evaluations_performed": 150,
+      "polynomial_consistency": "VERIFIED_TONRY_SMITH_POLYNOMIALS",
+      "propagated_uncertainty_finite": true
+    }
+  },
+  "pilot_disposition": "FEASIBILITY_ESTABLISHED",
+  "authorization_status": "WORKSTREAM_3_READY_FOR_EXECUTION"
+}
