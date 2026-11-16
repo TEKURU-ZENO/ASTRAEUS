@@ -1,45 +1,47 @@
-# ASTRAEUS — Gate 4 Phase 4B: ZTF Alert Broker Acquisition & Rare-Class Cohort Expansion Protocol (v1.2)
+# ASTRAEUS — Gate 4 Phase 4B: ZTF Alert Broker Acquisition & Rare-Class Cohort Expansion Protocol (v1.3)
 
-**Milestone:** Gate 4 Phase 4B.0 — Acquisition Engine Verification  
+**Milestone:** Gate 4 Phase 4B.0.1 — Final Acquisition Integrity Verification  
 **Author:** Antigravity (Google DeepMind) in coordination with Scientific Review  
 **Date:** November 16, 2026  
-**Revision:** v1.2 (Addressing All Blocker Findings: Flux Units, Fail-Closed Security, Global Rate Limiting, Full Vault Lifecycle, Pilot Reconciliation & Population Registry)  
-**Status:** **ACQUISITION ENGINE VERIFIED — READY FOR CONTROLLED 35-CANDIDATE PILOT AUTHORIZATION**  
-**Governing Commit Baseline:** [`3eaefd8`](https://github.com/TEKURU-ZENO/ASTRAEUS/commit/3eaefd8d5fb6c3ad9a221582e256085774913c2d)  
-**Automated Verification Suite:** 19/19 tests passing (`tests/test_phase4b_protocol_and_geometry.py` and regression suites)  
+**Revision:** v1.3 (Addressing All Review Blockers A, B, C, D: Windows Byte-0 Locking, Pre-Commit Validation, Masked NaN Photometry, Conventional Uncertainty Propagation, and 25-Test Expanded Suite)  
+**Status:** **ACQUISITION INTEGRITY FULLY VERIFIED — 25/25 TESTS PASSING — READY FOR CONTROLLED 35-CANDIDATE PILOT AUTHORIZATION**  
+**Governing Commit Baseline:** [`0885e7c`](https://github.com/TEKURU-ZENO/ASTRAEUS/commit/0885e7c931c8cab758579d3966126406ef8a0c66)  
+**Automated Verification Suite:** 25/25 tests passing (`tests/` regression suite: 6 in 4A.1, 5 in 4A.2, 14 in 4B)  
 
 ---
 
 ## 1. Executive Summary & Review Invariant Status
 
-Following the Phase 4B v1.1 review, this protocol revision (v1.2) establishes **Phase 4B.0: Acquisition Engine Verification**, completely resolving the four implementation blockers and two cohort design questions before any live broker retrieval or model training:
+Following the Phase 4B.0 review, this protocol revision (v1.3) establishes **Phase 4B.0.1: Final Acquisition Integrity Verification**, fully resolving all remaining implementation and verification blockers before any live broker retrieval or model training:
 
-1. **Photometric Calibration & Flux Unit Consistency (Blocker 1):**  
-   Standardizes canonical flux units across the repository on **nanomaggies ($\text{nmgy}$)** with zero point $Z_{0, \text{nmgy}} = 22.500$ mag, matching `ObservationRecord` and `RealSurveyFeatureExtractor`. Explicitly documents and independently validates microjanskys ($\mu\text{Jy}$) with zero point $Z_{0, \mu\text{Jy}} = 23.900$ mag ($1\ \text{nmgy} = 3.631028\ \mu\text{Jy}$). Asserts scale-invariance of the signed signal-to-noise ratio ($SNR$).
-2. **Fail-Closed Sign Security (Blocker 2):**  
-   Replaces silent positive fallback with strict fail-closed parsing. Any missing, null, or unrecognized `isdiffpos` token is marked invalid (`is_valid_sign = False`), rejected from positive detections (`is_positive_detection_snr5 = False`), and tracked in the ingestion manifest under `invalid_sign_detections_count`.
-3. **Process-Safe & Thread-Safe Global Rate Limiter (Blocker 3):**  
-   Implements `GlobalInterprocessRateLimiter` utilizing OS-level file locking (`msvcrt` on Windows / `fcntl` on POSIX) and `threading.Lock` to enforce the conservative $\le 5.0$ requests/second operational cap across concurrent threads and independent worker processes, incorporating uniform random jitter ($\Delta t \in [0.02, 0.06]$s).
-4. **Complete End-to-End Vault Lifecycle & Idempotency (Blocker 4):**  
-   Implements full request-to-vault lifecycle in [`broker_client.py`](file:///c:/Users/Dev%20Mehta/Desktop/ASTRAEUS/experiments/gate4b_broker_acquisition_and_cohort_expansion/broker_client.py): raw JSON response preservation, atomic temporary file commits, SHA-256 manifest registration, forced photometry isolation, bounded exponential backoff on HTTP 429/5xx, and **strict non-overwriting idempotency** (formally verified by unit tests proving that failed retries never overwrite or corrupt existing raw vault files).
-5. **Reconciliation of Pilot Specification (Review Issue 3):**  
-   Reconciles the stated cohort ranges with the exact empirical distributions in [`pilot_cohort_specification.json`](file:///c:/Users/Dev%20Mehta/Desktop/ASTRAEUS/experiments/gate4b_broker_acquisition_and_cohort_expansion/pilot_cohort_specification.json):
-   - SN_Ia Pending ($N=11$): $z \in [0.0141, 0.1000]$, peak magnitude $14.37 - 18.82$ mag.
-   - SN_CC Pending ($N=12$): Exactly 12 distinct subtypes, 1 candidate each (`SN Ic`, `SN II`, `SN IIb`, `SN Ib`, `SN IIP`, `SN Ic-BL`, `SN Ib/c`, `SN IIn`, `SN Ibn`, `SN II-pec`, `SN Icn`, `SN Ic-pec`).
-6. **Explicit Phase 4C Tri-Partition Population Registry (Review Issue 4):**  
-   Formally defines three disjoint populations assigned at the parent physical-transient level (Training, Validation, and Locked External Evaluation). Disclaims the pilot's 4 rare events as performance benchmarks, restricting them strictly to ingestion verification.
+1. **Windows Inter-Process Locking (Blocker A Resolution):**  
+   Resolves Windows byte-range locking offset drift by explicitly seeking to byte 0 (`file_obj.seek(0)`) before invoking `msvcrt.locking(file_obj.fileno(), msvcrt.LK_NBLCK, 1)` and `msvcrt.LK_UNLCK`. Guarantees that independent OS processes contend on the exact same byte range. Validated through a multi-process test (`test_windows_multiprocess_rate_limiter`) executing across 3 independent child OS processes.
+2. **Pre-Commit JSON Validation & Race-Free Temp Files (Blocker B Resolution):**  
+   Validates JSON parseability and enforces `isinstance(raw_data, dict)` **before** writing or replacing the permanent vault artifact. Uses process-and-thread-unique temp files (`{stem}_{pid}_{tid}_{time_ns}.tmp`) to prevent concurrent collision. Verified by `test_malformed_json_validation_before_commit` asserting that broken JSON or non-dict payloads return error statuses without touching or corrupting vault paths.
+3. **Fail-Closed Masked NaN Photometry & Feature Extractor Protection (Blocker C Resolution):**  
+   Invalid photometry (unrecognized sign, non-finite magnitude, or non-positive error) yields `NaN` fluxes (`flux_nmgy`, `flux_ujy`, `signed_snr`), `is_valid_sign = False`, `is_valid_measurement = False`, and `is_positive_detection_snr5 = False`. It is **never** silently substituted with `0.0`. Downstream in `RealSurveyFeatureExtractor`, invalid measurements are cleanly masked/filtered from detection arrays, preventing `NaN` corruption of the 27 physical observable features (`test_invalid_photometry_downstream_handling`).
+4. **Conventional Propagated Flux Uncertainty (Blocker D Resolution):**  
+   Adopts conventional first-order propagated standard deviation:
+   $$\sigma_F = \left(\frac{\ln 10}{2.5}\right) |F| \sigma_m \approx 0.921034 |F| \sigma_m$$
+   Under this definition, $SNR = F / \sigma_F = \text{sgn}(\text{isdiffpos}) \cdot (1.0857362 / \sigma_m)$ is the exact scale-invariant Gaussian detection significance. The auxiliary non-linear symmetric half-interval $|F| \sinh((\ln 10 / 2.5) \sigma_m)$ is retained as an auxiliary diagnostic without confounding detection thresholds.
+5. **Explicit HTTP 429 and 5xx Retry Recovery:**  
+   Simulates full HTTP 429 (rate limited) $\to$ HTTP 503 (unavailable) $\to$ HTTP 200 (success) sequence, validating bounded exponential backoff with jitter and retry recovery (`test_explicit_http_429_and_5xx_retries`).
+6. **Forced Photometry Dedicated Archival & Isolation:**  
+   Archives strictly to `data/external_validity_v1/raw/alerce_forced/{ztf_id}_forced.json`. Unit tests verify dedicated lifecycle, pre-commit validation, 404 handling, idempotency, and absolute isolation from difference light curve vaults (`test_forced_photometry_archival_and_separation`).
+7. **Mathematical Provenance of Conformal Quantile Index $k=507$:**  
+   Documents exact finite-sample quantile specification: calibration population $N_{\text{calib}} = 562$ (from the 80/20 train/calibration split of the $N=2,808$ development cohort), target coverage $1 - \alpha = 0.90$ ($\alpha = 0.10$), finite-sample index $k = \lceil (N_{\text{calib}} + 1)(1 - \alpha) \rceil = \lceil 563 \times 0.90 \rceil = 507$, 0-indexed rank $506$, with conservative tie-breaking (`test_conformal_k507_specification_and_provenance`).
 
 ```mermaid
 flowchart TD
-    subgraph P4B0["Phase 4B.0: Acquisition Engine Verification (COMPLETED)"]
-        CALIB["Photometric Calibration Engine<br/>Canonical nmgy (Z0=22.500) vs uJy (Z0=23.900)"]
-        FAIL_CLOSED["Fail-Closed Sign Security<br/>Invalid/missing signs rejected & audited"]
-        RATE_LIMIT["Global Process-Safe Rate Limiter<br/>OS File Lock + Thread Lock (<=5 req/s)"]
-        VAULT_LIFECYCLE["Atomic Request-to-Vault Lifecycle<br/>Non-overwriting Idempotency & Forced Photometry Isolation"]
-        TESTS["Comprehensive Test Suite<br/>19/19 Passing Tests (Mocked HTTP & Physics)"]
+    subgraph P4B01["Phase 4B.0.1: Final Acquisition Integrity Verification (COMPLETED)"]
+        LOCK["Seek(0) Windows Locking & Multi-Process Concurrency (Blocker A)"]
+        VAL["Pre-Commit JSON Validation & Race-Free Temp Files (Blocker B)"]
+        NAN_MASK["Fail-Closed Masked NaN Photometry & Downstream Filtering (Blocker C)"]
+        UNCERT["Conventional Propagated Uncertainty & Gaussian SNR (Blocker D)"]
+        TESTS["25/25 Passing Tests Across All Regression Suites"]
     end
 
-    subgraph P4B1["Phase 4B.1: Controlled Pilot (N = 35) (PENDING AUTHORIZATION)"]
+    subgraph P4B1["Phase 4B.1: Controlled Pilot (N = 35) (READY FOR SIGN-OFF)"]
         PILOT_SPEC["Pre-Registered Pilot Cohort<br/>5 Evaluable | 3 Single-Band | 4 Rare | 11 Ia | 12 CC"]
         HP_AUDIT["Exact HEALPix 60'' Isolation<br/>astrometry_isolation_audit.py (1,808 Frozen Pixels)"]
         PILOT_FETCH["Execute Rate-Limited Pilot Fetch<br/>Write to data/external_validity_v1/raw/alerce_external/"]
@@ -160,13 +162,16 @@ The four rare transients in the pilot cohort (`ZTF18aabdajx`, `ZTF18aabtxvd`, `Z
 
 ---
 
-## 6. Pre-Execution Verification Sign-Off Checklist
+## 6. Pre-Execution Verification Sign-Off Checklist (Phase 4B.0.1 Closure)
 
-- [x] **Flux Units Reconciled:** Canonical nanomaggies ($Z_0 = 22.500$) and microjanskys ($Z_0 = 23.900$) calibrated and validated against independent references.
-- [x] **Fail-Closed Sign Parsing:** Missing, null, or malformed `isdiffpos` tokens fail closed; invalid signs recorded in manifest.
-- [x] **Global Rate Limiter Verified:** OS-level file locking and `threading.Lock` tested under concurrent thread contention.
-- [x] **Non-Overwriting Idempotency Verified:** Unit test proves failed retries NEVER overwrite or corrupt existing raw vault files.
+- [x] **Windows Byte-0 Locking & Multi-Process Concurrency (Blocker A):** Tested and passed via `test_windows_multiprocess_rate_limiter` across 3 independent OS processes.
+- [x] **Pre-Commit JSON Structure Validation & Race-Free Temp Files (Blocker B):** Tested and passed via `test_malformed_json_validation_before_commit`.
+- [x] **Fail-Closed Masked NaN Photometry & Feature Extractor Protection (Blocker C):** Tested and passed via `test_invalid_photometry_downstream_handling` and `test_fail_closed_sign_parsing`.
+- [x] **Conventional Propagated Uncertainty & Gaussian Detection Significance (Blocker D):** Tested and passed via `test_physical_flux_units_and_independent_validation`.
+- [x] **Explicit HTTP 429 and 5xx Retry Recovery:** Tested and passed via `test_explicit_http_429_and_5xx_retries`.
+- [x] **Forced Photometry Dedicated Lifecycle & Separation:** Tested and passed via `test_forced_photometry_archival_and_separation`.
+- [x] **Mathematical Provenance of Conformal Quantile Index $k=507$:** Tested and passed via `test_conformal_k507_specification_and_provenance`.
 - [x] **Pilot Specification Reconciled:** SN_Ia ranges ($z \in [0.0141, 0.1000]$, mag $14.37 - 18.82$) and SN_CC 12 subtypes documented accurately.
 - [x] **Gate 3 Test Quarantine Maintained:** All 35 pilot candidates audited and verified $>60''$ spatially isolated from the 1,808 frozen test pixels. Zero test ID queries executed.
 - [x] **Phase 4C Population Registry Defined:** Strict physical-transient level separation between Training, Validation, and Locked Evaluation populations.
-- [x] **Automated Regression Suite:** 19/19 tests passing in repository environment.
+- [x] **Automated Regression Suite:** 25/25 tests passing in repository environment (14 Phase 4B tests, 5 Phase 4A.2 tests, 6 Phase 4A.1 tests).

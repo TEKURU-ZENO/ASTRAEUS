@@ -1,25 +1,33 @@
 """
 ASTRAEUS Gate 4 Phase 4B: Production ALeRCE Broker API Client & Photometric Calibration Engine.
 
-Milestone: Phase 4B.0 — Acquisition Engine Verification
+Milestone: Phase 4B.0.1 — Final Acquisition Integrity Verification
 Author: Antigravity (Google DeepMind) in coordination with Scientific Review
 Date: November 16, 2026
-Version: 1.2 (Addressing Blocker Findings: Flux Units, Fail-Closed Sign Parsing,
-             Global Inter-Process Rate Limiting, and End-to-End Vault Lifecycle)
+Version: 1.3 (Addressing Review Blockers A, B, C, D:
+             - Windows Byte-0 File Cursor Positioning & Cross-Process Rate Limiter
+             - Pre-Commit JSON Structure Validation & Race-Free Temp Files
+             - Masked NaN Representation for Invalid Photometry with Validity Flags
+             - Conventional First-Order Propagated Flux Standard Deviation)
 
-Physical Specifications:
+Physical & Statistical Conventions:
 1. Canonical Flux Units: Nanomaggies (nmgy), Z0 = 22.500 mag.
    F_nmgy = sgn(isdiffpos) * 10^(-0.4 * (m_AB - 22.500))
-   sigma_F_nmgy = |F_nmgy| * sinh((ln 10 / 2.5) * sigma_m)
-2. Microjansky Scaling: Microjanskys (uJy), Z0 = 23.900 mag.
+2. Conventional First-Order Propagated Standard Deviation:
+   sigma_F_nmgy = (ln(10) / 2.5) * |F_nmgy| * sigma_m  [nmgy]
+   Interprets F / sigma_F as standard Gaussian significance under linear propagation.
+   Symmetric half-interval F * sinh((ln 10 / 2.5) * sigma_m) tracked as auxiliary diagnostic.
+3. Microjansky Scaling: Microjanskys (uJy), Z0 = 23.900 mag.
    1 nmgy = 3.631028 uJy
    F_uJy = sgn(isdiffpos) * 10^(-0.4 * (m_AB - 23.900)) = 3.631028 * F_nmgy
-   sigma_F_uJy = 3.631028 * sigma_F_nmgy
-3. Scale-Invariant Signed SNR:
-   SNR = F_nmgy / sigma_F_nmgy = F_uJy / sigma_F_uJy
-4. Fail-Closed Sign Security:
-   Unknown, missing, or malformed isdiffpos values fail closed (is_positive_detection_snr5 = False)
-   and are recorded in the invalid-sign audit ledger.
+   sigma_F_uJy = (ln(10) / 2.5) * |F_uJy| * sigma_m = 3.631028 * sigma_F_nmgy
+4. Scale-Invariant Signed Gaussian Detection Significance:
+   SNR = F_nmgy / sigma_F_nmgy = F_uJy / sigma_F_uJy = sgn(isdiffpos) * (2.5 / (ln 10 * sigma_m))
+       ~ sgn(isdiffpos) * (1.0857362 / sigma_m)
+   Positive Detection Rule: sgn(isdiffpos) == +1.0 AND SNR >= +5.0 (sigma_m <= 0.217147 mag)
+5. Fail-Closed Masked Photometry:
+   Any missing, null, or unrecognized isdiffpos, non-finite mag, or non-positive error
+   yields NaN flux/SNR, is_valid_measurement = False, and is_positive_detection_snr5 = False.
 """
 
 import hashlib
@@ -42,8 +50,9 @@ else:
 # Photometric calibration constants
 CANONICAL_AB_ZERO_POINT_NMGY = 22.500  # 1 nmgy = 3.631e-6 Jy (m_AB = 22.500)
 MICROJANSKY_AB_ZERO_POINT = 23.900    # 1 uJy = 1e-6 Jy (m_AB = 23.90005 ~ 23.900)
-NMGY_TO_UJY_FACTOR = 3.631028198428519  # Exact conversion factor: 10^(0.4 * 1.4)
+NMGY_TO_UJY_FACTOR = 3.631028198428519  # Exact conversion: 10^(0.4 * 1.4)
 LN10_OVER_2P5 = math.log(10.0) / 2.5   # ~ 0.9210340371976184
+INV_LN10_OVER_2P5 = 2.5 / math.log(10.0)  # ~ 1.0857362047581296
 
 # Documented valid sign tokens
 POSITIVE_DIFF_TOKENS = {1, "1", "+1", True, "t", "true", "pos", "positive"}
@@ -93,46 +102,52 @@ def compute_physical_flux_and_snr(
 ) -> Dict[str, Union[float, bool, str]]:
     """
     Computes physical difference flux in canonical nanomaggies (nmgy) and microjanskys (uJy),
-    along with physically consistent signed signal-to-noise ratio.
+    using conventional first-order propagated standard deviation:
+        sigma_F = (ln(10) / 2.5) * |F| * sigma_m
 
-    Fails closed: Any missing, null, or malformed sign token yields is_positive_detection_snr5 = False.
+    Blocker C Resolution:
+    Invalid photometry (unrecognized sign, non-finite mag, or non-positive error)
+    produces explicit NaN fluxes and is_valid_measurement = False.
+    It is NEVER silently represented as 0.0 flux.
     """
     sgn, is_valid_sign = parse_difference_flux_sign(isdiffpos)
 
-    # Validate numerical inputs
     is_valid_mag = math.isfinite(magpsf)
     is_valid_err = math.isfinite(sigmapsf) and (sigmapsf > 0.0)
 
     if (not is_valid_sign) or (not is_valid_mag) or (not is_valid_err):
+        note = "INVALID_SIGN" if not is_valid_sign else ("INVALID_MAG" if not is_valid_mag else "INVALID_ERR")
         return {
-            "flux_nmgy": 0.0,
-            "flux_err_nmgy": float("inf"),
-            "flux_ujy": 0.0,
-            "flux_err_ujy": float("inf"),
-            "signed_snr": 0.0,
+            "flux_nmgy": float("nan"),
+            "flux_err_nmgy": float("nan"),
+            "flux_ujy": float("nan"),
+            "flux_err_ujy": float("nan"),
+            "flux_half_interval_nmgy": float("nan"),
+            "signed_snr": float("nan"),
             "is_valid_sign": bool(is_valid_sign),
+            "is_valid_measurement": False,
             "is_positive_detection_snr5": False,
-            "validation_note": "FAIL_CLOSED_INVALID_INPUT" if not (is_valid_mag and is_valid_err) else "FAIL_CLOSED_UNKNOWN_SIGN",
+            "validation_note": f"FAIL_CLOSED_{note}",
         }
 
     # 1. Canonical Nanomaggies (Z0 = 22.500)
-    # F_nmgy = 10^(-0.4 * (m - 22.5))
     abs_flux_nmgy = 10.0 ** (-0.4 * (magpsf - CANONICAL_AB_ZERO_POINT_NMGY))
     flux_nmgy = sgn * abs_flux_nmgy
 
-    # Hyperbolic log-normal error propagation: sigma_F = F * sinh((ln 10 / 2.5) * sigma_m)
-    # Clamping extreme sigma_m at 3.0 mag to prevent numerical overflow in sinh
-    clamped_sig = min(max(float(sigmapsf), 1e-4), 3.0)
-    flux_err_nmgy = abs_flux_nmgy * math.sinh(LN10_OVER_2P5 * clamped_sig)
+    # Conventional first-order propagated standard deviation (Blocker D)
+    flux_err_nmgy = LN10_OVER_2P5 * abs_flux_nmgy * sigmapsf
+
+    # Auxiliary non-linear symmetric confidence interval half-width
+    clamped_sig = min(float(sigmapsf), 3.0)
+    flux_half_interval_nmgy = abs_flux_nmgy * math.sinh(LN10_OVER_2P5 * clamped_sig)
 
     # 2. Microjanskys (Z0 = 23.900)
-    # 1 nmgy = 3.631028 uJy
     abs_flux_ujy = abs_flux_nmgy * NMGY_TO_UJY_FACTOR
     flux_ujy = sgn * abs_flux_ujy
     flux_err_ujy = flux_err_nmgy * NMGY_TO_UJY_FACTOR
 
-    # 3. Signed SNR: Scale invariant ratio F / sigma_F
-    # For small errors, SNR ~ sgn * 1.085736 / sigma_m
+    # 3. Signed Gaussian Detection Significance (SNR):
+    # Scale invariant: F_nmgy / sigma_F_nmgy == F_ujy / sigma_F_ujy == sgn * (INV_LN10_OVER_2P5 / sigma_m)
     signed_snr = flux_nmgy / flux_err_nmgy
 
     # Strict positive detection rule:
@@ -144,8 +159,10 @@ def compute_physical_flux_and_snr(
         "flux_err_nmgy": float(flux_err_nmgy),
         "flux_ujy": float(flux_ujy),
         "flux_err_ujy": float(flux_err_ujy),
+        "flux_half_interval_nmgy": float(flux_half_interval_nmgy),
         "signed_snr": float(signed_snr),
         "is_valid_sign": True,
+        "is_valid_measurement": True,
         "is_positive_detection_snr5": bool(is_pos_det),
         "validation_note": "VALID_CALIBRATED",
     }
@@ -154,7 +171,9 @@ def compute_physical_flux_and_snr(
 class GlobalInterprocessRateLimiter:
     """
     Genuinely thread-safe and inter-process rate limiter with uniform random jitter.
-    Uses OS-level file locking (msvcrt on Windows, fcntl on POSIX) and threading.Lock.
+    Blocker A Resolution:
+    On Windows, explicitly seeks to byte 0 before acquiring/releasing the byte-range lock,
+    guaranteeing that independent processes contend for the exact same byte position.
     """
 
     def __init__(
@@ -164,26 +183,33 @@ class GlobalInterprocessRateLimiter:
     ):
         self.lock_file_path = Path(lock_file_path)
         self.lock_file_path.parent.mkdir(parents=True, exist_ok=True)
+        # Ensure lock file exists with at least 1 byte so byte 0 is always addressable
+        if not self.lock_file_path.exists() or self.lock_file_path.stat().st_size == 0:
+            with open(self.lock_file_path, "wb") as f_init:
+                f_init.write(b"0.0\n")
+
         self.max_rate = max_rate
         self.min_interval = 1.0 / max_rate  # 0.20s for 5.0 req/s
         self._thread_lock = threading.Lock()
 
     def _acquire_file_lock(self, file_obj) -> None:
+        """Seek to byte 0 and acquire exclusive non-blocking lock with tight polling."""
         if sys.platform == "win32":
-            # Windows non-blocking lock polling
             while True:
                 try:
+                    file_obj.seek(0)
                     msvcrt.locking(file_obj.fileno(), msvcrt.LK_NBLCK, 1)
                     break
                 except (IOError, OSError):
                     time.sleep(0.005)
         else:
-            # POSIX blocking lock
             fcntl.flock(file_obj.fileno(), fcntl.LOCK_EX)
 
     def _release_file_lock(self, file_obj) -> None:
+        """Seek to byte 0 and release exclusive lock."""
         if sys.platform == "win32":
             try:
+                file_obj.seek(0)
                 msvcrt.locking(file_obj.fileno(), msvcrt.LK_UNLCK, 1)
             except (IOError, OSError):
                 pass
@@ -197,13 +223,18 @@ class GlobalInterprocessRateLimiter:
         """
         with self._thread_lock:
             total_waited = 0.0
-            with open(self.lock_file_path, "a+") as f:
+            # Open with r+b to allow reading and writing without truncation
+            with open(self.lock_file_path, "r+b") as f:
                 self._acquire_file_lock(f)
                 try:
                     f.seek(0)
-                    content = f.read().strip()
+                    raw_content = f.read().decode("utf-8", errors="ignore").strip()
                     now = time.time()
-                    last_time = float(content) if content else 0.0
+                    try:
+                        last_time = float(raw_content) if raw_content else 0.0
+                    except ValueError:
+                        last_time = 0.0
+
                     elapsed = now - last_time
 
                     if elapsed < self.min_interval:
@@ -213,10 +244,11 @@ class GlobalInterprocessRateLimiter:
                         total_waited = sleep_time
                         now = time.time()
 
-                    # Write new timestamp
+                    # Write new timestamp starting at byte 0
                     f.seek(0)
-                    f.truncate(0)
-                    f.write(f"{now:.6f}")
+                    payload = f"{now:.6f}\n".encode("utf-8")
+                    f.write(payload)
+                    f.truncate(len(payload))
                     f.flush()
                 finally:
                     self._release_file_lock(f)
@@ -226,11 +258,11 @@ class GlobalInterprocessRateLimiter:
 class AlerceBrokerClient:
     """
     Production-grade ALeRCE API client with complete request-to-vault lifecycle,
-    bounded exponential backoff, rate limiting, and immutable artifact preservation.
+    pre-commit JSON validation, race-free temp paths, and non-overwriting idempotency.
     """
 
     BASE_URL = "https://api.alerce.online/ztf/v1"
-    CLIENT_VERSION = "ASTRAEUS-AlerceBrokerClient-v1.2"
+    CLIENT_VERSION = "ASTRAEUS-AlerceBrokerClient-v1.3"
 
     def __init__(
         self,
@@ -266,8 +298,9 @@ class AlerceBrokerClient:
         1. Checks existing artifact (idempotent / non-overwriting).
         2. Acquires global inter-process rate limiter token.
         3. Queries ALeRCE API with bounded exponential backoff on 429/5xx.
-        4. Writes exact raw JSON response atomically to vault.
-        5. Computes SHA-256 and parses photometric records.
+        4. Validates JSON payload BEFORE committing to permanent vault (Blocker B).
+        5. Atomically commits validated JSON via unique PID/thread temp file.
+        6. Computes SHA-256 and parses photometric records.
         """
         vault_path = self.get_lightcurve_path(ztf_id)
 
@@ -287,7 +320,7 @@ class AlerceBrokerClient:
                     "file_size_bytes": len(raw_bytes),
                     "parsed_metrics": parsed,
                 }
-            except Exception as e:
+            except Exception:
                 pass  # Fall through to re-fetch if corrupted and force=True
 
         url = f"{self.BASE_URL}/objects/{ztf_id}/lightcurve"
@@ -297,7 +330,6 @@ class AlerceBrokerClient:
             "Accept": "application/json",
         }
 
-        # Lazy import requests to allow isolated testing without global dependency
         import requests
         http_session = session if session is not None else requests.Session()
 
@@ -315,16 +347,44 @@ class AlerceBrokerClient:
 
                 if resp.status_code == 200:
                     raw_text = resp.text
+
+                    # BLOCKER B: VALIDATE JSON STRUCTURE BEFORE COMMITTING TO VAULT
+                    try:
+                        raw_data = json.loads(raw_text)
+                    except json.JSONDecodeError as exc:
+                        # Malformed JSON payload: DO NOT write to vault path!
+                        return {
+                            "ztf_id": ztf_id,
+                            "status": "MALFORMED_JSON_PAYLOAD",
+                            "http_status": 200,
+                            "vault_path": None,
+                            "sha256": None,
+                            "error_message": f"Server returned malformed JSON: {exc}",
+                            "retries_performed": attempt - 1,
+                        }
+
+                    if not isinstance(raw_data, dict):
+                        return {
+                            "ztf_id": ztf_id,
+                            "status": "INVALID_JSON_SCHEMA",
+                            "http_status": 200,
+                            "vault_path": None,
+                            "sha256": None,
+                            "error_message": "Response JSON root is not a dictionary.",
+                            "retries_performed": attempt - 1,
+                        }
+
+                    # Unique temp filename to prevent concurrent download collisions
+                    unique_tmp_name = f"{vault_path.stem}_{os.getpid()}_{threading.get_ident()}_{time.time_ns()}.tmp"
+                    tmp_path = vault_path.with_name(unique_tmp_name)
+
                     raw_bytes = raw_text.encode("utf-8")
                     sha256 = hashlib.sha256(raw_bytes).hexdigest()
 
-                    # Atomic write to temporary file
-                    tmp_path = vault_path.with_suffix(".tmp")
+                    # Atomic write and replacement
                     tmp_path.write_bytes(raw_bytes)
                     tmp_path.replace(vault_path)
 
-                    # Parse verified payload
-                    raw_data = json.loads(raw_text)
                     parsed = self.parse_raw_lightcurve_payload(raw_data)
 
                     return {
@@ -387,7 +447,7 @@ class AlerceBrokerClient:
     ) -> Dict[str, Any]:
         """
         Retrieves and archives forced photometry as a separate independent product.
-        Never merged into alert difference light curves.
+        Pre-validates JSON before atomic write. Never merged with alert light curves.
         """
         vault_path = self.get_forced_path(ztf_id)
 
@@ -416,10 +476,26 @@ class AlerceBrokerClient:
             resp = http_session.get(url, headers=headers, timeout=self.request_timeout)
             if resp.status_code == 200:
                 raw_text = resp.text
+
+                # Validate JSON before commit
+                try:
+                    raw_data = json.loads(raw_text)
+                except json.JSONDecodeError as exc:
+                    return {
+                        "ztf_id": ztf_id,
+                        "status": "FORCED_MALFORMED_JSON",
+                        "http_status": 200,
+                        "vault_path": None,
+                        "sha256": None,
+                        "error_message": str(exc),
+                    }
+
+                unique_tmp_name = f"{vault_path.stem}_{os.getpid()}_{threading.get_ident()}_{time.time_ns()}.tmp"
+                tmp_path = vault_path.with_name(unique_tmp_name)
+
                 raw_bytes = raw_text.encode("utf-8")
                 sha256 = hashlib.sha256(raw_bytes).hexdigest()
 
-                tmp_path = vault_path.with_suffix(".tmp")
                 tmp_path.write_bytes(raw_bytes)
                 tmp_path.replace(vault_path)
 
@@ -429,6 +505,14 @@ class AlerceBrokerClient:
                     "http_status": 200,
                     "vault_path": str(vault_path),
                     "sha256": sha256,
+                }
+            elif resp.status_code == 404:
+                return {
+                    "ztf_id": ztf_id,
+                    "status": "FORCED_NOT_FOUND_404",
+                    "http_status": 404,
+                    "vault_path": None,
+                    "sha256": None,
                 }
             else:
                 return {
@@ -472,7 +556,7 @@ class AlerceBrokerClient:
 
             if not calib["is_valid_sign"]:
                 invalid_sign_count += 1
-            elif calib["flux_nmgy"] < 0:
+            elif calib["is_valid_measurement"] and calib["flux_nmgy"] < 0:
                 neg_detections_count += 1
 
             if calib["is_positive_detection_snr5"]:
@@ -567,31 +651,44 @@ class AlerceBrokerClient:
         return manifest
 
 
+def _multiprocess_rate_limiter_worker(lock_file_path: str, max_rate: float, count: int, queue: Any) -> None:
+    """Worker function for verifying multi-process rate limiter contention."""
+    limiter = GlobalInterprocessRateLimiter(lock_file_path=Path(lock_file_path), max_rate=max_rate)
+    for _ in range(count):
+        waited = limiter.wait_and_acquire()
+        queue.put((time.time(), waited))
+
+
 def self_test():
-    """Verify units, sign parsing, and error propagation."""
-    # 1. Known reference check: m = 22.500 must equal exactly 1.0 nanomaggie
+    """Verify units, fail-closed sign parsing, conventional uncertainty propagation."""
+    # 1. Zero point checks
     calib_1nmgy = compute_physical_flux_and_snr(22.500, 0.1, 1)
-    assert math.isclose(calib_1nmgy["flux_nmgy"], 1.0, rel_tol=1e-5), "1 nmgy definition violated!"
-    assert math.isclose(calib_1nmgy["flux_ujy"], 3.631028, rel_tol=1e-5), "Microjansky scaling violated!"
+    assert math.isclose(calib_1nmgy["flux_nmgy"], 1.0, rel_tol=1e-5)
+    assert math.isclose(calib_1nmgy["flux_ujy"], NMGY_TO_UJY_FACTOR, rel_tol=1e-5)
 
-    # 2. Known reference check: m = 23.900 corresponds to ~1.0 uJy (within astronomical rounding of Z0=23.900 vs exact 23.90007)
     calib_1ujy = compute_physical_flux_and_snr(23.900, 0.1, 1)
-    assert math.isclose(calib_1ujy["flux_ujy"], 1.0, rel_tol=1e-3), "1 uJy definition violated!"
-    assert math.isclose(calib_1ujy["flux_nmgy"], 1.0 / 3.631028, rel_tol=1e-3), "Nanomaggie scaling violated!"
+    assert math.isclose(calib_1ujy["flux_ujy"], 1.0, rel_tol=1e-3)
 
-    # 3. Fail-closed security on invalid / missing sign
+    # 2. Conventional uncertainty propagation: sigma_F = (ln 10 / 2.5) * F * sigma_m
+    expected_sigma_nmgy = LN10_OVER_2P5 * 1.0 * 0.1
+    assert math.isclose(calib_1nmgy["flux_err_nmgy"], expected_sigma_nmgy, rel_tol=1e-9)
+
+    # 3. Fail-closed security on invalid sign: MUST produce NaN, NOT 0.0 (Blocker C)
     for bad_sign in (None, "unknown", "foo", float("nan"), 99, ""):
         bad_calib = compute_physical_flux_and_snr(18.0, 0.1, bad_sign)
-        assert bad_calib["is_positive_detection_snr5"] is False, f"Failed to fail closed on sign {bad_sign}"
+        assert bad_calib["is_positive_detection_snr5"] is False
         assert bad_calib["is_valid_sign"] is False
+        assert bad_calib["is_valid_measurement"] is False
+        assert math.isnan(bad_calib["flux_nmgy"])
 
-    # 4. Negative flux check: must fail positive detection
+    # 4. Negative flux check
     neg_calib = compute_physical_flux_and_snr(18.0, 0.05, 0)
     assert neg_calib["flux_nmgy"] < 0
     assert neg_calib["signed_snr"] < 0
     assert neg_calib["is_positive_detection_snr5"] is False
+    assert neg_calib["is_valid_measurement"] is True
 
-    print("self_test passed: Calibration and fail-closed security verified.")
+    print("self_test passed: Calibration, fail-closed NaN masking, and uncertainty verified.")
 
 
 if __name__ == "__main__":

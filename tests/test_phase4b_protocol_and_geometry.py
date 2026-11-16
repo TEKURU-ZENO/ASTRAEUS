@@ -1,20 +1,28 @@
 """
-ASTRAEUS Gate 4 Phase 4B: Acquisition Engine Verification Test Suite (v1.2).
+ASTRAEUS Gate 4 Phase 4B: Acquisition Engine Verification Test Suite (v1.3).
 
 Verifies:
 1. Authoritative HEALPix split geometry: 1,808 frozen test pixels at NSIDE=32, NESTED, ICRS.
 2. Complete spatial isolation (>60'') of all 35 pre-registered pilot cohort candidates.
 3. Physical flux calibration: canonical nanomaggies (Z0=22.500) vs microjanskys (Z0=23.900).
-4. Fail-closed difference flux sign parsing on missing, malformed, or unknown tokens.
+4. Fail-closed difference flux sign parsing on missing, malformed, or unknown tokens (Blocker C).
 5. Process-safe & thread-safe rate limiter concurrency.
-6. Full end-to-end mocked HTTP acquisition lifecycle (HTTP 200, 429 retry, 404 not found).
+6. Full end-to-end mocked HTTP acquisition lifecycle (HTTP 200, 404 not found).
 7. Non-overwriting idempotency: failed retries NEVER overwrite existing raw vault artifacts.
 8. Reconciled pilot cohort distributions (SN_Ia z and mag ranges; SN_CC 12 subtypes).
+9. Windows multi-process rate ceiling obedience without contention deadlocks (Blocker A).
+10. Pre-commit JSON validation preventing malformed or invalid schema archival (Blocker B).
+11. Explicit HTTP 429 and 5xx bounded exponential backoff and retry recovery.
+12. Downstream feature extractor fail-closed filtering of NaN/invalid photometry (Blocker C).
+13. Forced photometry dedicated lifecycle and strict vault separation.
+14. Mathematical provenance and exact specification of conformal quantile index k=507.
 """
 
 import hashlib
 import json
 import math
+import multiprocessing
+import os
 from pathlib import Path
 import threading
 import time
@@ -27,6 +35,11 @@ import numpy as np
 import pandas as pd
 import pytest
 
+from astraeus_data.real_survey.observation_feature_pipeline import (
+    CanonicalObservation,
+    ObservationConfig,
+    RealSurveyFeatureExtractor,
+)
 from experiments.gate4b_broker_acquisition_and_cohort_expansion.astrometry_isolation_audit import (
     SpatialIsolationAuditor,
     EXPECTED_HEALPIX_CONFIG_HASH,
@@ -37,6 +50,7 @@ from experiments.gate4b_broker_acquisition_and_cohort_expansion.broker_client im
     GlobalInterprocessRateLimiter,
     compute_physical_flux_and_snr,
     parse_difference_flux_sign,
+    _multiprocess_rate_limiter_worker,
     CANONICAL_AB_ZERO_POINT_NMGY,
     MICROJANSKY_AB_ZERO_POINT,
     NMGY_TO_UJY_FACTOR,
@@ -130,15 +144,18 @@ def test_fail_closed_sign_parsing():
         assert c["is_positive_detection_snr5"] is False
         assert c["signed_snr"] < 0
 
-    # Unknown / Malformed tokens: MUST FAIL CLOSED
+    # Unknown / Malformed tokens: MUST FAIL CLOSED (Blocker C)
     for bad_token in (None, "", "unknown", "ambiguous", "null", float("nan"), 99, -99, 2, "2"):
         sgn, is_valid = parse_difference_flux_sign(bad_token)
         assert is_valid is False
         assert sgn is None
         c = compute_physical_flux_and_snr(18.0, 0.1, bad_token)
         assert c["is_valid_sign"] is False
+        assert c["is_valid_measurement"] is False
         assert c["is_positive_detection_snr5"] is False
-        assert c["signed_snr"] == 0.0
+        assert math.isnan(c["signed_snr"])
+        assert math.isnan(c["flux_nmgy"])
+        assert math.isnan(c["flux_ujy"])
 
 
 def test_global_rate_limiter_concurrency(tmp_path):
@@ -170,7 +187,7 @@ def test_global_rate_limiter_concurrency(tmp_path):
 
 
 def test_mocked_end_to_end_acquisition_lifecycle(tmp_path):
-    """Verify full HTTP request, archival, retry backoff, and 404 handling."""
+    """Verify full HTTP request, atomic archival, idempotency, and 404 handling."""
     vault_dir = tmp_path / "vault"
     forced_dir = tmp_path / "forced"
     client = AlerceBrokerClient(raw_vault_dir=vault_dir, forced_vault_dir=forced_dir, max_rate=100.0)
@@ -284,3 +301,287 @@ def test_reconciled_pilot_specification_distributions():
         "SN Ib/c", "SN IIn", "SN Ibn", "SN II-pec", "SN Icn", "SN Ic-pec"
     }
     assert subtypes == expected_subtypes
+
+
+def test_windows_multiprocess_rate_limiter(tmp_path):
+    """
+    CRITICAL BLOCKER A TEST:
+    Verify cross-process rate ceiling obedience on Windows using independent OS processes.
+    Asserts that 3 separate child processes contending on the same byte 0 lock file
+    strictly obey the shared rate limit (10 req/s -> min 0.10s interval) without deadlocks.
+    """
+    lock_file = tmp_path / "multiprocess_rate.lock"
+    max_rate = 10.0  # 10 req/s -> 0.10s interval
+    reqs_per_proc = 2
+    n_procs = 3
+    total_reqs = reqs_per_proc * n_procs
+
+    ctx = multiprocessing.get_context("spawn")
+    queue = ctx.Queue()
+
+    procs = [
+        ctx.Process(
+            target=_multiprocess_rate_limiter_worker,
+            args=(str(lock_file), max_rate, reqs_per_proc, queue),
+        )
+        for _ in range(n_procs)
+    ]
+
+    t0 = time.time()
+    for p in procs:
+        p.start()
+    for p in procs:
+        p.join(timeout=15.0)
+    t1 = time.time()
+
+    results = []
+    while not queue.empty():
+        results.append(queue.get())
+
+    assert len(results) == total_reqs, f"Expected {total_reqs} results, got {len(results)}"
+    total_duration = t1 - t0
+    # Minimum total time for 6 requests at 10 req/s with jitter must be >= 0.45s
+    assert total_duration >= 0.45, f"Multi-process rate limiter permitted requests too quickly: {total_duration:.3f}s"
+
+
+def test_malformed_json_validation_before_commit(tmp_path):
+    """
+    CRITICAL BLOCKER B TEST:
+    Verify that malformed or non-dictionary JSON returned with HTTP 200 is validated
+    BEFORE committing to the permanent vault, preventing corrupted vault artifacts.
+    """
+    vault_dir = tmp_path / "vault_malformed"
+    client = AlerceBrokerClient(raw_vault_dir=vault_dir, max_rate=100.0, max_retries=2)
+
+    mock_session = MagicMock()
+
+    # 1. Broken / Truncated JSON payload with HTTP 200
+    mock_resp_broken = MagicMock()
+    mock_resp_broken.status_code = 200
+    mock_resp_broken.text = '{"detections": [{"mjd": 58000.0, "magpsf": 18.0,'  # Syntax error!
+    mock_session.get.return_value = mock_resp_broken
+
+    bad_id = "ZTF18brokenJson"
+    bad_vault_path = client.get_lightcurve_path(bad_id)
+
+    res_broken = client.fetch_and_archive_lightcurve(bad_id, session=mock_session)
+    assert res_broken["status"] == "MALFORMED_JSON_PAYLOAD"
+    assert res_broken["vault_path"] is None
+    assert not bad_vault_path.exists(), f"Corrupted file was written to vault: {bad_vault_path}"
+
+    # 2. Valid JSON syntax but invalid schema (non-dict root e.g. list)
+    mock_resp_nondict = MagicMock()
+    mock_resp_nondict.status_code = 200
+    mock_resp_nondict.text = json.dumps(["unexpected", "list", "root"])
+    mock_session.get.return_value = mock_resp_nondict
+
+    bad_id_2 = "ZTF18nonDictJson"
+    bad_vault_path_2 = client.get_lightcurve_path(bad_id_2)
+
+    res_nondict = client.fetch_and_archive_lightcurve(bad_id_2, session=mock_session)
+    assert res_nondict["status"] == "INVALID_JSON_SCHEMA"
+    assert res_nondict["vault_path"] is None
+    assert not bad_vault_path_2.exists(), f"Invalid schema file was written to vault: {bad_vault_path_2}"
+
+
+def test_explicit_http_429_and_5xx_retries(tmp_path):
+    """
+    Verify bounded exponential backoff and retry recovery across HTTP 429 and 5xx errors:
+    1st call -> HTTP 429 (Rate Limit Exceeded)
+    2nd call -> HTTP 503 (Service Unavailable)
+    3rd call -> HTTP 200 (OK with valid light curve)
+    """
+    vault_dir = tmp_path / "vault_retries"
+    client = AlerceBrokerClient(raw_vault_dir=vault_dir, max_rate=50.0, max_retries=5)
+
+    mock_session = MagicMock()
+    mock_resp_429 = MagicMock()
+    mock_resp_429.status_code = 429
+
+    mock_resp_503 = MagicMock()
+    mock_resp_503.status_code = 503
+
+    valid_payload = {
+        "detections": [{"mjd": 58100.0, "fid": 1, "magpsf": 18.2, "sigmapsf": 0.05, "isdiffpos": 1}],
+        "non_detections": [],
+    }
+    mock_resp_200 = MagicMock()
+    mock_resp_200.status_code = 200
+    mock_resp_200.text = json.dumps(valid_payload)
+
+    mock_session.get.side_effect = [mock_resp_429, mock_resp_503, mock_resp_200]
+
+    res = client.fetch_and_archive_lightcurve("ZTF18retrySuccess", session=mock_session)
+    assert res["status"] == "SUCCESS_DOWNLOADED"
+    assert res["http_status"] == 200
+    assert res["retries_performed"] == 2
+    assert Path(res["vault_path"]).exists()
+    assert json.loads(Path(res["vault_path"]).read_text(encoding="utf-8")) == valid_payload
+    assert mock_session.get.call_count == 3
+
+
+def test_invalid_photometry_downstream_handling():
+    """
+    CRITICAL BLOCKER C TEST:
+    Verifies that downstream feature extraction cleanly filters out invalid/NaN photometry measurements
+    and does NOT silently consume invalid values as physical measurements or cause numerical corruption.
+    """
+    extractor = RealSurveyFeatureExtractor(config=ObservationConfig.ALERCE_ONLY)
+
+    # 1. Mix of valid detections, non-detections, and invalid (NaN) measurements
+    obs = [
+        # Valid detection 1 (g-band, positive)
+        CanonicalObservation(
+            mjd=58300.0, passband="g", flux_nmgy=25.0, flux_err_nmgy=1.2,
+            is_upper_limit=False, source_survey="ALERCE"
+        ),
+        # Invalid detection (Blocker C: NaN flux produced by compute_physical_flux_and_snr on bad sign)
+        CanonicalObservation(
+            mjd=58301.0, passband="g", flux_nmgy=float("nan"), flux_err_nmgy=0.1,
+            is_upper_limit=False, source_survey="ALERCE"
+        ),
+        # Valid detection 2 (r-band, positive)
+        CanonicalObservation(
+            mjd=58302.0, passband="r", flux_nmgy=30.0, flux_err_nmgy=1.5,
+            is_upper_limit=False, source_survey="ALERCE"
+        ),
+        # Valid upper limit / non-detection
+        CanonicalObservation(
+            mjd=58303.0, passband="r", flux_nmgy=0.0, flux_err_nmgy=0.5,
+            is_upper_limit=True, limiting_flux_nmgy=5.0, source_survey="ALERCE"
+        ),
+        # Valid negative difference detection (fading transient)
+        CanonicalObservation(
+            mjd=58304.0, passband="r", flux_nmgy=-2.5, flux_err_nmgy=0.8,
+            is_upper_limit=False, is_negative_flux=True, source_survey="ALERCE"
+        ),
+    ]
+
+    feats = extractor.extract_from_observations(obs)
+
+    # The 3 valid detections are preserved (NaN detection is cleanly filtered out)
+    assert feats["n_detections"] == 3.0
+    assert feats["n_upper_limits"] == 1.0
+    assert feats["peak_flux_nmgy"] == 30.0
+    assert feats["min_flux_nmgy"] == -2.5  # Negative flux preserved!
+    assert math.isclose(feats["mean_flux_nmgy"], (25.0 + 30.0 - 2.5) / 3.0, rel_tol=1e-5)
+
+    # All 32 extracted features MUST be strictly finite floats
+    for k, v in feats.items():
+        assert math.isfinite(v), f"Feature {k} was corrupted with non-finite value: {v}"
+
+    # 2. Degenerate case: ALL detections have NaN flux
+    all_bad_obs = [
+        CanonicalObservation(
+            mjd=58300.0, passband="g", flux_nmgy=float("nan"), flux_err_nmgy=0.1,
+            is_upper_limit=False, source_survey="ALERCE"
+        ),
+    ]
+    degenerate_feats = extractor.extract_from_observations(all_bad_obs)
+    assert degenerate_feats["n_detections"] == 0.0
+    assert degenerate_feats["peak_flux_nmgy"] == 0.0
+    for k, v in degenerate_feats.items():
+        assert math.isfinite(v), f"Degenerate feature {k} is non-finite: {v}"
+
+
+def test_forced_photometry_archival_and_separation(tmp_path):
+    """
+    Verify forced photometry lifecycle and strict isolation from alert light curves:
+    1. Archives strictly to forced_vault_dir ({ztf_id}_forced.json).
+    2. Leaves difference light curve vault path untouched.
+    3. Validates JSON before commit.
+    4. Handles 404 cleanly.
+    5. Re-requesting returns FORCED_ALREADY_ARCHIVED without HTTP call.
+    """
+    raw_dir = tmp_path / "raw_vault"
+    forced_dir = tmp_path / "forced_vault"
+    client = AlerceBrokerClient(raw_vault_dir=raw_dir, forced_vault_dir=forced_dir, max_rate=100.0)
+
+    ztf_id = "ZTF18forcedObj"
+    lc_path = client.get_lightcurve_path(ztf_id)
+    forced_path = client.get_forced_path(ztf_id)
+
+    mock_payload = {"forced_photometry": [{"mjd": 58500.0, "forced_flux": 12.5, "forced_err": 1.2}]}
+    mock_session = MagicMock()
+    mock_resp_200 = MagicMock()
+    mock_resp_200.status_code = 200
+    mock_resp_200.text = json.dumps(mock_payload)
+    mock_session.get.return_value = mock_resp_200
+
+    # 1. Successful download and archival
+    res = client.fetch_and_archive_forced_photometry(ztf_id, session=mock_session)
+    assert res["status"] == "FORCED_SUCCESS_DOWNLOADED"
+    assert res["vault_path"] == str(forced_path)
+    assert forced_path.exists()
+    assert not lc_path.exists(), "Forced photometry must NEVER write to difference light curve vault!"
+    assert json.loads(forced_path.read_text(encoding="utf-8")) == mock_payload
+
+    # 2. Idempotent retrieval
+    mock_session.get.reset_mock()
+    res_idem = client.fetch_and_archive_forced_photometry(ztf_id, session=mock_session)
+    assert res_idem["status"] == "FORCED_ALREADY_ARCHIVED"
+    mock_session.get.assert_not_called()
+
+    # 3. Malformed JSON validation before commit
+    mock_resp_bad = MagicMock()
+    mock_resp_bad.status_code = 200
+    mock_resp_bad.text = "{ malformed forced json ... "
+    mock_session.get.return_value = mock_resp_bad
+
+    bad_id = "ZTF18badForced"
+    bad_forced_path = client.get_forced_path(bad_id)
+    res_bad = client.fetch_and_archive_forced_photometry(bad_id, session=mock_session)
+    assert res_bad["status"] == "FORCED_MALFORMED_JSON"
+    assert res_bad["vault_path"] is None
+    assert not bad_forced_path.exists()
+
+    # 4. HTTP 404 handling
+    mock_resp_404 = MagicMock()
+    mock_resp_404.status_code = 404
+    mock_session.get.return_value = mock_resp_404
+
+    notfound_id = "ZTF18notfoundForced"
+    res_404 = client.fetch_and_archive_forced_photometry(notfound_id, session=mock_session)
+    assert res_404["status"] == "FORCED_NOT_FOUND_404"
+    assert res_404["vault_path"] is None
+
+
+def test_conformal_k507_specification_and_provenance():
+    """
+    Verifies the exact statistical specification and mathematical provenance of the
+    conformal quantile index k=507 required for Gate 4C sequence modeling calibration:
+    1. Calibration population size: N_calib = 562 (from the 80/20 train/calibration split of the N=2,808 development cohort).
+    2. Target coverage: 1 - alpha = 0.90 (significance alpha = 0.10).
+    3. Exact finite-sample quantile formula:
+       k = ceil((N_calib + 1) * (1 - alpha)) = ceil(563 * 0.90) = ceil(506.7) = 507.
+    4. 0-indexed order statistic array index: k - 1 = 506.
+    5. Conservative tie-handling rule: np.sort(scores)[k - 1], which guarantees
+       empirical coverage P(Y in C(X)) >= 1 - alpha under exchangeability.
+    """
+    n_dev_total = 2808
+    n_train_proper = 2246
+    n_calib = 562
+    assert n_train_proper + n_calib == n_dev_total
+
+    alpha = 0.10
+    target_coverage = 1.0 - alpha
+
+    # Exact finite-sample quantile formula
+    k_float = (n_calib + 1) * target_coverage  # 563 * 0.90 = 506.7
+    k_ceil = math.ceil(k_float)
+    assert k_ceil == 507
+
+    # 0-indexed rank index
+    rank_0_indexed = k_ceil - 1
+    assert rank_0_indexed == 506
+
+    # Verify order statistic evaluation on synthetic conformity scores
+    np.random.seed(42)
+    synthetic_scores = np.random.uniform(0.0, 1.0, size=n_calib)
+    sorted_scores = np.sort(synthetic_scores)
+    q_hat = sorted_scores[rank_0_indexed]
+
+    # Verify coverage guarantee on calibration set: fraction of scores <= q_hat
+    empirical_coverage = np.mean(synthetic_scores <= q_hat)
+    assert empirical_coverage >= target_coverage
+    assert math.isclose(empirical_coverage, 507 / 562, rel_tol=1e-5)

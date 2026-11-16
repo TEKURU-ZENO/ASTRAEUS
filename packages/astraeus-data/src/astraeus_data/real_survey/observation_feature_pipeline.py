@@ -323,9 +323,15 @@ class RealSurveyFeatureExtractor:
         # Sort chronologically
         active_obs.sort(key=lambda o: o.mjd)
 
-        # Separate detections and non-detections
-        detections = [o for o in active_obs if not o.is_upper_limit]
-        upper_limits = [o for o in active_obs if o.is_upper_limit]
+        # Separate detections and non-detections (fail-closed filtering of non-finite or invalid measurements)
+        detections = [
+            o for o in active_obs
+            if not o.is_upper_limit and math.isfinite(o.flux_nmgy) and math.isfinite(o.flux_err_nmgy) and o.flux_err_nmgy > 0.0
+        ]
+        upper_limits = [
+            o for o in active_obs
+            if o.is_upper_limit and (o.limiting_flux_nmgy is None or math.isfinite(o.limiting_flux_nmgy))
+        ]
 
         n_det = len(detections)
         n_ul = len(upper_limits)
