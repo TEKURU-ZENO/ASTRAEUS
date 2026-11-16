@@ -1,0 +1,102 @@
+{
+  "author": "Dev Mehta",
+  "date": "2026-11-16",
+  "conformal_specification": {
+    "calibration_size": 562,
+    "target_coverage": 0.9,
+    "alpha": 0.1,
+    "conformal_rank_k": 507,
+    "quantile_q_hat": 0.5696,
+    "threshold_1_minus_q_hat": 0.4304,
+    "model_sha256": "466c2752808be01e4f41bd8fdb9c0804a57b03b2c02c35e5172ccebda411fce5"
+  },
+  "marginal_validation_metrics": {
+    "validation_size": 741,
+    "marginal_coverage": 0.7139,
+    "coverage_ci_95": [
+      0.7139,
+      0.6803
+    ],
+    "mean_prediction_set_size": 0.92,
+    "empty_set_count": 61,
+    "empty_set_rate": 0.0823,
+    "singleton_set_count": 678,
+    "singleton_set_rate": 0.915,
+    "multi_label_set_count": 2,
+    "multi_label_set_rate": 0.0027
+  },
+  "per_class_coverage": {
+    "SN_Ia": {
+      "support": 202,
+      "coverage": 0.8713,
+      "coverage_ci_95": [
+        0.8713,
+        0.8181
+      ],
+      "mean_set_size": 0.96
+    },
+    "SN_CC": {
+      "support": 120,
+      "coverage": 0.5083,
+      "coverage_ci_95": [
+        0.5083,
+        0.42
+      ],
+      "mean_set_size": 0.9
+    },
+    "SLSN": {
+      "support": 50,
+      "coverage": 0.4,
+      "coverage_ci_95": [
+        0.4,
+        0.2761
+      ],
+      "mean_set_size": 0.76
+    },
+    "TDE": {
+      "support": 24,
+      "coverage": 0.2083,
+      "coverage_ci_95": [
+        0.2083,
+        0.0924
+      ],
+      "mean_set_size": 0.67
+    },
+    "CV_Nova": {
+      "support": 49,
+      "coverage": 0.6735,
+      "coverage_ci_95": [
+        0.6735,
+        0.5338
+      ],
+      "mean_set_size": 0.88
+    },
+    "AGN_QSO": {
+      "support": 205,
+      "coverage": 0.8829,
+      "coverage_ci_95": [
+        0.8829,
+        0.8317
+      ],
+      "mean_set_size": 0.97
+    },
+    "Varstar": {
+      "support": 73,
+      "coverage": 0.726,
+      "coverage_ci_95": [
+        0.726,
+        0.6144
+      ],
+      "mean_set_size": 0.97
+    },
+    "OTHER_EXTRAGALACTIC": {
+      "support": 18,
+      "coverage": 0.0,
+      "coverage_ci_95": [
+        0.0,
+        0.0
+      ],
+      "mean_set_size": 0.83
+    }
+  }
+}

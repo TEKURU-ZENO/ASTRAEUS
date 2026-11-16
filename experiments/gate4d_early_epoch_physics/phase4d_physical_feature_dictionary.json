@@ -1,0 +1,49 @@
+{
+  "features": {
+    "n_detections_early": {
+      "units": "count",
+      "desc": "Number of positive detections (SNR>=5) in early horizon window",
+      "missingness": "0.0"
+    },
+    "time_span_days": {
+      "units": "days",
+      "desc": "Elapsed time between first and last detection in early horizon",
+      "missingness": "0.0"
+    },
+    "median_cadence_days": {
+      "units": "days",
+      "desc": "Median interval between successive observations in window",
+      "missingness": "0.0"
+    },
+    "rise_rate_g": {
+      "units": "nmgy / day",
+      "desc": "Linear flux derivative in ZTF g-band over first window observations",
+      "missingness": "0.0"
+    },
+    "rise_rate_r": {
+      "units": "nmgy / day",
+      "desc": "Linear flux derivative in ZTF r-band over first window observations",
+      "missingness": "0.0"
+    },
+    "color_index_gr": {
+      "units": "mag",
+      "desc": "-2.5 * log10(F_g / F_r) at early maximum, proxy for early effective temperature",
+      "missingness": "0.0"
+    },
+    "early_curvature": {
+      "units": "nmgy",
+      "desc": "Second derivative flux deviation from linear interpolation (rise convexity)",
+      "missingness": "0.0"
+    },
+    "pre_explosion_window_days": {
+      "units": "days",
+      "desc": "Interval between first detection and latest preceding non-detection",
+      "missingness": "999.0"
+    },
+    "has_dual_band_early": {
+      "units": "binary",
+      "desc": "1.0 if both g and r detections present in early window, else 0.0",
+      "missingness": "0.0"
+    }
+  }
+}

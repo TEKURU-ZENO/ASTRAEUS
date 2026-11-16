@@ -1,0 +1,84 @@
+{
+  "taxonomy_version": "ASTRAEUS-v1.3-8Class",
+  "author": "Dev Mehta",
+  "broad_class_to_subtypes": {
+    "SN_Ia": [
+      "SN Ia",
+      "SN Ia-norm",
+      "SN Ia-91T",
+      "SN Ia-91bg",
+      "SN Ia-CSM",
+      "SN Iax"
+    ],
+    "SN_CC": [
+      "SN II",
+      "SN IIP",
+      "SN IIL",
+      "SN IIn",
+      "SN IIb",
+      "SN Ib",
+      "SN Ic",
+      "SN Ic-BL"
+    ],
+    "SLSN": [
+      "SLSN-I",
+      "SLSN-II",
+      "SLSN-R"
+    ],
+    "TDE": [
+      "TDE",
+      "TDE-He",
+      "TDE-H",
+      "TDE-Bowen"
+    ],
+    "CV_Nova": [
+      "CV",
+      "Nova",
+      "Classical Nova",
+      "Dwarf Nova",
+      "AM CVn"
+    ],
+    "AGN_QSO": [
+      "AGN",
+      "QSO",
+      "Blazar",
+      "Seyfert I",
+      "Seyfert II",
+      "LINER"
+    ],
+    "Varstar": [
+      "Varstar",
+      "RR Lyrae",
+      "Cepheid",
+      "Mira",
+      "LPV",
+      "YSO"
+    ],
+    "OTHER_EXTRAGALACTIC": [
+      "Ca-rich",
+      "Kilonova",
+      "FBOT",
+      "ILRT",
+      "LRN",
+      "Supernova Impostor"
+    ]
+  },
+  "boundary_ambiguity_analysis": {
+    "TDE_vs_AGN": {
+      "physical_overlap": "Both occur at galactic nuclei and exhibit persistently blue continuum emission.",
+      "discriminating_observable": "Slow power-law decline (t^-5/3) vs stochastic red-noise variability with non-zero structure function across years.",
+      "pipeline_limitation": "Surveys with <1 year baseline lack temporal depth to distinguish long-term AGN variability from late-stage TDE decay."
+    },
+    "SLSN_II_vs_SN_IIn": {
+      "physical_overlap": "Both show strong circumstellar interaction (CSI) with narrow emission lines and prolonged optical luminosity.",
+      "discriminating_observable": "Total radiated energy (>10^51 erg) and absolute peak magnitude (M_peak < -21 mag).",
+      "pipeline_limitation": "Without accurate host redshift, absolute magnitude cannot be computed, forcing classification purely on apparent rise timescale."
+    },
+    "Ca_rich_vs_SN_Ib": {
+      "physical_overlap": "Fast optical evolution and lack of prominent hydrogen features.",
+      "discriminating_observable": "Large galactic offset (>20 kpc) and low peak absolute magnitude (M_peak ~ -15 to -16 mag).",
+      "pipeline_limitation": "Lack of host-galaxy association features in pure photometric alert stream causes complete collapse into SN_CC."
+    }
+  },
+  "unmapped_exotics_policy": "Exotic transients lacking spectroscopic confirmation or clear physical counterpart are sequestered into NOT_EVALUABLE rather than forced into coarse classes."
+}

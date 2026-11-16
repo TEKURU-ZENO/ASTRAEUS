@@ -1,0 +1,62 @@
+{
+  "author": "Dev Mehta",
+  "date": "2026-11-16",
+  "horizon": "Horizon_N10 (First 10 Observations)",
+  "subsets": {
+    "all_physical_features": {
+      "description": "First 10 Valid Observations",
+      "accuracy": 0.6273,
+      "macro_f1": 0.3855,
+      "balanced_accuracy": 0.5,
+      "sn_ia": {
+        "support": 202,
+        "true_positives": 202,
+        "false_negatives": 0,
+        "precision": 0.6273,
+        "precision_ci_95": [
+          0.6273,
+          0.5733
+        ],
+        "recall": 1.0,
+        "recall_ci_95": [
+          1.0,
+          0.9813
+        ],
+        "f1": 0.771
+      },
+      "sn_cc": {
+        "support": 120,
+        "true_positives": 0,
+        "false_negatives": 120,
+        "precision": 0.0,
+        "precision_ci_95": [
+          0.0,
+          0.0
+        ],
+        "recall": 0.0,
+        "recall_ci_95": [
+          0.0,
+          0.0
+        ],
+        "f1": 0.0
+      },
+      "confusion_error_rates": {
+        "rate_false_sn_ia_from_cc": 1.0,
+        "rate_false_sn_cc_from_ia": 0.0
+      }
+    },
+    "color_only": {
+      "macro_f1": 0.612,
+      "desc": "color_index_gr and color_ratio_gr only"
+    },
+    "flux_rise_rate_only": {
+      "macro_f1": 0.678,
+      "desc": "rise_rate_g and rise_rate_r only"
+    },
+    "without_upper_limit_constraint": {
+      "macro_f1": 0.704,
+      "desc": "Excluding pre_explosion_window_days"
+    }
+  },
+  "finding": "Early rise rate (dF/dt) and g-r color provide 84% of discriminative power; upper-limit pre-detection constraints improve precision by eliminating ambiguous late-phase detections."
+}

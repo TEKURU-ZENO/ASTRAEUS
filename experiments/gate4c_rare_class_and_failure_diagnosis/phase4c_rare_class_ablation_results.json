@@ -1,0 +1,759 @@
+{
+  "author": "Dev Mehta",
+  "date": "2026-11-16",
+  "split_protocol": "Stratified 5-Fold Cross-Validation on Track 1 Train (N=2,808); Frozen Holdout on Track 1 Val (N=741)",
+  "ablations": {
+    "Control_Unweighted_RF": {
+      "strategy": "Control_Unweighted_RF",
+      "overall_accuracy": 0.6333,
+      "tde_metrics": {
+        "support": 24,
+        "precision": 0.75,
+        "precision_ci_95": [
+          0.4093,
+          0.9285
+        ],
+        "recall": 0.25,
+        "recall_ci_95": [
+          0.12,
+          0.449
+        ],
+        "f1": 0.375,
+        "true_positives": 6,
+        "false_positives": 2,
+        "false_negatives": 18,
+        "is_rare_class": true
+      },
+      "other_extragalactic_metrics": {
+        "support": 18,
+        "precision": 0.0,
+        "precision_ci_95": [
+          0.0,
+          0.6576
+        ],
+        "recall": 0.0,
+        "recall_ci_95": [
+          0.0,
+          0.1759
+        ],
+        "f1": 0.0,
+        "true_positives": 0,
+        "false_positives": 2,
+        "false_negatives": 18,
+        "is_rare_class": true
+      },
+      "slsn_metrics": {
+        "support": 50,
+        "precision": 0.5429,
+        "precision_ci_95": [
+          0.3819,
+          0.6953
+        ],
+        "recall": 0.38,
+        "recall_ci_95": [
+          0.2586,
+          0.5185
+        ],
+        "f1": 0.4471,
+        "true_positives": 19,
+        "false_positives": 16,
+        "false_negatives": 31,
+        "is_rare_class": false
+      },
+      "sn_ia_metrics": {
+        "support": 202,
+        "precision": 0.6917,
+        "precision_ci_95": [
+          0.6338,
+          0.7442
+        ],
+        "recall": 0.9109,
+        "recall_ci_95": [
+          0.8636,
+          0.9429
+        ],
+        "f1": 0.7863,
+        "true_positives": 184,
+        "false_positives": 82,
+        "false_negatives": 18,
+        "is_rare_class": false
+      },
+      "sn_cc_metrics": {
+        "support": 120,
+        "precision": 0.5826,
+        "precision_ci_95": [
+          0.4912,
+          0.6686
+        ],
+        "recall": 0.5583,
+        "recall_ci_95": [
+          0.469,
+          0.644
+        ],
+        "f1": 0.5702,
+        "true_positives": 67,
+        "false_positives": 48,
+        "false_negatives": 53,
+        "is_rare_class": false
+      }
+    },
+    "Balanced_Weights_RF": {
+      "strategy": "Balanced_Weights_RF",
+      "overall_accuracy": 0.5945,
+      "tde_metrics": {
+        "support": 24,
+        "precision": 0.45,
+        "precision_ci_95": [
+          0.2582,
+          0.6579
+        ],
+        "recall": 0.375,
+        "recall_ci_95": [
+          0.2116,
+          0.5729
+        ],
+        "f1": 0.4091,
+        "true_positives": 9,
+        "false_positives": 11,
+        "false_negatives": 15,
+        "is_rare_class": true
+      },
+      "other_extragalactic_metrics": {
+        "support": 18,
+        "precision": 0.0,
+        "precision_ci_95": [
+          0.0,
+          0.5615
+        ],
+        "recall": 0.0,
+        "recall_ci_95": [
+          0.0,
+          0.1759
+        ],
+        "f1": 0.0,
+        "true_positives": 0,
+        "false_positives": 3,
+        "false_negatives": 18,
+        "is_rare_class": true
+      },
+      "slsn_metrics": {
+        "support": 50,
+        "precision": 0.5556,
+        "precision_ci_95": [
+          0.3958,
+          0.7046
+        ],
+        "recall": 0.4,
+        "recall_ci_95": [
+          0.2761,
+          0.5382
+        ],
+        "f1": 0.4651,
+        "true_positives": 20,
+        "false_positives": 16,
+        "false_negatives": 30,
+        "is_rare_class": false
+      },
+      "sn_ia_metrics": {
+        "support": 202,
+        "precision": 0.6992,
+        "precision_ci_95": [
+          0.6404,
+          0.7521
+        ],
+        "recall": 0.8861,
+        "recall_ci_95": [
+          0.8349,
+          0.9229
+        ],
+        "f1": 0.7817,
+        "true_positives": 179,
+        "false_positives": 77,
+        "false_negatives": 23,
+        "is_rare_class": false
+      },
+      "sn_cc_metrics": {
+        "support": 120,
+        "precision": 0.5545,
+        "precision_ci_95": [
+          0.4614,
+          0.644
+        ],
+        "recall": 0.5083,
+        "recall_ci_95": [
+          0.42,
+          0.5961
+        ],
+        "f1": 0.5304,
+        "true_positives": 61,
+        "false_positives": 49,
+        "false_negatives": 59,
+        "is_rare_class": false
+      }
+    },
+    "Effective_Number_Beta99_RF": {
+      "strategy": "Effective_Number_Beta99_RF",
+      "overall_accuracy": 0.6241,
+      "tde_metrics": {
+        "support": 24,
+        "precision": 0.6667,
+        "precision_ci_95": [
+          0.3542,
+          0.8794
+        ],
+        "recall": 0.25,
+        "recall_ci_95": [
+          0.12,
+          0.449
+        ],
+        "f1": 0.3636,
+        "true_positives": 6,
+        "false_positives": 3,
+        "false_negatives": 18,
+        "is_rare_class": true
+      },
+      "other_extragalactic_metrics": {
+        "support": 18,
+        "precision": 0.0,
+        "precision_ci_95": [
+          0.0,
+          0.5615
+        ],
+        "recall": 0.0,
+        "recall_ci_95": [
+          0.0,
+          0.1759
+        ],
+        "f1": 0.0,
+        "true_positives": 0,
+        "false_positives": 3,
+        "false_negatives": 18,
+        "is_rare_class": true
+      },
+      "slsn_metrics": {
+        "support": 50,
+        "precision": 0.5429,
+        "precision_ci_95": [
+          0.3819,
+          0.6953
+        ],
+        "recall": 0.38,
+        "recall_ci_95": [
+          0.2586,
+          0.5185
+        ],
+        "f1": 0.4471,
+        "true_positives": 19,
+        "false_positives": 16,
+        "false_negatives": 31,
+        "is_rare_class": false
+      },
+      "sn_ia_metrics": {
+        "support": 202,
+        "precision": 0.7023,
+        "precision_ci_95": [
+          0.6443,
+          0.7544
+        ],
+        "recall": 0.9109,
+        "recall_ci_95": [
+          0.8636,
+          0.9429
+        ],
+        "f1": 0.7931,
+        "true_positives": 184,
+        "false_positives": 78,
+        "false_negatives": 18,
+        "is_rare_class": false
+      },
+      "sn_cc_metrics": {
+        "support": 120,
+        "precision": 0.5932,
+        "precision_ci_95": [
+          0.503,
+          0.6776
+        ],
+        "recall": 0.5833,
+        "recall_ci_95": [
+          0.4939,
+          0.6676
+        ],
+        "f1": 0.5882,
+        "true_positives": 70,
+        "false_positives": 48,
+        "false_negatives": 50,
+        "is_rare_class": false
+      }
+    },
+    "Effective_Number_Beta999_RF": {
+      "strategy": "Effective_Number_Beta999_RF",
+      "overall_accuracy": 0.6003,
+      "tde_metrics": {
+        "support": 24,
+        "precision": 0.4444,
+        "precision_ci_95": [
+          0.2456,
+          0.6628
+        ],
+        "recall": 0.3333,
+        "recall_ci_95": [
+          0.1797,
+          0.5329
+        ],
+        "f1": 0.381,
+        "true_positives": 8,
+        "false_positives": 10,
+        "false_negatives": 16,
+        "is_rare_class": true
+      },
+      "other_extragalactic_metrics": {
+        "support": 18,
+        "precision": 0.0,
+        "precision_ci_95": [
+          0.0,
+          0.4899
+        ],
+        "recall": 0.0,
+        "recall_ci_95": [
+          0.0,
+          0.1759
+        ],
+        "f1": 0.0,
+        "true_positives": 0,
+        "false_positives": 4,
+        "false_negatives": 18,
+        "is_rare_class": true
+      },
+      "slsn_metrics": {
+        "support": 50,
+        "precision": 0.5556,
+        "precision_ci_95": [
+          0.3958,
+          0.7046
+        ],
+        "recall": 0.4,
+        "recall_ci_95": [
+          0.2761,
+          0.5382
+        ],
+        "f1": 0.4651,
+        "true_positives": 20,
+        "false_positives": 16,
+        "false_negatives": 30,
+        "is_rare_class": false
+      },
+      "sn_ia_metrics": {
+        "support": 202,
+        "precision": 0.7087,
+        "precision_ci_95": [
+          0.65,
+          0.7611
+        ],
+        "recall": 0.8911,
+        "recall_ci_95": [
+          0.8406,
+          0.927
+        ],
+        "f1": 0.7895,
+        "true_positives": 180,
+        "false_positives": 74,
+        "false_negatives": 22,
+        "is_rare_class": false
+      },
+      "sn_cc_metrics": {
+        "support": 120,
+        "precision": 0.5946,
+        "precision_ci_95": [
+          0.5016,
+          0.6813
+        ],
+        "recall": 0.55,
+        "recall_ci_95": [
+          0.4608,
+          0.6361
+        ],
+        "f1": 0.5714,
+        "true_positives": 66,
+        "false_positives": 45,
+        "false_negatives": 54,
+        "is_rare_class": false
+      }
+    },
+    "Balanced_Random_Forest": {
+      "strategy": "Balanced_Random_Forest",
+      "overall_accuracy": 0.606,
+      "tde_metrics": {
+        "support": 24,
+        "precision": 0.4737,
+        "precision_ci_95": [
+          0.2733,
+          0.6829
+        ],
+        "recall": 0.375,
+        "recall_ci_95": [
+          0.2116,
+          0.5729
+        ],
+        "f1": 0.4186,
+        "true_positives": 9,
+        "false_positives": 10,
+        "false_negatives": 15,
+        "is_rare_class": true
+      },
+      "other_extragalactic_metrics": {
+        "support": 18,
+        "precision": 0.0,
+        "precision_ci_95": [
+          0.0,
+          0.5615
+        ],
+        "recall": 0.0,
+        "recall_ci_95": [
+          0.0,
+          0.1759
+        ],
+        "f1": 0.0,
+        "true_positives": 0,
+        "false_positives": 3,
+        "false_negatives": 18,
+        "is_rare_class": true
+      },
+      "slsn_metrics": {
+        "support": 50,
+        "precision": 0.5946,
+        "precision_ci_95": [
+          0.4349,
+          0.7365
+        ],
+        "recall": 0.44,
+        "recall_ci_95": [
+          0.3116,
+          0.5769
+        ],
+        "f1": 0.5057,
+        "true_positives": 22,
+        "false_positives": 15,
+        "false_negatives": 28,
+        "is_rare_class": false
+      },
+      "sn_ia_metrics": {
+        "support": 202,
+        "precision": 0.6992,
+        "precision_ci_95": [
+          0.6404,
+          0.7521
+        ],
+        "recall": 0.8861,
+        "recall_ci_95": [
+          0.8349,
+          0.9229
+        ],
+        "f1": 0.7817,
+        "true_positives": 179,
+        "false_positives": 77,
+        "false_negatives": 23,
+        "is_rare_class": false
+      },
+      "sn_cc_metrics": {
+        "support": 120,
+        "precision": 0.5676,
+        "precision_ci_95": [
+          0.4747,
+          0.6559
+        ],
+        "recall": 0.525,
+        "recall_ci_95": [
+          0.4363,
+          0.6122
+        ],
+        "f1": 0.5455,
+        "true_positives": 63,
+        "false_positives": 48,
+        "false_negatives": 57,
+        "is_rare_class": false
+      }
+    },
+    "Balanced_Weights_HGBT": {
+      "strategy": "Balanced_Weights_HGBT",
+      "overall_accuracy": 0.6633,
+      "tde_metrics": {
+        "support": 24,
+        "precision": 0.8333,
+        "precision_ci_95": [
+          0.4365,
+          0.9699
+        ],
+        "recall": 0.2083,
+        "recall_ci_95": [
+          0.0924,
+          0.4047
+        ],
+        "f1": 0.3333,
+        "true_positives": 5,
+        "false_positives": 1,
+        "false_negatives": 19,
+        "is_rare_class": true
+      },
+      "other_extragalactic_metrics": {
+        "support": 18,
+        "precision": 0.0,
+        "precision_ci_95": [
+          0.0,
+          0.7935
+        ],
+        "recall": 0.0,
+        "recall_ci_95": [
+          0.0,
+          0.1759
+        ],
+        "f1": 0.0,
+        "true_positives": 0,
+        "false_positives": 1,
+        "false_negatives": 18,
+        "is_rare_class": true
+      },
+      "slsn_metrics": {
+        "support": 50,
+        "precision": 0.5676,
+        "precision_ci_95": [
+          0.4091,
+          0.7133
+        ],
+        "recall": 0.42,
+        "recall_ci_95": [
+          0.2938,
+          0.5577
+        ],
+        "f1": 0.4828,
+        "true_positives": 21,
+        "false_positives": 16,
+        "false_negatives": 29,
+        "is_rare_class": false
+      },
+      "sn_ia_metrics": {
+        "support": 202,
+        "precision": 0.6667,
+        "precision_ci_95": [
+          0.61,
+          0.7189
+        ],
+        "recall": 0.9406,
+        "recall_ci_95": [
+          0.899,
+          0.9657
+        ],
+        "f1": 0.7803,
+        "true_positives": 190,
+        "false_positives": 95,
+        "false_negatives": 12,
+        "is_rare_class": false
+      },
+      "sn_cc_metrics": {
+        "support": 120,
+        "precision": 0.6,
+        "precision_ci_95": [
+          0.4995,
+          0.6928
+        ],
+        "recall": 0.475,
+        "recall_ci_95": [
+          0.3878,
+          0.5637
+        ],
+        "f1": 0.5302,
+        "true_positives": 57,
+        "false_positives": 38,
+        "false_negatives": 63,
+        "is_rare_class": false
+      }
+    },
+    "Focal_Loss_PyTorch": {
+      "strategy": "Focal_Loss_PyTorch",
+      "overall_accuracy": 0.5421,
+      "tde_metrics": {
+        "support": 24,
+        "precision": 0.5455,
+        "precision_ci_95": [
+          0.2801,
+          0.7873
+        ],
+        "recall": 0.25,
+        "recall_ci_95": [
+          0.12,
+          0.449
+        ],
+        "f1": 0.3429,
+        "true_positives": 6,
+        "false_positives": 5,
+        "false_negatives": 18,
+        "is_rare_class": true
+      },
+      "other_extragalactic_metrics": {
+        "support": 18,
+        "precision": 0.0,
+        "precision_ci_95": [
+          0.0,
+          0.0
+        ],
+        "recall": 0.0,
+        "recall_ci_95": [
+          0.0,
+          0.1759
+        ],
+        "f1": 0.0,
+        "true_positives": 0,
+        "false_positives": 0,
+        "false_negatives": 18,
+        "is_rare_class": true
+      },
+      "slsn_metrics": {
+        "support": 50,
+        "precision": 0.5833,
+        "precision_ci_95": [
+          0.422,
+          0.7286
+        ],
+        "recall": 0.42,
+        "recall_ci_95": [
+          0.2938,
+          0.5577
+        ],
+        "f1": 0.4884,
+        "true_positives": 21,
+        "false_positives": 15,
+        "false_negatives": 29,
+        "is_rare_class": false
+      },
+      "sn_ia_metrics": {
+        "support": 202,
+        "precision": 0.627,
+        "precision_ci_95": [
+          0.5648,
+          0.6853
+        ],
+        "recall": 0.7574,
+        "recall_ci_95": [
+          0.6939,
+          0.8114
+        ],
+        "f1": 0.6861,
+        "true_positives": 153,
+        "false_positives": 91,
+        "false_negatives": 49,
+        "is_rare_class": false
+      },
+      "sn_cc_metrics": {
+        "support": 120,
+        "precision": 0.4516,
+        "precision_ci_95": [
+          0.3668,
+          0.5393
+        ],
+        "recall": 0.4667,
+        "recall_ci_95": [
+          0.3798,
+          0.5556
+        ],
+        "f1": 0.459,
+        "true_positives": 56,
+        "false_positives": 68,
+        "false_negatives": 64,
+        "is_rare_class": false
+      }
+    },
+    "SMOTE_Physical_Ablation_RF": {
+      "strategy": "SMOTE_Physical_Ablation_RF",
+      "overall_accuracy": 0.6443,
+      "tde_metrics": {
+        "support": 24,
+        "precision": 0.4138,
+        "precision_ci_95": [
+          0.2551,
+          0.5926
+        ],
+        "recall": 0.5,
+        "recall_ci_95": [
+          0.3143,
+          0.6857
+        ],
+        "f1": 0.4528,
+        "true_positives": 12,
+        "false_positives": 17,
+        "false_negatives": 12,
+        "is_rare_class": true
+      },
+      "other_extragalactic_metrics": {
+        "support": 18,
+        "precision": 0.2727,
+        "precision_ci_95": [
+          0.1315,
+          0.4815
+        ],
+        "recall": 0.3333,
+        "recall_ci_95": [
+          0.1628,
+          0.5625
+        ],
+        "f1": 0.3,
+        "true_positives": 6,
+        "false_positives": 16,
+        "false_negatives": 12,
+        "is_rare_class": true
+      },
+      "slsn_metrics": {
+        "support": 50,
+        "precision": 0.6562,
+        "precision_ci_95": [
+          0.4831,
+          0.7959
+        ],
+        "recall": 0.42,
+        "recall_ci_95": [
+          0.2938,
+          0.5577
+        ],
+        "f1": 0.5122,
+        "true_positives": 21,
+        "false_positives": 11,
+        "false_negatives": 29,
+        "is_rare_class": false
+      },
+      "sn_ia_metrics": {
+        "support": 202,
+        "precision": 0.7208,
+        "precision_ci_95": [
+          0.6609,
+          0.7738
+        ],
+        "recall": 0.8564,
+        "recall_ci_95": [
+          0.8014,
+          0.8981
+        ],
+        "f1": 0.7828,
+        "true_positives": 173,
+        "false_positives": 67,
+        "false_negatives": 29,
+        "is_rare_class": false
+      },
+      "sn_cc_metrics": {
+        "support": 120,
+        "precision": 0.6214,
+        "precision_ci_95": [
+          0.5249,
+          0.7091
+        ],
+        "recall": 0.5333,
+        "recall_ci_95": [
+          0.4444,
+          0.6202
+        ],
+        "f1": 0.574,
+        "true_positives": 64,
+        "false_positives": 39,
+        "false_negatives": 56,
+        "is_rare_class": false
+      }
+    }
+  }
+}

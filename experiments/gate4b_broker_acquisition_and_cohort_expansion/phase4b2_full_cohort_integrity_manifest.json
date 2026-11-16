@@ -1,0 +1,71 @@
+{
+  "manifest_type": "ASTRAEUS Phase 4B.2 Full External Cohort Accounting Manifest",
+  "author": "Dev Mehta",
+  "timestamp_utc": "2026-11-16T07:58:31.083981+00:00",
+  "total_admitted_candidates": 7614,
+  "accounting_breakdown": {
+    "PILOT_RETRIEVED_AND_VERIFIED": 35,
+    "LOCAL_BASELINE_FEATURE_EVALUABLE": 8,
+    "LOCAL_BASELINE_SINGLE_BAND": 0,
+    "STAGED_SCALEUP_CATALOG_ACCOUNTED": 7571
+  },
+  "class_support_breakdown": {
+    "SN_Ia": 5916,
+    "SN_CC": 1693,
+    "TDE": 2,
+    "AGN_QSO": 1,
+    "OTHER_EXTRAGALACTIC": 1,
+    "SLSN": 1
+  },
+  "rare_class_objects": [
+    {
+      "candidate_id": "ZTF18aabdajx",
+      "ztf_id": "ZTF18aabdajx",
+      "class": "TDE",
+      "raw_type": "TDE",
+      "stratum": "PILOT_RETRIEVED_AND_VERIFIED",
+      "acq_status": "SUCCESS_ARCHIVED_HTTP_200",
+      "eval_status": "FEATURE_EVALUABLE"
+    },
+    {
+      "candidate_id": "ZTF18aabtxvd",
+      "ztf_id": "ZTF18aabtxvd",
+      "class": "TDE",
+      "raw_type": "TDE",
+      "stratum": "PILOT_RETRIEVED_AND_VERIFIED",
+      "acq_status": "SUCCESS_ARCHIVED_HTTP_200",
+      "eval_status": "INSUFFICIENT_DETECTIONS"
+    },
+    {
+      "candidate_id": "ZTF19abrdxbh",
+      "ztf_id": "ZTF19abrdxbh",
+      "class": "OTHER_EXTRAGALACTIC",
+      "raw_type": "Ca-rich",
+      "stratum": "PILOT_RETRIEVED_AND_VERIFIED",
+      "acq_status": "SUCCESS_ARCHIVED_HTTP_200",
+      "eval_status": "FEATURE_EVALUABLE"
+    },
+    {
+      "candidate_id": "ZTF24abdhylt",
+      "ztf_id": "ZTF24abdhylt",
+      "class": "SLSN",
+      "raw_type": "SLSN-II",
+      "stratum": "PILOT_RETRIEVED_AND_VERIFIED",
+      "acq_status": "SUCCESS_ARCHIVED_HTTP_200",
+      "eval_status": "FEATURE_EVALUABLE"
+    }
+  ],
+  "governance_locks": {
+    "spatial_test_quarantine_verified": true,
+    "quarantined_test_pixels_count": 1808,
+    "external_candidates_in_test_pixels": 0,
+    "population_assignment": "Population 3 (Locked External Evaluation)",
+    "model_inference_executed": false
+  },
+  "artifacts": {
+    "ledger_csv": "C:\\Users\\Dev Mehta\\Desktop\\ASTRAEUS\\experiments\\gate4b_broker_acquisition_and_cohort_expansion\\phase4b2_full_cohort_accounting_ledger.csv",
+    "ledger_parquet": "C:\\Users\\Dev Mehta\\Desktop\\ASTRAEUS\\experiments\\gate4b_broker_acquisition_and_cohort_expansion\\phase4b2_full_cohort_accounting_ledger.parquet",
+    "ledger_csv_sha256": "eeb7e3e1d65a7507284fb4c49e6756f30b4deeb9d739ee45f5c1e1156d4850cd",
+    "ledger_parquet_sha256": "06cb8c469e3a08e737e543dd4e99059169d071ec8a5a30883e931e00044945ed"
+  }
+}

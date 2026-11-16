@@ -1,0 +1,30 @@
+{
+  "author": "Dev Mehta",
+  "date": "2026-11-16",
+  "shift_factors": {
+    "Photometric": {
+      "variable": "peak_flux_nmgy",
+      "reference_regime": "Bright (m_peak < 18.0 mag, F_peak > 63 nmgy)",
+      "shifted_regime": "Faint (m_peak >= 18.0 mag, F_peak <= 63 nmgy)",
+      "risk": "Faint transients suffer from increased photometric noise and asymmetric Gaussian error distortion."
+    },
+    "Temporal_Cadence": {
+      "variable": "median_cadence_days",
+      "reference_regime": "Dense cadence (<= 3 days)",
+      "shifted_regime": "Sparse cadence (> 3 days)",
+      "risk": "Sparse cadence misses peak light curve convexity, leading to misclassification of SNe Ia as SNe CC."
+    },
+    "Temporal_Epochs": {
+      "variable": "n_epochs",
+      "reference_regime": "Rich light curves (>= 20 observations)",
+      "shifted_regime": "Sparse light curves (< 20 observations)",
+      "risk": "Triggers premature early-warning classification with high false-positive rates."
+    },
+    "Cross_Survey": {
+      "variable": "survey_origin",
+      "reference_regime": "ZTF Alert Stream difference photometry",
+      "shifted_regime": "ZTF DR24 coadded archival light curves",
+      "risk": "Negative transfer due to differences in PSF homogenization and template subtraction epochs."
+    }
+  }
+}

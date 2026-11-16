@@ -1,0 +1,24 @@
+{
+  "author": "Dev Mehta",
+  "date": "2026-11-16",
+  "matched_comparison": {
+    "population": "ZTF Alert Stream vs. ZTF DR24 Archival Photometry",
+    "physical_parameter_consistency": {
+      "peak_flux_spearman_rho": 0.942,
+      "rise_slope_spearman_rho": 0.887,
+      "color_gr_spearman_rho": 0.865,
+      "interpretation": "High rank-order agreement on physical features across survey processing pipelines."
+    },
+    "classification_transfer_fidelity": {
+      "alert_stream_accuracy": 0.738,
+      "dr24_transferred_accuracy": 0.694,
+      "transfer_accuracy_delta": -0.044,
+      "macro_f1_delta": -0.051,
+      "interpretation": "Direct cross-survey evaluation reveals a 4.4% accuracy degradation due to template subtraction differences."
+    },
+    "negative_transfer_vulnerabilities": [
+      "Faint transients near survey limit (m > 19.5 mag) where DR24 coadds smooth out fast transient flares.",
+      "Differing filter throughput profiles between DR24 calibration and real-time alert calibrations."
+    ]
+  }
+}

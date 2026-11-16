@@ -1,0 +1,266 @@
+{
+  "milestone": "ASTRAEUS Phase 4C Rare-Class Metrics",
+  "author": "Dev Mehta",
+  "timestamp_utc": "2026-11-16T08:01:53.663866+00:00",
+  "evaluation_cohort": "Track 1 Validation Set (N=741)",
+  "model_name": "CalibratedBalancedSubsampleRF (Champion)",
+  "model_sha256": "466c2752808be01e4f41bd8fdb9c0804a57b03b2c02c35e5172ccebda411fce5",
+  "overall_metrics": {
+    "accuracy": 0.7368,
+    "macro_f1": 0.5842,
+    "balanced_accuracy": 0.5711,
+    "confusion_matrix": [
+      [
+        179,
+        12,
+        1,
+        4,
+        4,
+        2,
+        0,
+        0
+      ],
+      [
+        45,
+        63,
+        5,
+        1,
+        3,
+        2,
+        0,
+        1
+      ],
+      [
+        9,
+        17,
+        22,
+        2,
+        0,
+        0,
+        0,
+        0
+      ],
+      [
+        5,
+        5,
+        4,
+        9,
+        0,
+        1,
+        0,
+        0
+      ],
+      [
+        8,
+        3,
+        0,
+        1,
+        35,
+        1,
+        0,
+        1
+      ],
+      [
+        2,
+        2,
+        3,
+        2,
+        1,
+        185,
+        10,
+        0
+      ],
+      [
+        0,
+        1,
+        0,
+        0,
+        2,
+        16,
+        53,
+        1
+      ],
+      [
+        8,
+        8,
+        2,
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    ]
+  },
+  "per_class": {
+    "SN_Ia": {
+      "support": 202,
+      "true_positives": 179,
+      "false_positives": 77,
+      "false_negatives": 23,
+      "precision": 0.6992,
+      "precision_ci_95": [
+        0.6992,
+        0.6404
+      ],
+      "recall": 0.8861,
+      "recall_ci_95": [
+        0.8861,
+        0.8349
+      ],
+      "f1": 0.7817,
+      "evaluability_verdict": "EVALUABLE",
+      "external_cohort_support": 5916
+    },
+    "SN_CC": {
+      "support": 120,
+      "true_positives": 63,
+      "false_positives": 48,
+      "false_negatives": 57,
+      "precision": 0.5676,
+      "precision_ci_95": [
+        0.5676,
+        0.4747
+      ],
+      "recall": 0.525,
+      "recall_ci_95": [
+        0.525,
+        0.4363
+      ],
+      "f1": 0.5455,
+      "evaluability_verdict": "EVALUABLE",
+      "external_cohort_support": 1693
+    },
+    "SLSN": {
+      "support": 50,
+      "true_positives": 22,
+      "false_positives": 15,
+      "false_negatives": 28,
+      "precision": 0.5946,
+      "precision_ci_95": [
+        0.5946,
+        0.4349
+      ],
+      "recall": 0.44,
+      "recall_ci_95": [
+        0.44,
+        0.3116
+      ],
+      "f1": 0.5057,
+      "evaluability_verdict": "DESCRIPTIVE_ONLY",
+      "external_cohort_support": 1
+    },
+    "TDE": {
+      "support": 24,
+      "true_positives": 9,
+      "false_positives": 10,
+      "false_negatives": 15,
+      "precision": 0.4737,
+      "precision_ci_95": [
+        0.4737,
+        0.2733
+      ],
+      "recall": 0.375,
+      "recall_ci_95": [
+        0.375,
+        0.2116
+      ],
+      "f1": 0.4186,
+      "evaluability_verdict": "INSUFFICIENT_EXTERNAL_SUPPORT",
+      "external_cohort_support": 2
+    },
+    "CV_Nova": {
+      "support": 49,
+      "true_positives": 35,
+      "false_positives": 10,
+      "false_negatives": 14,
+      "precision": 0.7778,
+      "precision_ci_95": [
+        0.7778,
+        0.6373
+      ],
+      "recall": 0.7143,
+      "recall_ci_95": [
+        0.7143,
+        0.5759
+      ],
+      "f1": 0.7447,
+      "evaluability_verdict": "DESCRIPTIVE_ONLY",
+      "external_cohort_support": 0
+    },
+    "AGN_QSO": {
+      "support": 205,
+      "true_positives": 185,
+      "false_positives": 22,
+      "false_negatives": 20,
+      "precision": 0.8937,
+      "precision_ci_95": [
+        0.8937,
+        0.8443
+      ],
+      "recall": 0.9024,
+      "recall_ci_95": [
+        0.9024,
+        0.8541
+      ],
+      "f1": 0.8981,
+      "evaluability_verdict": "DESCRIPTIVE_ONLY",
+      "external_cohort_support": 1
+    },
+    "Varstar": {
+      "support": 73,
+      "true_positives": 53,
+      "false_positives": 10,
+      "false_negatives": 20,
+      "precision": 0.8413,
+      "precision_ci_95": [
+        0.8413,
+        0.7319
+      ],
+      "recall": 0.726,
+      "recall_ci_95": [
+        0.726,
+        0.6144
+      ],
+      "f1": 0.7794,
+      "evaluability_verdict": "DESCRIPTIVE_ONLY",
+      "external_cohort_support": 0
+    },
+    "OTHER_EXTRAGALACTIC": {
+      "support": 18,
+      "true_positives": 0,
+      "false_positives": 3,
+      "false_negatives": 18,
+      "precision": 0.0,
+      "precision_ci_95": [
+        0.0,
+        0.0
+      ],
+      "recall": 0.0,
+      "recall_ci_95": [
+        0.0,
+        0.0
+      ],
+      "f1": 0.0,
+      "evaluability_verdict": "INSUFFICIENT_EXTERNAL_SUPPORT",
+      "external_cohort_support": 1
+    }
+  },
+  "scientific_disposition": {
+    "evaluable_classes": [
+      "SN_Ia",
+      "SN_CC"
+    ],
+    "descriptive_only_classes": [
+      "SLSN",
+      "CV_Nova",
+      "AGN_QSO",
+      "Varstar"
+    ],
+    "insufficient_external_support_classes": [
+      "TDE",
+      "OTHER_EXTRAGALACTIC"
+    ],
+    "core_finding": "Champion model reliably discriminates common SN types (Ia F1=0.7817, CC F1=0.5455), but rare classes lack sufficient sample support in independent external data (TDE=2, SLSN=1, OTHER=1) and collapse under uncalibrated inference."
+  }
+}
