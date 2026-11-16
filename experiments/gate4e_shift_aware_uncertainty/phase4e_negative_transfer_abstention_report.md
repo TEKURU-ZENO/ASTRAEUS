@@ -10,12 +10,12 @@
 
 ## 1. Executive Summary & Purpose
 
-A model trained on difference-imaging alert packets cannot be assumed to transfer flawlessly to cross-survey data (e.g. Pan-STARRS1, DECam, or ZTF DR24 deep coadds) without domain adaptation. While physical features (such as peak flux and color) may maintain high rank correlation across surveys, classification performance often experiences severe **negative transfer**.
+A model trained on difference-imaging alert packets cannot be assumed to transfer flawlessly to cross-survey data (e.g. Pan-STARRS1, DECam) or across different processing products of the same survey (e.g. ZTF DR24 deep coadds) without domain adaptation. While physical features (such as peak flux and color) may maintain high rank correlation across pipelines, classification performance often experiences severe **negative transfer**.
 
 This report evaluates:
-1. **Empirical Negative Transfer:** Measures the performance drop when transferring models across survey processing regimes.
-2. **Failure Mechanisms in Cross-Survey Astronomy:** Identifies why point-spread-function homogenization and coadded reference templates distort transient light curve parameters.
-3. **The Validated Operating Envelope:** Defines explicit operational boundaries within which uncertainty is calibrated and mandates hard automated abstention outside it.
+1. **Cross-Pipeline / Cross-Product Processing-Domain Transfer:** Measures the empirical performance drop when transferring models from real-time alert difference packets to archival coadded data products. Full external cross-survey replication (e.g. Pan-STARRS1, DECam) remains uncertified in this release.
+2. **Failure Mechanisms in Processing-Domain Transfer:** Identifies why point-spread-function homogenization and coadded reference templates distort transient light curve parameters.
+3. **The Validated Operating Envelope:** Defines explicit operational boundaries within which uncertainty loss is mitigated (recovering to 76–78% coverage) and mandates hard automated abstention outside it.
 
 ---
 
@@ -68,7 +68,7 @@ xychart-beta
 
 ## 4. The Validated Operating Envelope & Mandatory Abstention
 
-Because conformal coverage drops to $58\text{--}65\%$ under domain shifts, ASTRAEUS **must not** claim a universal $90\%$ coverage guarantee in production. Instead, it operates under a strictly bounded envelope:
+Because conformal coverage drops to $58\text{--}65\%$ under domain shifts, ASTRAEUS **must not** claim an empirical $90\%$ coverage guarantee under real shift. Instead, it operates under a strictly bounded envelope:
 
 ### The Validated Operating Envelope:
 The model is certified for production classification ONLY when all five conditions are satisfied:
@@ -77,6 +77,9 @@ The model is certified for production classification ONLY when all five conditio
 3. Median observation cadence $\le 3.5\text{ days}$.
 4. Data origin: Direct ZTF alert difference photometry (no unadapted cross-survey transfers).
 5. Conformal prediction set size: $1 \le |C(x)| \le 3$.
+
+### Coverage Mitigation vs. Retracted 90% Guarantee:
+Operating within this envelope mitigates catastrophic coverage loss, restoring empirical coverage to **$76\text{--}78\%$** ($78.23\%$ for $N_{\text{obs}} \ge 20$ and $76.70\%$ for dense cadence $\le 3\text{d}$). However, **we explicitly retract any claim that 90% coverage is achieved under real shift**. The operating envelope is an operational risk-mitigation triage policy, not an empirical guarantee of nominal coverage.
 
 ### Mandatory Abstention Outside Envelope:
 If any envelope condition is violated, the pipeline must return an explicit degraded status:

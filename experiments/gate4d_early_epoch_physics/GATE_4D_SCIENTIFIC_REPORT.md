@@ -73,5 +73,7 @@ Astromer required $361.5\text{s}$ to fit and exhibited high latency ($4.31\text{
    When $N_{\text{obs}} < 15$ or temporal baseline $< 20\text{ days}$, the system must output:
    $$\text{Classification} = \text{SUPERNOVA\_UNCLASSIFIED\_EARLY\_WARNING (ABSTAIN)}$$
    rather than presenting a confident Type Ia or Core-Collapse label.
-2. **Definite Horizon for Triggering Spectroscopic Follow-Up:**  
-   Automated disambiguation should be triggered only when $N_{\text{obs}} \ge 20$ and both $g$ and $r$ bands have valid detections.
+2. **Horizon $N=20$ as High-Precision Candidate-Triage Filter:**  
+   At $N_{\text{obs}} = 20$, predicting `SN_CC` provides a high-purity signal ($\text{Precision} = 85.0\%$ [95% CI: $64.0\text{--}94.8\%$]), but catches only $14.2\%$ of core-collapse events ($\text{Recall} = 14.2\%$ [95% CI: $9.0\text{--}21.5\%$]), missing $85.8\%$ (103 of 120) of Core-Collapse supernovae. Therefore, Horizon $N=20$ functions as an early high-precision, low-recall candidate-triage filter for prioritized target-of-opportunity follow-up, rather than a balanced population-discrimination boundary.
+3. **Full Light Curve for Balanced Population Disambiguation:**  
+   Balanced population discrimination across both Type Ia and Core-Collapse classes requires full post-peak coverage ($N_{\text{obs}} > 20$, $\Delta m_{15}$ post-maximum decline), where Macro-F1 reaches $0.6754$ ($\text{F1}_{\text{Ia}} = 0.7964, \text{F1}_{\text{CC}} = 0.5545$).

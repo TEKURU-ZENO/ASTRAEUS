@@ -241,15 +241,15 @@ def run_phase4d_engine():
         prec_ia = tp / (tp + fp) if (tp + fp) > 0 else 0.0
         rec_ia = tp / (tp + fn) if (tp + fn) > 0 else 0.0
         f1_ia = 2 * prec_ia * rec_ia / (prec_ia + rec_ia) if (prec_ia + rec_ia) > 0 else 0.0
-        ci_prec_ia = compute_wilson_score_interval(tp, tp + fp) if (tp + fp) > 0 else (0.0, 0.0)
-        ci_rec_ia = compute_wilson_score_interval(tp, tp + fn) if (tp + fn) > 0 else (0.0, 0.0)
+        ci_prec_ia = compute_wilson_score_interval(tp, tp + fp) if (tp + fp) > 0 else (0.0, 0.0, 0.0)
+        ci_rec_ia = compute_wilson_score_interval(tp, tp + fn) if (tp + fn) > 0 else (0.0, 0.0, 0.0)
 
         # SN_CC Metrics
         prec_cc = tn / (tn + fn) if (tn + fn) > 0 else 0.0
         rec_cc = tn / (tn + fp) if (tn + fp) > 0 else 0.0
         f1_cc = 2 * prec_cc * rec_cc / (prec_cc + rec_cc) if (prec_cc + rec_cc) > 0 else 0.0
-        ci_prec_cc = compute_wilson_score_interval(tn, tn + fn) if (tn + fn) > 0 else (0.0, 0.0)
-        ci_rec_cc = compute_wilson_score_interval(tn, tn + fp) if (tn + fp) > 0 else (0.0, 0.0)
+        ci_prec_cc = compute_wilson_score_interval(tn, tn + fn) if (tn + fn) > 0 else (0.0, 0.0, 0.0)
+        ci_rec_cc = compute_wilson_score_interval(tn, tn + fp) if (tn + fp) > 0 else (0.0, 0.0, 0.0)
 
         macro_f1 = (f1_ia + f1_cc) / 2.0
         bal_acc = (rec_ia + rec_cc) / 2.0
@@ -269,9 +269,9 @@ def run_phase4d_engine():
                 "true_positives": int(tp),
                 "false_negatives": int(fn),
                 "precision": round(float(prec_ia), 4),
-                "precision_ci_95": [round(ci_prec_ia[0], 4), round(ci_prec_ia[1], 4)],
+                "precision_ci_95": [round(ci_prec_ia[1], 4), round(ci_prec_ia[2], 4)],
                 "recall": round(float(rec_ia), 4),
-                "recall_ci_95": [round(ci_rec_ia[0], 4), round(ci_rec_ia[1], 4)],
+                "recall_ci_95": [round(ci_rec_ia[1], 4), round(ci_rec_ia[2], 4)],
                 "f1": round(float(f1_ia), 4),
             },
             "sn_cc": {
@@ -279,9 +279,9 @@ def run_phase4d_engine():
                 "true_positives": int(tn),
                 "false_negatives": int(fp),
                 "precision": round(float(prec_cc), 4),
-                "precision_ci_95": [round(ci_prec_cc[0], 4), round(ci_prec_cc[1], 4)],
+                "precision_ci_95": [round(ci_prec_cc[1], 4), round(ci_prec_cc[2], 4)],
                 "recall": round(float(rec_cc), 4),
-                "recall_ci_95": [round(ci_rec_cc[0], 4), round(ci_rec_cc[1], 4)],
+                "recall_ci_95": [round(ci_rec_cc[1], 4), round(ci_rec_cc[2], 4)],
                 "f1": round(float(f1_cc), 4),
             },
             "confusion_error_rates": {

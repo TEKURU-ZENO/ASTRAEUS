@@ -1,7 +1,7 @@
 {
   "milestone": "ASTRAEUS Phase 4C Rare-Class Metrics",
   "author": "Dev Mehta",
-  "timestamp_utc": "2026-11-16T08:01:53.663866+00:00",
+  "timestamp_utc": "2026-11-16T08:31:48.703469+00:00",
   "evaluation_cohort": "Track 1 Validation Set (N=741)",
   "model_name": "CalibratedBalancedSubsampleRF (Champion)",
   "model_sha256": "466c2752808be01e4f41bd8fdb9c0804a57b03b2c02c35e5172ccebda411fce5",
@@ -100,13 +100,13 @@
       "false_negatives": 23,
       "precision": 0.6992,
       "precision_ci_95": [
-        0.6992,
-        0.6404
+        0.6404,
+        0.7521
       ],
       "recall": 0.8861,
       "recall_ci_95": [
-        0.8861,
-        0.8349
+        0.8349,
+        0.9229
       ],
       "f1": 0.7817,
       "evaluability_verdict": "EVALUABLE",
@@ -119,13 +119,13 @@
       "false_negatives": 57,
       "precision": 0.5676,
       "precision_ci_95": [
-        0.5676,
-        0.4747
+        0.4747,
+        0.6559
       ],
       "recall": 0.525,
       "recall_ci_95": [
-        0.525,
-        0.4363
+        0.4363,
+        0.6122
       ],
       "f1": 0.5455,
       "evaluability_verdict": "EVALUABLE",
@@ -138,13 +138,13 @@
       "false_negatives": 28,
       "precision": 0.5946,
       "precision_ci_95": [
-        0.5946,
-        0.4349
+        0.4349,
+        0.7365
       ],
       "recall": 0.44,
       "recall_ci_95": [
-        0.44,
-        0.3116
+        0.3116,
+        0.5769
       ],
       "f1": 0.5057,
       "evaluability_verdict": "DESCRIPTIVE_ONLY",
@@ -157,13 +157,13 @@
       "false_negatives": 15,
       "precision": 0.4737,
       "precision_ci_95": [
-        0.4737,
-        0.2733
+        0.2733,
+        0.6829
       ],
       "recall": 0.375,
       "recall_ci_95": [
-        0.375,
-        0.2116
+        0.2116,
+        0.5729
       ],
       "f1": 0.4186,
       "evaluability_verdict": "INSUFFICIENT_EXTERNAL_SUPPORT",
@@ -176,13 +176,13 @@
       "false_negatives": 14,
       "precision": 0.7778,
       "precision_ci_95": [
-        0.7778,
-        0.6373
+        0.6373,
+        0.8746
       ],
       "recall": 0.7143,
       "recall_ci_95": [
-        0.7143,
-        0.5759
+        0.5759,
+        0.8215
       ],
       "f1": 0.7447,
       "evaluability_verdict": "DESCRIPTIVE_ONLY",
@@ -195,13 +195,13 @@
       "false_negatives": 20,
       "precision": 0.8937,
       "precision_ci_95": [
-        0.8937,
-        0.8443
+        0.8443,
+        0.9288
       ],
       "recall": 0.9024,
       "recall_ci_95": [
-        0.9024,
-        0.8541
+        0.8541,
+        0.936
       ],
       "f1": 0.8981,
       "evaluability_verdict": "DESCRIPTIVE_ONLY",
@@ -214,13 +214,13 @@
       "false_negatives": 20,
       "precision": 0.8413,
       "precision_ci_95": [
-        0.8413,
-        0.7319
+        0.7319,
+        0.9114
       ],
       "recall": 0.726,
       "recall_ci_95": [
-        0.726,
-        0.6144
+        0.6144,
+        0.8151
       ],
       "f1": 0.7794,
       "evaluability_verdict": "DESCRIPTIVE_ONLY",
@@ -234,12 +234,12 @@
       "precision": 0.0,
       "precision_ci_95": [
         0.0,
-        0.0
+        0.5615
       ],
       "recall": 0.0,
       "recall_ci_95": [
         0.0,
-        0.0
+        0.1759
       ],
       "f1": 0.0,
       "evaluability_verdict": "INSUFFICIENT_EXTERNAL_SUPPORT",

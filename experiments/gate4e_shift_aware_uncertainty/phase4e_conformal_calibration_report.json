@@ -14,8 +14,8 @@
     "validation_size": 741,
     "marginal_coverage": 0.7139,
     "coverage_ci_95": [
-      0.7139,
-      0.6803
+      0.6803,
+      0.7453
     ],
     "mean_prediction_set_size": 0.92,
     "empty_set_count": 61,
@@ -30,8 +30,8 @@
       "support": 202,
       "coverage": 0.8713,
       "coverage_ci_95": [
-        0.8713,
-        0.8181
+        0.8181,
+        0.9106
       ],
       "mean_set_size": 0.96
     },
@@ -39,8 +39,8 @@
       "support": 120,
       "coverage": 0.5083,
       "coverage_ci_95": [
-        0.5083,
-        0.42
+        0.42,
+        0.5961
       ],
       "mean_set_size": 0.9
     },
@@ -48,8 +48,8 @@
       "support": 50,
       "coverage": 0.4,
       "coverage_ci_95": [
-        0.4,
-        0.2761
+        0.2761,
+        0.5382
       ],
       "mean_set_size": 0.76
     },
@@ -57,8 +57,8 @@
       "support": 24,
       "coverage": 0.2083,
       "coverage_ci_95": [
-        0.2083,
-        0.0924
+        0.0924,
+        0.4047
       ],
       "mean_set_size": 0.67
     },
@@ -66,8 +66,8 @@
       "support": 49,
       "coverage": 0.6735,
       "coverage_ci_95": [
-        0.6735,
-        0.5338
+        0.5338,
+        0.7879
       ],
       "mean_set_size": 0.88
     },
@@ -75,8 +75,8 @@
       "support": 205,
       "coverage": 0.8829,
       "coverage_ci_95": [
-        0.8829,
-        0.8317
+        0.8317,
+        0.9201
       ],
       "mean_set_size": 0.97
     },
@@ -84,8 +84,8 @@
       "support": 73,
       "coverage": 0.726,
       "coverage_ci_95": [
-        0.726,
-        0.6144
+        0.6144,
+        0.8151
       ],
       "mean_set_size": 0.97
     },
@@ -94,7 +94,7 @@
       "coverage": 0.0,
       "coverage_ci_95": [
         0.0,
-        0.0
+        0.1759
       ],
       "mean_set_size": 0.83
     }

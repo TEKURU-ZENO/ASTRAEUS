@@ -2,12 +2,13 @@
   "manifest_title": "ASTRAEUS Gate 4 Final Evidence & Governance Manifest",
   "milestone": "Gate 4 \u2014 External Validity & Scientific Robustness: Final Closure",
   "author": "Dev Mehta",
-  "timestamp_utc": "2026-11-16T13:30:00Z",
-  "git_head_base_commit": "0d888720e88eb1ffa728f608941ef9f37e3c0d0e",
+  "timestamp_utc": "2026-11-16T14:15:00Z",
+  "git_head_base_commit": "113f26d965b65ebd8f0de2ec76b4ac17afcd0619",
   "governance_locks": {
     "gate3_test_cohort_quarantined": true,
     "gate3_quarantined_candidate_count": 586,
     "gate3_quarantined_test_pixels": 1808,
+    "gate3_quarantine_verification_method": "Non-disclosing HEALPix geometric disjointness proof & custodian release manifest seal",
     "gate3_unblinding_leaks_detected": 0,
     "champion_model_frozen": true,
     "champion_model_name": "CalibratedBalancedSubsampleRF",
@@ -59,17 +60,17 @@
       "primary_artifact_sha256": "e297e7408ef8366b82e7ca847a491be62ba0e2540974c1deede70fa243cae811"
     },
     "Phase_4B2": {
-      "title": "Full External Cohort Acquisition Audit & Accounting",
+      "title": "Full External Cohort Accounting & Provenance Reconciliation",
       "disposition": "CLOSED",
       "key_metrics": {
         "total_accounted": 7614,
-        "pilot_ingested": 35,
-        "local_baseline_ingested": 8,
+        "pilot_ingested_lightcurves": 35,
+        "local_baseline_lightcurves": 8,
         "staged_catalog_accounted": 7571,
         "rare_candidates_accounted": 4
       },
       "primary_artifact": "experiments/gate4b_broker_acquisition_and_cohort_expansion/GATE_4B2_FULL_COHORT_ACQUISITION_AUDIT.md",
-      "primary_artifact_sha256": "fbfb9fdf53d334c9b0dd2b74931af550626e6021433c9801206f1793812d7100"
+      "primary_artifact_sha256": "344ccfacf9262198afec0c09175139973c49871d1c30ebc1f86cb627e403171d"
     },
     "Phase_4C": {
       "title": "Rare-Class Representation, Failure Diagnosis & Open-Set Analysis",
@@ -104,14 +105,16 @@
         "horizon_n5_macro_f1": 0.3855,
         "horizon_n10_macro_f1": 0.3855,
         "horizon_n20_macro_f1": 0.5163,
+        "horizon_n20_sncc_precision": 0.85,
+        "horizon_n20_sncc_recall": 0.1417,
         "horizon_full_macro_f1": 0.6754,
-        "earliest_defensible_horizon": "Horizon N=20 (Pre-peak discrimination unsupported at N<=10)"
+        "earliest_defensible_horizon": "Horizon N=20 (Early high-precision 85% triage signal; balanced discrimination requires full post-peak light curve)"
       },
       "primary_artifact": "experiments/gate4d_early_epoch_physics/GATE_4D_SCIENTIFIC_REPORT.md",
-      "primary_artifact_sha256": "eae18602759ea4f95a983154bd0f01498c5d2f1d52ab650a2988da1a91f2ee85"
+      "primary_artifact_sha256": "c6e2f57212cd2e5efa4b58db5a86b05e3dcdff84feaa948b5a1d2e65740033b9"
     },
     "Phase_4E": {
-      "title": "Shift-Aware Uncertainty, Conformal Calibration & Cross-Survey Robustness",
+      "title": "Shift-Aware Uncertainty, Conformal Calibration & Domain Transfer",
       "disposition": "CLOSED",
       "key_metrics": {
         "calibration_population_size": 562,
@@ -120,11 +123,334 @@
         "nominal_calibration_coverage": 0.9004,
         "unshifted_validation_coverage": 0.7139,
         "sparse_observation_coverage": 0.5827,
-        "cross_survey_transfer_accuracy_delta": -0.044,
+        "in_envelope_coverage_mitigated": "76-78% (78.2% for N>=20, 76.7% for cadence<=3d)",
+        "guaranteed_90_percent_coverage_under_shift": false,
+        "cross_pipeline_transfer_accuracy_delta": -0.044,
+        "cross_survey_replication_certified": false,
         "operating_envelope_established": true
       },
       "primary_artifact": "experiments/gate4e_shift_aware_uncertainty/GATE_4E_SCIENTIFIC_CLOSURE.md",
-      "primary_artifact_sha256": "b153c0b54d44e2ac94722332c5f4bcd23214a6fdbf94184c0a4e05e242dc8dea"
+      "primary_artifact_sha256": "27bd643a04f15eb0305b37611e30c6c9cc0c837a144ed265483c6997c7cdae34"
+    }
+  },
+  "deliverables": {
+    "configs/gate4/gate4a_taxonomy_mapping.yaml": {
+      "work_package": "Phase_4A",
+      "description": "Taxonomy mapping YAML definition for 8-class real survey schema",
+      "sha256": "265b538f2ad040e15a4b9b0069676c7dbbaec095c9a8b88bbcbe96ad7e8364b1",
+      "size_bytes": 4060
+    },
+    "configs/gate4/gate4a_raw_label_reconciliation.csv": {
+      "work_package": "Phase_4A",
+      "description": "Raw BTS 33-label reconciliation table (Approved, Quarantined, Unmapped)",
+      "sha256": "c5c8b06e0e3b065437224513efef33212ae4fdd4404f65c9dca6b7bdc6cef0f1",
+      "size_bytes": 2783
+    },
+    "experiments/gate4a_external_cohort_preregistration/gate4a1_audit_metrics.json": {
+      "work_package": "Phase_4A",
+      "description": "Phase 4A.1 screening attrition metrics and set arithmetic counts",
+      "sha256": "3db98a22aa98bfb2e5f2aadd017ba6caf21cea2e263e56e11c884072c5e54ab3",
+      "size_bytes": 4045
+    },
+    "experiments/gate4a_external_cohort_preregistration/gate4a1_event_accounting_ledger.csv": {
+      "work_package": "Phase_4A",
+      "description": "10,988-row complete event accounting ledger (CSV)",
+      "sha256": "372e0757aeb04fd172132b3e4f3400547bbcb8b1d69b1b2549acb4fd95a513ca",
+      "size_bytes": 2390374
+    },
+    "experiments/gate4a_external_cohort_preregistration/gate4a1_event_accounting_ledger.parquet": {
+      "work_package": "Phase_4A",
+      "description": "10,988-row complete event accounting ledger (Parquet)",
+      "sha256": "22487122272cd1d13f800eee1ac56b7ad89d82dee48f6cb73d56700e84a10418",
+      "size_bytes": 951637
+    },
+    "experiments/gate4a_external_cohort_preregistration/gate4a1_screened_admitted_candidates.csv": {
+      "work_package": "Phase_4A",
+      "description": "7,614 taxonomy-admitted external candidate subset",
+      "sha256": "abd7dc90eebeeb5507334f5f30acddf01824e4c3c6efd2834186ca850456fcb9",
+      "size_bytes": 1640216
+    },
+    "experiments/gate4a_external_cohort_preregistration/GATE_4A_CLASS_SUPPORT_REPORT.md": {
+      "work_package": "Phase_4A",
+      "description": "Class support and statistical power report across external classes",
+      "sha256": "1e838b3288ba280c9fb0e20ccf771728ea730aad9657923e7f05f52fefd13afb",
+      "size_bytes": 8905
+    },
+    "experiments/gate4a_external_cohort_preregistration/GATE_4A_COHORT_INDEPENDENCE_CERTIFICATION.md": {
+      "work_package": "Phase_4A",
+      "description": "Primary cohort independence and sequential attrition certification",
+      "sha256": "2cdeabf4e0bc0b8535ea2e3d75e110f149c7e94fe1cc1e82ed42d48aec9a1112",
+      "size_bytes": 8694
+    },
+    "experiments/gate4a_external_cohort_preregistration/GATE_4A_HEALPIX_FOOTPRINT_VERIFICATION.md": {
+      "work_package": "Phase_4A",
+      "description": "HEALPix spatial exclusion footprint verification report",
+      "sha256": "1f4749706ad555336ca658d35bb83622203b6cd80d44e62358c588310684d978",
+      "size_bytes": 5400
+    },
+    "experiments/gate4a_external_cohort_preregistration/run_phase4a1_cohort_integrity_audit.py": {
+      "work_package": "Phase_4A",
+      "description": "Executable audit script for Phase 4A.1 cohort screening",
+      "sha256": "a14cdff12d7b54091c607c4ded11dc5c7e4c482341f062f6d803cd59e18c9f5b",
+      "size_bytes": 22076
+    },
+    "experiments/gate4a2_evidence_and_feature_eligibility/spectroscopic_evidence_ledger.csv": {
+      "work_package": "Phase_4A",
+      "description": "Track A spectroscopic classification evidence ledger (7,614 records)",
+      "sha256": "3d1daf1653e47a6f4ce7ec4a34913a5506b7c00f6807e664b8154ef025e39a83",
+      "size_bytes": 3648655
+    },
+    "experiments/gate4a2_evidence_and_feature_eligibility/lightcurve_match_ledger.parquet": {
+      "work_package": "Phase_4A",
+      "description": "Track B photometric evaluability ledger (Parquet, 7,614 records)",
+      "sha256": "ff0f763ee9cf69cc7d74a39bc02188699ccbe5a8f6f60c75d209ab40e4bb107d",
+      "size_bytes": 214270
+    },
+    "experiments/gate4a2_evidence_and_feature_eligibility/lightcurve_match_ledger.csv": {
+      "work_package": "Phase_4A",
+      "description": "Track B photometric evaluability ledger (CSV, 7,614 records)",
+      "sha256": "ed789e28a8c35da2cba8fb40a1a273359d6e0779432d63adee495f05c128dbba",
+      "size_bytes": 1630765
+    },
+    "experiments/gate4a2_evidence_and_feature_eligibility/feature_eligibility_report.md": {
+      "work_package": "Phase_4A",
+      "description": "Detailed feature eligibility analysis report across Track A and B",
+      "sha256": "82cd9cbe20f10f647a599fdbd7f31d0c9ebf582fe4f1fe140f26d0cc81966877",
+      "size_bytes": 16700
+    },
+    "experiments/gate4a2_evidence_and_feature_eligibility/GATE_4A2_ELIGIBILITY_CERTIFICATION.md": {
+      "work_package": "Phase_4A",
+      "description": "Phase 4A.2 formal eligibility certification sign-off",
+      "sha256": "a1d263e560e9d4baf0f341c6378134b35bea477439ea7d9d5cfbad121bc610a5",
+      "size_bytes": 7513
+    },
+    "experiments/gate4a2_evidence_and_feature_eligibility/phase4a2_reproducibility_manifest.json": {
+      "work_package": "Phase_4A",
+      "description": "Cryptographic reproducibility manifest for Phase 4A.2",
+      "sha256": "bbed937a00337c8d9d2c8fc86a6f39f8a53ca5513c09261d33faaa339a15bcd5",
+      "size_bytes": 4540
+    },
+    "experiments/gate4a2_evidence_and_feature_eligibility/run_phase4a2_eligibility_audit.py": {
+      "work_package": "Phase_4A",
+      "description": "Executable audit script for Phase 4A.2 eligibility verification",
+      "sha256": "d6603a667e6365b17c2bae6809577ac92355eee4c70231bbb93daf5346c1d844",
+      "size_bytes": 21618
+    },
+    "experiments/gate4b_broker_acquisition_and_cohort_expansion/GATE_4B_BROKER_ACQUISITION_AND_COHORT_EXPANSION_PROTOCOL.md": {
+      "work_package": "Phase_4B",
+      "description": "Protocol specification for controlled broker acquisition (v1.3)",
+      "sha256": "b2bcf2627ffbc2657d181a10feb60879df98a4876b8bc47cc10fb93057b2a102",
+      "size_bytes": 17791
+    },
+    "experiments/gate4b_broker_acquisition_and_cohort_expansion/pilot_cohort_specification.json": {
+      "work_package": "Phase_4B",
+      "description": "Pre-registered 35-candidate pilot cohort specification",
+      "sha256": "96dea3d56626b3bf0033ba3c5d614a2962dbce439c43a616c1b10f2fc3970d45",
+      "size_bytes": 21169
+    },
+    "experiments/gate4b_broker_acquisition_and_cohort_expansion/phase4b1_photometric_audit.csv": {
+      "work_package": "Phase_4B",
+      "description": "Controlled 35-candidate photometric acquisition audit ledger",
+      "sha256": "59b541a5744c1ccb558bea980a307a56ff233203dbd708ba11f5f543f8aaacff",
+      "size_bytes": 5220
+    },
+    "experiments/gate4b_broker_acquisition_and_cohort_expansion/GATE_4B1_PILOT_ACQUISITION_AUDIT_REPORT.md": {
+      "work_package": "Phase_4B",
+      "description": "Controlled pilot acquisition audit and reproducibility report",
+      "sha256": "e297e7408ef8366b82e7ca847a491be62ba0e2540974c1deede70fa243cae811",
+      "size_bytes": 22208
+    },
+    "experiments/gate4b_broker_acquisition_and_cohort_expansion/phase4b2_full_cohort_accounting_ledger.csv": {
+      "work_package": "Phase_4B",
+      "description": "Full external cohort accounting ledger (CSV, 7,614 records)",
+      "sha256": "eeb7e3e1d65a7507284fb4c49e6756f30b4deeb9d739ee45f5c1e1156d4850cd",
+      "size_bytes": 2412210
+    },
+    "experiments/gate4b_broker_acquisition_and_cohort_expansion/phase4b2_full_cohort_accounting_ledger.parquet": {
+      "work_package": "Phase_4B",
+      "description": "Full external cohort accounting ledger (Parquet, 7,614 records)",
+      "sha256": "06cb8c469e3a08e737e543dd4e99059169d071ec8a5a30883e931e00044945ed",
+      "size_bytes": 424709
+    },
+    "experiments/gate4b_broker_acquisition_and_cohort_expansion/phase4b2_full_cohort_integrity_manifest.json": {
+      "work_package": "Phase_4B",
+      "description": "Integrity manifest for full external cohort accounting",
+      "sha256": "13e46c7d90976d3a8fe49d5055d17e5572c60bf371dae4871ff25c9d474d3229",
+      "size_bytes": 2583
+    },
+    "experiments/gate4b_broker_acquisition_and_cohort_expansion/GATE_4B2_FULL_COHORT_ACQUISITION_AUDIT.md": {
+      "work_package": "Phase_4B",
+      "description": "Full external cohort accounting and provenance reconciliation audit report",
+      "sha256": "344ccfacf9262198afec0c09175139973c49871d1c30ebc1f86cb627e403171d",
+      "size_bytes": 5909
+    },
+    "experiments/gate4b_broker_acquisition_and_cohort_expansion/run_phase4b2_full_cohort_audit.py": {
+      "work_package": "Phase_4B",
+      "description": "Executable audit script for Phase 4B.2 full cohort accounting",
+      "sha256": "f25f5ef71d5daa4241b9776682b306a3dde789e34e357a2bf522cf5244fe7eb2",
+      "size_bytes": 8843
+    },
+    "experiments/gate4c_rare_class_and_failure_diagnosis/phase4c_rare_class_failure_ledger.csv": {
+      "work_package": "Phase_4C",
+      "description": "Diagnosed event-level rare-class failure ledger (156 events)",
+      "sha256": "0af259261dc7b7593ac966429ce69c0630a77ed0eeb0e989d9df72b4ec140de3",
+      "size_bytes": 62744
+    },
+    "experiments/gate4c_rare_class_and_failure_diagnosis/phase4c_rare_class_metrics.json": {
+      "work_package": "Phase_4C",
+      "description": "Per-class performance metrics with Wilson 95% confidence intervals",
+      "sha256": "f5291e47832c0b5c97e2476d360d03efffdcf77608a1145dbca537c67639c6be",
+      "size_bytes": 5504
+    },
+    "experiments/gate4c_rare_class_and_failure_diagnosis/phase4c_subtype_hierarchy_audit.json": {
+      "work_package": "Phase_4C",
+      "description": "Subtype hierarchy audit and boundary ambiguity analysis",
+      "sha256": "b71eea767bed45bae6565a855552db490049c498028050ebfd0f0625b8608154",
+      "size_bytes": 2620
+    },
+    "experiments/gate4c_rare_class_and_failure_diagnosis/phase4c_rare_class_ablation_results.json": {
+      "work_package": "Phase_4C",
+      "description": "Feature ablation impact results across rare transient classes",
+      "sha256": "97b4826f040f855c9999bd764aa938df94d50bde0b10011269a1fd1df335b9b7",
+      "size_bytes": 17941
+    },
+    "experiments/gate4c_rare_class_and_failure_diagnosis/GATE_4C_RARE_CLASS_EVIDENCE_AND_COHORT_REPORT.md": {
+      "work_package": "Phase_4C",
+      "description": "Rare-class representation evidence and cohort distribution report",
+      "sha256": "cf73d1d81fbac5c5c9b5d7e877ce650ebadfc710f8376f43ac81c8f261f432eb",
+      "size_bytes": 7846
+    },
+    "experiments/gate4c_rare_class_and_failure_diagnosis/phase4c_open_set_and_abstention_report.md": {
+      "work_package": "Phase_4C",
+      "description": "Open-set risk analysis and rare-class abstention paradox report",
+      "sha256": "ca077fc6920c8937ead31aa6f2572d6640fb8c84c84476e07eb998474e85ad23",
+      "size_bytes": 5144
+    },
+    "experiments/gate4c_rare_class_and_failure_diagnosis/GATE_4C_SCIENTIFIC_CLOSURE.md": {
+      "work_package": "Phase_4C",
+      "description": "Work Package 4C scientific closure report and sign-off",
+      "sha256": "91d1a8793702c9a796051b2d5789260250b92debc4f05d9ad67e0f5ab529246e",
+      "size_bytes": 4084
+    },
+    "experiments/gate4c_rare_class_and_failure_diagnosis/run_phase4c_rare_class_analysis.py": {
+      "work_package": "Phase_4C",
+      "description": "Executable engine for Phase 4C rare-class and failure analysis",
+      "sha256": "25cd9415f0cfca7ea6600d6fd3106657acd02daa85a54c65249acdddd80c65a6",
+      "size_bytes": 15784
+    },
+    "experiments/gate4d_early_epoch_physics/phase4d_horizon_benchmark.json": {
+      "work_package": "Phase_4D",
+      "description": "Quantitative early-epoch observation horizon benchmark metrics",
+      "sha256": "476fa9aa3bd621ea4e7b092a11907522b2f62d121bb21afe2f93ca1953956d81",
+      "size_bytes": 3612
+    },
+    "experiments/gate4d_early_epoch_physics/phase4d_sncc_snia_error_analysis.csv": {
+      "work_package": "Phase_4D",
+      "description": "Detailed event error analysis for early horizon N=10",
+      "sha256": "778998ce22a6351e21b7f200c66a5f80c74bd3e7db6d41cdecf987475edf4f35",
+      "size_bytes": 21501
+    },
+    "experiments/gate4d_early_epoch_physics/phase4d_physical_feature_dictionary.json": {
+      "work_package": "Phase_4D",
+      "description": "Dictionary of 27 physical features for early-epoch disambiguation",
+      "sha256": "6b5edb8cf1b3cd29b1c56c452722b5de766a7e9fd5239a2e6697906a1143ccd9",
+      "size_bytes": 1597
+    },
+    "experiments/gate4d_early_epoch_physics/phase4d_physical_ablation_results.json": {
+      "work_package": "Phase_4D",
+      "description": "Feature ablation results comparing physical models vs baselines",
+      "sha256": "e973b7f41f0b6edb81374d1825a6983bf77a5cc708d13690d0a38faa36898d42",
+      "size_bytes": 1657
+    },
+    "experiments/gate4d_early_epoch_physics/phase4d_early_epoch_cohort_manifest.parquet": {
+      "work_package": "Phase_4D",
+      "description": "Early-epoch supernova cohort manifest (2,083 candidates)",
+      "sha256": "2c98b515e7711d0a3fe305506e8efc48eb8ca68263417a992268046298d9eb66",
+      "size_bytes": 94467
+    },
+    "experiments/gate4d_early_epoch_physics/GATE_4D_EARLY_EPOCH_PHYSICS_PROTOCOL.md": {
+      "work_package": "Phase_4D",
+      "description": "Protocol for early-epoch physical feature extraction and horizons",
+      "sha256": "1c6a78332f1cb96fd3eae277b3d26e2ad7cdccaa278f5902b274ee3b4ff34c2a",
+      "size_bytes": 3522
+    },
+    "experiments/gate4d_early_epoch_physics/GATE_4D_SCIENTIFIC_REPORT.md": {
+      "work_package": "Phase_4D",
+      "description": "Work Package 4D scientific synthesis report on early physics horizons",
+      "sha256": "c6e2f57212cd2e5efa4b58db5a86b05e3dcdff84feaa948b5a1d2e65740033b9",
+      "size_bytes": 6639
+    },
+    "experiments/gate4d_early_epoch_physics/run_phase4d_early_epoch_physics.py": {
+      "work_package": "Phase_4D",
+      "description": "Executable benchmark script for Phase 4D early-epoch horizons",
+      "sha256": "963a65fd24dc65539950122cb34f82ff5e27112887829a5a7e41b722fb8bfbb9",
+      "size_bytes": 18892
+    },
+    "experiments/gate4e_shift_aware_uncertainty/phase4e_conformal_calibration_report.json": {
+      "work_package": "Phase_4E",
+      "description": "Split-conformal calibration specification (k=507) and coverage metrics",
+      "sha256": "acdddf6360f4485fbbfe4847c91dfa34b207b0db735b3269e6013ae1785d5cde",
+      "size_bytes": 2175
+    },
+    "experiments/gate4e_shift_aware_uncertainty/phase4e_shift_stratified_metrics.parquet": {
+      "work_package": "Phase_4E",
+      "description": "Shift-stratified empirical coverage metrics across cadence and epochs",
+      "sha256": "e1d7442cf186070183f5cd0dd31efa1a07523f01138e864be73734f5b25d1470",
+      "size_bytes": 5406
+    },
+    "experiments/gate4e_shift_aware_uncertainty/phase4e_shift_factor_manifest.json": {
+      "work_package": "Phase_4E",
+      "description": "Manifest of astronomical domain shift factors and risks",
+      "sha256": "08c8257601952c4b5af05003f184e0f03b4d1e14bfc31d7f6566bdb4b899574b",
+      "size_bytes": 1328
+    },
+    "experiments/gate4e_shift_aware_uncertainty/phase4e_cross_survey_transfer_results.json": {
+      "work_package": "Phase_4E",
+      "description": "Processing-domain transfer results: ZTF Alert vs DR24 coadds",
+      "sha256": "a7124efb6169fdd29f9fbb3ec9383b64eca14eb0fd7163c8be96e489e92ce272",
+      "size_bytes": 1049
+    },
+    "experiments/gate4e_shift_aware_uncertainty/phase4e_negative_transfer_abstention_report.md": {
+      "work_package": "Phase_4E",
+      "description": "Negative transfer analysis and validated operating envelope rules",
+      "sha256": "7cf067ce1c4deca109efe6f49d0e686a13da4e2379d8bbcda8a9ba9c1e9d6dd8",
+      "size_bytes": 6488
+    },
+    "experiments/gate4e_shift_aware_uncertainty/GATE_4E_SHIFT_AND_UNCERTAINTY_PROTOCOL.md": {
+      "work_package": "Phase_4E",
+      "description": "Protocol for shift-aware uncertainty and conformal calibration",
+      "sha256": "9282364150c85d277913b9afdd5194897e803b4bdd1f3cde9331e66ec6ba2444",
+      "size_bytes": 3307
+    },
+    "experiments/gate4e_shift_aware_uncertainty/GATE_4E_SCIENTIFIC_CLOSURE.md": {
+      "work_package": "Phase_4E",
+      "description": "Work Package 4E scientific closure report and sign-off",
+      "sha256": "27bd643a04f15eb0305b37611e30c6c9cc0c837a144ed265483c6997c7cdae34",
+      "size_bytes": 4053
+    },
+    "experiments/gate4e_shift_aware_uncertainty/run_phase4e_uncertainty_and_shift.py": {
+      "work_package": "Phase_4E",
+      "description": "Executable engine for Phase 4E uncertainty, conformal, and shift audit",
+      "sha256": "ab87e6ac2bccfd07e5b1e16ccc79826cd7c5e4066fdbee703fa0dbc75d542a65",
+      "size_bytes": 14055
+    },
+    "experiments/GATE_4_FINAL_GOVERNANCE_AUDIT.md": {
+      "work_package": "Synthesis",
+      "description": "Final governance, quarantine, and population separation audit report",
+      "sha256": "169c0a6627ba032f1f07a02af02393cd3fba8c502c4e890c3e78faa074d8ffc6",
+      "size_bytes": 7170
+    },
+    "experiments/GATE_4_FINAL_SCIENTIFIC_CLOSURE_REPORT.md": {
+      "work_package": "Synthesis",
+      "description": "Final scientific closure and external validity synthesis report",
+      "sha256": "edab206ed0d47b9be19f14a83a39d110c7d79ef0ffb26faf48d685f7d1ed72f7",
+      "size_bytes": 11564
+    },
+    "tests/test_gate4_final_closure.py": {
+      "work_package": "Synthesis",
+      "description": "Gate 4 final closure regression verification test suite",
+      "sha256": "7bb840efeb9e2d85431a5d178e2ab489604956e8df11da9675e2d3932ad7ce03",
+      "size_bytes": 9270
     }
   },
   "final_gate_disposition": "GATE 4 OFFICIALLY CLOSED"

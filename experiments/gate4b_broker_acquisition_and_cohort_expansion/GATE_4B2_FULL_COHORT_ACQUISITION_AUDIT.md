@@ -1,9 +1,9 @@
-# ASTRAEUS Gate 4 — Phase 4B.2 Full External Cohort Acquisition Audit & Accounting Report
+# ASTRAEUS Gate 4 — Phase 4B.2 Full External Cohort Accounting & Provenance Reconciliation Audit Report
 
 **Author:** Dev Mehta  
 **Date:** 2026-11-16  
 **Status:** COMPLETE — SUBMITTED FOR FORMAL CLOSURE REVIEW  
-**Execution Context:** Full External Cohort Acquisition & Accounting Audit  
+**Execution Context:** Full External Cohort Accounting & Provenance Reconciliation Audit  
 **Governing Protocols:** `GATE_4B_BROKER_ACQUISITION_AND_COHORT_EXPANSION_PROTOCOL.md` (v1.3), `GATE_4_EXTERNAL_VALIDITY_AND_SCIENTIFIC_ROBUSTNESS_CHARTER.md`  
 **Base Deliverables:** `phase4b2_full_cohort_accounting_ledger.csv`, `phase4b2_full_cohort_accounting_ledger.parquet`, `phase4b2_full_cohort_integrity_manifest.json`  
 

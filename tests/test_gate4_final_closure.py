@@ -16,14 +16,21 @@ Tests:
 
 from __future__ import annotations
 
+import hashlib
 import json
 import math
 from pathlib import Path
 import pytest
 import numpy as np
 import pandas as pd
+import astropy.units as u
+from astropy.coordinates import SkyCoord
+from astropy_healpix import HEALPix
 
 from astraeus_bench.real_survey_benchmark_protocol import REAL_SURVEY_CLASSES_8
+
+EXPECTED_HEALPIX_CONFIG_HASH = "234bb08c482824648607fa8f874477d0225717c18263b0f16ea276dd1e12417b"
+EXPECTED_SPRINT4H_MANIFEST_HASH = "1ddbf733cc52f6fe5a36a7a9854e780a59d2cadc3b4b153aaadf970a3b377761"
 
 
 @pytest.fixture
@@ -31,35 +38,61 @@ def repo_root() -> Path:
     return Path(__file__).resolve().parents[1]
 
 
-def test_gate3_quarantine_and_population_disjointness(repo_root: Path):
+def test_gate3_quarantine_custodian_attestation_and_geometric_disjointness(repo_root: Path):
     """
-    GOVERNANCE ASSERTION 1:
-    Verifies that the 586 quarantined Gate 3 test objects have ZERO overlap
-    with external cohort candidates (Phase 4B.2) or training partitions.
+    GOVERNANCE ASSERTION 1: Gate 3 Quarantine Custodian Attestation & Geometric Footprint Disjointness.
+
+    DISCLOSURE OF PRIOR METADATA VERIFICATION INCIDENT:
+    In commit 113f26d, a regression test directly queried candidate_id and matched_external_id values
+    for assigned_split == 'test' in candidates_10k.parquet to assert set disjointness. While this was
+    a read-only metadata verification, touching the quarantined test rows violates the strict zero-touch
+    quarantine protocol. This test replaces that check with an independent, non-disclosing custodian
+    attestation and geometric footprint disjointness proof without loading or inspecting any test rows.
+
+    Verifications:
+    1. Authoritative HEALPix split configuration cryptographic hash assertion
+       (configs/data_splits_healpix.json, exactly 1,808 frozen test pixels at NSIDE=32, NESTED, ICRS).
+    2. Custodian release manifest cryptographic seal assertion
+       (experiments/sprint4h_final_release_remediation/sprint4h_release_manifest.json,
+       attesting to 586 sequestered test candidates under zero-touch invariant).
+    3. Strict geometric spatial footprint disjointness: all 7,614 external cohort candidates
+       in phase4b2_full_cohort_accounting_ledger.parquet reside strictly outside the
+       1,808 quarantined test pixels (zero intersection).
     """
-    cand_path = repo_root / "data" / "processed" / "real_survey_10k_v1" / "candidates_10k.parquet"
-    df_cand = pd.read_parquet(cand_path)
+    # 1. Authoritative HEALPix configuration hash & geometry
+    healpix_path = repo_root / "configs" / "data_splits_healpix.json"
+    assert healpix_path.exists(), f"Missing {healpix_path}"
+    hp_sha = hashlib.sha256(healpix_path.read_bytes()).hexdigest()
+    assert hp_sha == EXPECTED_HEALPIX_CONFIG_HASH, f"HEALPix config hash mismatch: {hp_sha}"
 
-    # 1. Quarantined Gate 3 test set
-    t1_test = df_cand[(df_cand["coarse_class"].isin(REAL_SURVEY_CLASSES_8)) & (df_cand["assigned_split"] == "test")]
-    assert len(t1_test) == 586, f"Expected 586 Gate 3 test candidates, got {len(t1_test)}"
-    test_cids = set(t1_test["candidate_id"])
-    test_zids = set(t1_test["matched_external_id"].dropna())
+    with open(healpix_path, "r", encoding="utf-8") as f:
+        hp_config = json.load(f)
+    test_pixels = set(int(p) for p in hp_config["splits"]["test"])
+    assert len(test_pixels) == 1808, f"Expected exactly 1,808 test pixels, got {len(test_pixels)}"
 
-    # 2. Phase 4B.2 external cohort
+    # 2. Custodian release manifest cryptographic seal (586 sealed test objects)
+    sprint4h_path = repo_root / "experiments" / "sprint4h_final_release_remediation" / "sprint4h_release_manifest.json"
+    assert sprint4h_path.exists(), f"Missing {sprint4h_path}"
+    s4h_sha = hashlib.sha256(sprint4h_path.read_bytes()).hexdigest()
+    assert s4h_sha == EXPECTED_SPRINT4H_MANIFEST_HASH, f"Sprint 4H manifest hash mismatch: {s4h_sha}"
+
+    with open(sprint4h_path, "r", encoding="utf-8") as f:
+        s4h_data = json.load(f)
+    assert s4h_data["spatial_isolation_audit"]["subtraction_verification"]["sequestered_test_count"] == 586
+    assert s4h_data["spatial_isolation_audit"]["test_isolation_verdict"] == "CERTIFIED SEALED & UNTOUCHED (Zero-Touch Invariant)"
+
+    # 3. Geometric footprint disjointness for all 7,614 external candidates
     p4b2_path = repo_root / "experiments" / "gate4b_broker_acquisition_and_cohort_expansion" / "phase4b2_full_cohort_accounting_ledger.parquet"
     assert p4b2_path.exists()
     df_p4b2 = pd.read_parquet(p4b2_path)
     assert len(df_p4b2) == 7614
 
-    ext_cids = set(df_p4b2["candidate_id"])
-    ext_zids = set(df_p4b2["ztf_id"])
+    hp = HEALPix(nside=hp_config.get("healpix_nside", 32), order="nested", frame="icrs")
+    sc_candidates = SkyCoord(df_p4b2["ra_raw"], df_p4b2["dec_raw"], unit=(u.hourangle, u.deg))
+    cand_pixels = set(hp.skycoord_to_healpix(sc_candidates).tolist())
 
-    # Assert ZERO intersection
-    overlap_cids = test_cids.intersection(ext_cids)
-    overlap_zids = test_zids.intersection(ext_zids)
-    assert len(overlap_cids) == 0, f"Leakage detected: {overlap_cids}"
-    assert len(overlap_zids) == 0, f"Leakage detected: {overlap_zids}"
+    geometric_overlap = test_pixels.intersection(cand_pixels)
+    assert len(geometric_overlap) == 0, f"Spatial leakage detected: {len(geometric_overlap)} overlapping test pixels: {geometric_overlap}"
 
 
 def test_chronological_prefix_no_future_leakage():
@@ -152,3 +185,14 @@ def test_final_evidence_manifest_integrity(repo_root: Path):
         assert ws_data["disposition"] == "CLOSED"
         art_path = repo_root / ws_data["primary_artifact"]
         assert art_path.exists(), f"Primary artifact missing: {art_path}"
+
+    # Deliverables catalog assertion
+    assert "deliverables" in man
+    deliverables = man["deliverables"]
+    assert len(deliverables) >= 34, f"Expected at least 34 deliverables, found {len(deliverables)}"
+
+    for rel_path, meta in deliverables.items():
+        full_path = repo_root / rel_path
+        assert full_path.exists(), f"Deliverable missing: {rel_path}"
+        actual_sha = hashlib.sha256(full_path.read_bytes()).hexdigest()
+        assert actual_sha == meta["sha256"], f"SHA256 mismatch for {rel_path}: {actual_sha} vs {meta['sha256']}"

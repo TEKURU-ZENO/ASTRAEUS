@@ -177,11 +177,11 @@ def run_phase4e_engine():
             c_ci = compute_wilson_score_interval(int(np.sum(in_set[c_mask])), c_supp)
             c_sz = float(np.mean(set_sizes[c_mask]))
         else:
-            c_cov, c_ci, c_sz = 0.0, (0.0, 0.0), 0.0
+            c_cov, c_ci, c_sz = 0.0, (0.0, 0.0, 0.0), 0.0
         per_class_cov[cname] = {
             "support": c_supp,
             "coverage": round(c_cov, 4),
-            "coverage_ci_95": [round(c_ci[0], 4), round(c_ci[1], 4)],
+            "coverage_ci_95": [round(c_ci[1], 4), round(c_ci[2], 4)],
             "mean_set_size": round(c_sz, 2),
         }
 
@@ -200,7 +200,7 @@ def run_phase4e_engine():
         "marginal_validation_metrics": {
             "validation_size": n_val,
             "marginal_coverage": round(marginal_coverage, 4),
-            "coverage_ci_95": [round(cov_ci[0], 4), round(cov_ci[1], 4)],
+            "coverage_ci_95": [round(cov_ci[1], 4), round(cov_ci[2], 4)],
             "mean_prediction_set_size": round(mean_set_size, 2),
             "empty_set_count": empty_sets,
             "empty_set_rate": round(empty_sets / n_val, 4),
@@ -244,14 +244,14 @@ def run_phase4e_engine():
             sub_sz = float(np.mean(sub["prediction_set_size"]))
             sub_ci = compute_wilson_score_interval(int(np.sum(sub["in_conformal_set"])), n_sub)
         else:
-            sub_cov, sub_acc, sub_sz, sub_ci = 0.0, 0.0, 0.0, (0.0, 0.0)
+            sub_cov, sub_acc, sub_sz, sub_ci = 0.0, 0.0, 0.0, (0.0, 0.0, 0.0)
 
         shift_records.append({
             "shift_factor": s_name,
             "sample_support": n_sub,
             "empirical_coverage": round(sub_cov, 4),
-            "coverage_ci_low_95": round(sub_ci[0], 4),
-            "coverage_ci_high_95": round(sub_ci[1], 4),
+            "coverage_ci_low_95": round(sub_ci[1], 4),
+            "coverage_ci_high_95": round(sub_ci[2], 4),
             "accuracy": round(sub_acc, 4),
             "mean_prediction_set_size": round(sub_sz, 2),
         })

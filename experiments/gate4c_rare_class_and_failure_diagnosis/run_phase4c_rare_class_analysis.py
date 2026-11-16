@@ -247,8 +247,8 @@ def run_phase4c_analysis():
         rec = float(tp / support) if support > 0 else 0.0
         f1 = float(2 * prec * rec / (prec + rec)) if (prec + rec) > 0 else 0.0
 
-        prec_ci = compute_wilson_score_interval(tp, tp + fp) if (tp + fp) > 0 else (0.0, 0.0)
-        rec_ci = compute_wilson_score_interval(tp, support) if support > 0 else (0.0, 0.0)
+        prec_ci = compute_wilson_score_interval(tp, tp + fp) if (tp + fp) > 0 else (0.0, 0.0, 0.0)
+        rec_ci = compute_wilson_score_interval(tp, support) if support > 0 else (0.0, 0.0, 0.0)
 
         per_class_metrics[cname] = {
             "support": support,
@@ -256,9 +256,9 @@ def run_phase4c_analysis():
             "false_positives": fp,
             "false_negatives": fn,
             "precision": round(prec, 4),
-            "precision_ci_95": [round(prec_ci[0], 4), round(prec_ci[1], 4)],
+            "precision_ci_95": [round(prec_ci[1], 4), round(prec_ci[2], 4)],
             "recall": round(rec, 4),
-            "recall_ci_95": [round(rec_ci[0], 4), round(rec_ci[1], 4)],
+            "recall_ci_95": [round(rec_ci[1], 4), round(rec_ci[2], 4)],
             "f1": round(f1, 4),
             "evaluability_verdict": evaluability_verdicts[cname],
             "external_cohort_support": 2 if cname == "TDE" else (1 if cname in ("SLSN", "OTHER_EXTRAGALACTIC", "AGN_QSO") else (5916 if cname == "SN_Ia" else (1693 if cname == "SN_CC" else 0))),
