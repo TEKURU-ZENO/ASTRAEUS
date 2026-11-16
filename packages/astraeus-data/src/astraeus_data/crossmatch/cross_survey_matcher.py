@@ -1,12 +1,15 @@
 """
-ASTRAEUS Cross-Survey Competing-Hypothesis Bayesian Matcher Module (v2.0).
+ASTRAEUS Cross-Survey Competing-Hypothesis Bayesian Matcher Module (v2.1).
 
 Author: Dev Mehta
 Lead Investigator & Mission Director, Project ASTRAEUS
 Date: November 16, 2026
 Document Reference: ASTRAEUS-P5-XMATCH-002
+
 Implements Sutherland & Saunders (1992) and Budavári & Szalay (2008) competing-hypothesis
 Bayesian counterpart association with normalized background likelihood and no-counterpart hypothesis (H0).
+Model Classification: Anisotropic Diagonal 2D Gaussian Positional Likelihood (sigma_xy = 0)
+evaluated on local tangent plane displacements (Delta_x = Delta_alpha * cos(delta), Delta_y = Delta_delta).
 """
 
 from typing import Dict, Any, List, Optional, Tuple
@@ -95,7 +98,12 @@ class CrossSurveyMatcher:
         prior_null_factor = (1.0 - self.q_prior) / self.q_prior
 
         # Local background source density (sources / arcsec^2)
-        rho = local_density_sq_arcsec or 0.005
+        if local_density_sq_arcsec is not None:
+            rho = float(local_density_sq_arcsec)
+            density_source = "EMPIRICAL_LOCAL_ESTIMATE"
+        else:
+            rho = 0.005
+            density_source = "DEFAULT_UNSPECIFIED_ASSUMPTION"
 
         if not candidates:
             return CrossSurveyAssociation(
@@ -108,6 +116,17 @@ class CrossSurveyMatcher:
                 chance_coincidence_probability=1.0,
                 local_source_density_per_sq_arcsec=rho,
                 competing_candidates_count=0,
+                details={
+                    "astrometric_likelihood_model": "ANISOTROPIC_DIAGONAL_2D_GAUSSIAN",
+                    "search_radius_arcsec": self.max_search_radius_arcsec,
+                    "search_area_sq_arcsec": float(np.pi * (self.max_search_radius_arcsec ** 2)),
+                    "completeness_prior_q": self.q_prior,
+                    "local_density_sq_arcsec": rho,
+                    "density_estimation_source": density_source,
+                    "evaluated_candidates_count": 0,
+                    "null_posterior_p_h0": 1.0,
+                    "all_candidate_posteriors": [],
+                }
             )
 
         # 2D Astrometric error modeling
@@ -201,6 +220,12 @@ class CrossSurveyMatcher:
             local_source_density_per_sq_arcsec=rho,
             competing_candidates_count=len(posteriors),
             details={
+                "astrometric_likelihood_model": "ANISOTROPIC_DIAGONAL_2D_GAUSSIAN",
+                "search_radius_arcsec": self.max_search_radius_arcsec,
+                "search_area_sq_arcsec": float(np.pi * (self.max_search_radius_arcsec ** 2)),
+                "completeness_prior_q": self.q_prior,
+                "local_density_sq_arcsec": rho,
+                "density_estimation_source": density_source,
                 "evaluated_candidates_count": len(posteriors),
                 "null_posterior_p_h0": p_h0,
                 "all_candidate_posteriors": [

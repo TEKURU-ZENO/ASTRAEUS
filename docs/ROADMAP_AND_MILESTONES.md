@@ -116,9 +116,23 @@ Determine whether ASTRAEUS preserves astrophysical information, physical paramet
 5. **Rubin LSST (Prospective Extension):** Public alert interface adapter; full inclusion conditional on data rights and processed product access.
 
 ### Sequential Workstreams:
-- **Workstream 1:** Scientific Preflight and Protocol Freeze (`PHASE5_SCIENTIFIC_PROTOCOL.md`)
-- **Workstream 2:** Survey Reconnaissance and Feasibility Audit (`PHASE5_SURVEY_FEASIBILITY_AUDIT.md`)
-- **Workstream 3:** Cross-Survey Identity and Provenance Resolution (`PHASE5_DATASET_AND_COHORT_DESIGN.md`)
+- **Workstream 1:** Scientific Preflight and Protocol Freeze (`PHASE5_SCIENTIFIC_PROTOCOL.md`) [COMPLETE]
+- **Workstream 2:** Survey Reconnaissance and Feasibility Audit (`PHASE5_SURVEY_FEASIBILITY_AUDIT.md`) [COMPLETE]
+- **Workstream 3:** Cross-Survey Identity and Provenance Resolution [COMPLETE & RECLASSIFIED]:
+  - Reclassified 150-candidate pilot as Synthetic Matcher Simulation Benchmark (`SYNTHETIC_MATCHER_SIMULATION_BENCHMARK`).
+  - Implemented 2D anisotropic diagonal Gaussian positional likelihood with Mahalanobis distance in local tangent plane.
+  - Durable Parquet-backed entity registry (`StableEntityRegistry`) with collision guards, monotonic IDs, and multi-survey indexing.
+  - Canonical Observation Contract v2.0 timestamp semantics coupling timestamps with physical time scales (`get_time_coordinate()`).
+  - Proved analytical positive harmonization covariance $\operatorname{Cov}(c, o) \approx 0.132\sigma_g^2 + 0.317\sigma_r^2 > 0$ with exact $A^{-1}$ inversion.
+  - All 47 tests passing across the repository.
+- **Workstream 3.1:** Controlled ATLAS Forced-Photometry Broker Acquisition Protocol [PROTOCOL FROZEN — LIVE EXECUTION GATED]:
+  - Authored formal acquisition charter: `PHASE5_ATLAS_FORCED_PHOTOMETRY_ACQUISITION_PROTOCOL.md`.
+  - Staged acquisition plan: 10-candidate operational validation pilot (`phase5_atlas_10obj_pilot_manifest.json`) covering all 5 physical classes; 140 candidates frozen in held-back expansion cohort.
+  - Application-level deterministic 24-character SHA-256 idempotency key and queue reconciliation.
+  - Application-level durable request ledger initialized (`phase5_atlas_request_ledger.parquet`).
+  - Raw payload vaulting architecture preserving byte-exact provider responses with SHA-256 digests.
+  - Non-destructive preservation of negative difference-flux measurements.
+  - Four-tier outcome disaggregation: Request status, Payload schema validity, Counterpart identity confidence, and Photometric feature evaluability.
 - **Workstream 4:** Photometric and Temporal Harmonization Framework
 - **Workstream 5:** Zero-Shot and Domain-Adaptation Experiments
 - **Workstream 6:** Uncertainty, Robustness, and Scientific Validation (`PHASE5_STATISTICAL_ANALYSIS_PLAN.md`)

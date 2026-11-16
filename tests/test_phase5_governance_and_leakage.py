@@ -47,6 +47,11 @@ from astraeus_data.crossmatch.cross_survey_matcher import (
     CrossSurveyMatchStatus,
 )
 from astraeus_data.registry import StableEntityRegistry, StableEntityRecord
+from astraeus_data.brokers import (
+    AtlasRequestState,
+    AtlasRequestRecord,
+    AtlasForcedPhotometryClient,
+)
 
 EXPECTED_HEALPIX_CONFIG_HASH = "234bb08c482824648607fa8f874477d0225717c18263b0f16ea276dd1e12417b"
 EXPECTED_SPRINT4H_MANIFEST_HASH = "1ddbf733cc52f6fe5a36a7a9854e780a59d2cadc3b4b153aaadf970a3b377761"
@@ -546,4 +551,206 @@ def test_phase5_stable_entity_registry_persistence_and_association(tmp_path: Pat
 
     # Check ATLAS index
     assert loaded_reg._atlas_index["ATLAS_SRC_999001"] == ent1.astraeus_id
+
+
+def test_phase5_registry_collision_guards_and_monotonicity():
+    """
+    REGISTRY COLLISION & MONOTONICITY TEST:
+    Verifies forced_id collision rejection, external survey ID collision rejection,
+    monotonic sequence preservation, and unsupported survey rejection.
+    """
+    reg = StableEntityRegistry()
+    ent1 = reg.register_entity(reference_ra_deg=100.0, reference_dec_deg=20.0, ztf_id="ZTF_A")
+    assert ent1.astraeus_id == "ASTRAEUS-EVT-00000001"
+
+    # 1. Monotonic ID generation
+    ent2 = reg.register_entity(reference_ra_deg=105.0, reference_dec_deg=25.0, ztf_id="ZTF_B")
+    assert ent2.astraeus_id == "ASTRAEUS-EVT-00000002"
+
+    # 2. forced_id collision guard
+    with pytest.raises(ValueError, match="forced_id '.*' already exists in registry"):
+        reg.register_entity(reference_ra_deg=110.0, reference_dec_deg=30.0, forced_id="ASTRAEUS-EVT-00000001")
+
+    # 3. Associate external ATLAS ID to ent1
+    reg.attach_survey_association(ent1.astraeus_id, "ATLAS", "ATLAS_TARGET_101")
+    assert ent1.atlas_id == "ATLAS_TARGET_101"
+
+    # Attempt to associate same ATLAS ID to ent2 must raise collision error
+    with pytest.raises(ValueError, match="Identity collision: External survey ID 'ATLAS_TARGET_101'"):
+        reg.attach_survey_association(ent2.astraeus_id, "ATLAS", "ATLAS_TARGET_101")
+
+    # 4. Overwrite guard: ent1 cannot be re-associated with a different ATLAS ID without allow_overwrite
+    with pytest.raises(ValueError, match="already has atlas_id=.*Cannot overwrite"):
+        reg.attach_survey_association(ent1.astraeus_id, "ATLAS", "ATLAS_TARGET_DIFFERENT")
+
+    # 5. Unsupported survey rejection
+    with pytest.raises(ValueError, match="Unsupported survey 'HUBBLE'"):
+        reg.attach_survey_association(ent1.astraeus_id, "HUBBLE", "HST_001")
+
+
+def test_phase5_canonical_record_time_coordinate_coupling():
+    """
+    CANONICAL TIME COORDINATE COUPLING TEST:
+    Verifies that get_time_coordinate() returns coupled (timestamp, time_scale)
+    and is_barycentric_converted accurately reflects conversion status.
+    """
+    # 1. Unconverted UTC observation
+    rec_utc = CanonicalObservationRecord(
+        astraeus_id="ASTRAEUS-EVT-00000001",
+        survey_obs_id="ATLAS_59100_UTC",
+        t_native=59100.25,
+        native_time_scale="UTC",
+        t_converted_bmjd=None,
+        ra_deg=120.0,
+        dec_deg=30.0,
+        survey_id="ATLAS",
+        native_passband="ATLAS_c",
+        obs_type=ObservationType.DIFFERENCE_FORCED,
+        measured_flux_ujy=15.0,
+        measurement_sigma_ujy=1.5,
+        is_positive_detection_snr5=True,
+        provenance_hash="a1b2" * 16,
+    )
+    assert rec_utc.is_barycentric_converted is False
+    t_val, t_scale = rec_utc.get_time_coordinate()
+    assert t_val == 59100.25
+    assert t_scale == "UTC"
+
+    # 2. Converted BMJD_TDB observation
+    rec_tdb = CanonicalObservationRecord(
+        astraeus_id="ASTRAEUS-EVT-00000001",
+        survey_obs_id="ATLAS_59100_TDB",
+        t_native=59100.25,
+        native_time_scale="UTC",
+        t_converted_bmjd=59100.2548,
+        converted_time_scale="BMJD_TDB",
+        time_conversion_method="ASTROPY_BARYCORR_V1",
+        t_obs_bmjd=59100.2548,
+        ra_deg=120.0,
+        dec_deg=30.0,
+        survey_id="ATLAS",
+        native_passband="ATLAS_c",
+        obs_type=ObservationType.DIFFERENCE_FORCED,
+        measured_flux_ujy=15.0,
+        measurement_sigma_ujy=1.5,
+        is_positive_detection_snr5=True,
+        provenance_hash="b2c3" * 16,
+    )
+    assert rec_tdb.is_barycentric_converted is True
+    t_val, t_scale = rec_tdb.get_time_coordinate()
+    assert t_val == 59100.2548
+    assert t_scale == "BMJD_TDB"
+
+
+def test_phase5_cross_survey_matcher_details_and_evidence_capture():
+    """
+    MATCHER PROVENANCE TEST:
+    Verifies that CrossSurveyMatcher records complete evaluation provenance:
+    astrometric_likelihood_model, search_area, local_density, and candidate posteriors.
+    """
+    matcher = CrossSurveyMatcher(completeness_prior_q=0.92, max_search_radius_arcsec=4.0)
+
+    cand = SurveyCandidate(
+        catalog_name="ATLAS",
+        source_id="ATLAS_SRC_001",
+        ra_deg=150.00002,
+        dec_deg=20.00001,
+        ra_err_arcsec=0.06,
+        dec_err_arcsec=0.06,
+        mag=18.2,
+        filter_band="ATLAS_o",
+    )
+
+    # Supply empirical local density
+    res = matcher.match_source(
+        query_id="TEST_PROV",
+        query_ra=150.0,
+        query_dec=20.0,
+        query_pos_err_arcsec=0.05,
+        candidates=[cand],
+        local_density_sq_arcsec=0.0035,
+    )
+
+    det = res.details
+    assert det["astrometric_likelihood_model"] == "ANISOTROPIC_DIAGONAL_2D_GAUSSIAN"
+    assert det["search_radius_arcsec"] == 4.0
+    assert np.isclose(det["search_area_sq_arcsec"], np.pi * 16.0)
+    assert det["completeness_prior_q"] == 0.92
+    assert det["local_density_sq_arcsec"] == 0.0035
+    assert det["density_estimation_source"] == "EMPIRICAL_LOCAL_ESTIMATE"
+    assert det["evaluated_candidates_count"] == 1
+    assert "all_candidate_posteriors" in det
+
+
+def test_phase5_atlas_broker_idempotency_manifest_and_vaulting(tmp_path: Path, repo_root: Path):
+    """
+    ATLAS BROKER, MANIFEST & VAULTING TEST:
+    Verifies deterministic request key stability, 10-object pilot manifest validity,
+    raw byte vaulting with SHA-256 integrity, and negative difference flux preservation.
+    """
+    p5_dir = repo_root / "experiments" / "phase5_cross_survey_generalization"
+
+    # 1. Manifest assertions
+    pilot_manifest_path = p5_dir / "phase5_atlas_10obj_pilot_manifest.json"
+    full_manifest_path = p5_dir / "phase5_atlas_150obj_request_manifest.json"
+    ledger_path = p5_dir / "phase5_atlas_request_ledger.parquet"
+
+    assert pilot_manifest_path.exists()
+    assert full_manifest_path.exists()
+    assert ledger_path.exists()
+
+    with open(pilot_manifest_path, "r", encoding="utf-8") as f:
+        pilot_data = json.load(f)
+    assert pilot_data["candidates_count"] == 10
+    assert len(pilot_data["requests"]) == 10
+
+    # Verify all 5 taxonomic classes present in 10-object pilot
+    classes = set(r["astraeus_class"] for r in pilot_data["requests"])
+    assert classes == {"SN_Ia", "SN_CC", "TDE", "SLSN", "OTHER_EXTRAGALACTIC"}
+
+    # 2. Idempotency key stability
+    req0 = pilot_data["requests"][0]
+    computed_key = AtlasForcedPhotometryClient.compute_idempotency_key(
+        astraeus_id=req0["astraeus_id"],
+        ra_deg=req0["ra_deg"],
+        dec_deg=req0["dec_deg"],
+        mjd_min=req0["mjd_min"],
+        mjd_max=req0["mjd_max"],
+        use_reduced=req0["use_reduced"],
+    )
+    assert computed_key == req0["idempotency_key"]
+
+    # 3. Raw payload vaulting and non-destructive negative flux parsing
+    sample_atlas_payload = (
+        "###MJD           uJy   duJy  F err chi/N   RA        Dec      x       y     maj   min   phi  apfit   mag    dmag  Color   filt\n"
+        "59750.12345    25.50   3.20  c 0   1.05   226.9220  70.9844 1024.5  512.2  2.10  1.90  45.0  0.02  20.38   0.14  0.000   c\n"
+        "59752.45678   -12.80   4.10  o 0   0.98   226.9221  70.9843 1025.0  513.0  2.15  1.95  44.0  0.01  99.99   9.99  0.000   o\n"
+    ).encode("utf-8")
+
+    vault_dir = tmp_path / "test_vault"
+    payload_path, sha = AtlasForcedPhotometryClient.vault_payload(
+        idempotency_key=computed_key,
+        raw_bytes=sample_atlas_payload,
+        metadata={"target": "SN2022pcj"},
+        vault_root=vault_dir,
+    )
+    assert payload_path.exists()
+    assert sha == hashlib.sha256(sample_atlas_payload).hexdigest()
+
+    # Parse vaulted payload
+    records = AtlasForcedPhotometryClient.parse_vaulted_payload(
+        payload_path=payload_path,
+        astraeus_id=req0["astraeus_id"],
+        reference_ra_deg=req0["ra_deg"],
+        reference_dec_deg=req0["dec_deg"],
+    )
+    assert len(records) == 2
+    # Verify positive flux
+    assert records[0].measured_flux_ujy == 25.50
+    assert records[0].native_passband == "ATLAS_c"
+    # Crucial invariant: verify negative difference flux survived parsing intact!
+    assert records[1].measured_flux_ujy == -12.80
+    assert records[1].native_passband == "ATLAS_o"
+    assert records[1].obs_type == ObservationType.DIFFERENCE_FORCED
+
 

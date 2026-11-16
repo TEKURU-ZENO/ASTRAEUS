@@ -66,8 +66,26 @@ class CanonicalObservationRecord(BaseModel):
 
     @property
     def observation_time(self) -> float:
-        """Returns the best available time coordinate (t_converted_bmjd if computed, else t_native)."""
+        """
+        Returns numeric timestamp: t_converted_bmjd if computed, else t_native.
+        WARNING: This numeric value MUST NOT be assumed to be BMJD(TDB) without inspecting
+        `is_barycentric_converted`. For precision timing, call `get_time_coordinate()`.
+        """
         return self.t_converted_bmjd if self.t_converted_bmjd is not None else self.t_native
+
+    @property
+    def is_barycentric_converted(self) -> bool:
+        """Returns True strictly when verified barycentric conversion to BMJD(TDB) was executed."""
+        return self.t_converted_bmjd is not None
+
+    def get_time_coordinate(self) -> Tuple[float, str]:
+        """
+        Returns the coupled (timestamp, time_scale) tuple.
+        Prevents scientific analysis code from consuming a naked numeric timestamp without its time scale.
+        """
+        if self.t_converted_bmjd is not None:
+            return self.t_converted_bmjd, self.converted_time_scale or "BMJD_TDB"
+        return self.t_native, self.native_time_scale
 
     ra_deg: float = Field(..., ge=0.0, lt=360.0, description="ICRS Right Ascension in degrees.")
     dec_deg: float = Field(..., ge=-90.0, le=90.0, description="ICRS Declination in degrees.")
