@@ -8,7 +8,7 @@ Document Reference: ASTRAEUS-P5-ARCH-002
 """
 
 from enum import Enum
-from typing import Optional
+from typing import Optional, Dict, Any, Tuple
 from datetime import datetime
 from pydantic import BaseModel, Field
 
@@ -63,6 +63,14 @@ class CanonicalObservationRecord(BaseModel):
     )
     t_pub_utc: Optional[datetime] = Field(default=None, description="ISO 8601 UTC timestamp when packet was published.")
     t_err_days: float = Field(default=0.0001, description="Exposure duration / timing uncertainty in days.")
+    time_conversion_provenance: Optional[Dict[str, Any]] = Field(
+        default=None,
+        description="Detailed provenance dictionary for barycentric time conversion (ephemeris, observatory, inputs, status)."
+    )
+    conversion_status: str = Field(
+        default="UNCONVERTED",
+        description="'UNCONVERTED', 'SUCCESS', or 'FAILED'."
+    )
 
     @property
     def observation_time(self) -> float:

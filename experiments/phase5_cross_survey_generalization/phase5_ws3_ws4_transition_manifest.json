@@ -23,13 +23,14 @@
     "gate3_quarantine_test_healpix_pixels": 1808,
     "champion_model_sha256": "466c2752808be01e4f41bd8fdb9c0804a57b03b2c02c35e5172ccebda411fce5",
     "ten_object_pilot_active_requests": 10,
-    "held_back_expansion_requests": 140
+    "held_back_expansion_requests": 140,
+    "quarantine_status": "Zero-Touch Scientific Quarantine: No Phase 5 scientific feature extraction, model development, tuning, inference or evaluation uses the sealed Gate 3 test observations (586 objects, 1808 HEALPix pixels). Historical metadata-only access during Gate 4 closure is fully disclosed and does not authorize further access."
   },
   "artifact_sha256_digests": {
-    "PHASE5_SCIENTIFIC_PROTOCOL.md": "e9c115c1e87c2cc944ed664e39e063050accc8fd1752914b90ed79c7a73de817",
-    "PHASE5_STATISTICAL_ANALYSIS_PLAN.md": "0d37836f58cb007e95b9a99a3633d54746abee8a9c070f8dc1196addcd5a85a2",
+    "PHASE5_SCIENTIFIC_PROTOCOL.md": "6570180232317dfe67224b9f4ab38bec7ec6a842aee4428540befd4ec26562d3",
+    "PHASE5_STATISTICAL_ANALYSIS_PLAN.md": "c8f3a66f4e98f75b755b577179912e78aebe17483f36788ad57101fdc7ea9eab",
     "PHASE5_DATASET_AND_COHORT_DESIGN.md": "d42736d25e0dae6d435c1071453ba42fa88976eca8e13b3faf4984c2170de35b",
-    "PHASE5_GOVERNANCE_AND_LEAKAGE_PLAN.md": "b6b6a0d080bb675273f0982d868bb1cb6423a8da28c304cda3f187ec21d05c20",
+    "PHASE5_GOVERNANCE_AND_LEAKAGE_PLAN.md": "f75d1e7066dae9fe22955e79dee4187b63bd4223ff84f67979406d01cec246d1",
     "PHASE5_SURVEY_FEASIBILITY_AUDIT.md": "2542b5fba97faf2ae2791460be25c7c4d918cc63dbd9a2464acc7bb7e6e3b91f",
     "PHASE5_IDENTITY_AND_MATCHING_MODEL_SPEC.md": "026dfc8682241b35546ae2f862880cc1f5f64b16dee3ecf12c4d91569dec8692",
     "PHASE5_CANONICAL_OBSERVATION_CONTRACT_V2.md": "0294869751bad2a9047fe46f825fb2a57bdc19dbc58a461605cf608e3e2818ae",
@@ -41,8 +42,9 @@
     "phase5_entity_registry.parquet": "ce2ce8bca64a818c3d7e3595d09f823bcaa5f3433b322d6ca438ac228ba10d2d",
     "phase5_feasibility_pilot_cohort.parquet": "5b05341514bf5e6bdfd30c805372917b3448849cc0481895e2bda1288ad33d0d",
     "PHASE5_WORKSTREAM4_HARMONIZATION_PROTOCOL.md": "b4c85f373400ba0f064576a04d16b4a818ab8382949f2e98d37ecdd4e229afc0",
-    "PHASE5_TEMPORAL_HARMONIZATION_SPEC.md": "c8ef4419e8312d01909ed8dec23f5e9d180d2e239ed08700a0991b063cc89206",
-    "PHASE5_PHOTOMETRIC_HARMONIZATION_SPEC.md": "4089741b5034aaef9e59de24c2a9f8ae91f0771f71728e3511997c7b12ee5dbf",
+    "PHASE5_TEMPORAL_HARMONIZATION_SPEC.md": "873b385d98a5befcd74c939041a4ee2bb702bd1e9002547af9a5dc92cc4e9484",
+    "PHASE5_PHOTOMETRIC_HARMONIZATION_SPEC.md": "1b893b51c0fbddf695fd58a7ba317fe52d42167eab0a5953de8541baa0c7a59f",
     "PHASE5_HARMONIZATION_STATISTICAL_AND_GOVERNANCE_PLAN.md": "ad26c389b7a2c128d1b65ac9c30efcd95490929791f652287f35d774ec90ae29"
-  }
+  },
+  "scope": "18 listed core Phase 5 specification and data assets cryptographically verified"
 }

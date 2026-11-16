@@ -1,0 +1,97 @@
+{
+  "workstream": "WS6",
+  "author": "Dev Mehta",
+  "date": "2026-11-16",
+  "conformal_calibration": {
+    "target_coverage": 0.9,
+    "q_hat": 0.812,
+    "empirical_coverage": 0.9540229885057471,
+    "coverage_95_ci": [
+      0.8876698467115925,
+      0.9819772792667908
+    ],
+    "mean_set_size": 1.5402298850574712
+  },
+  "hypothesis_h2_bootstrap": {
+    "mean_delta_macro_f1": -0.049721925389592546,
+    "ci_95_bca": [
+      -0.11710967254737084,
+      0.0
+    ],
+    "p_value": 1.0,
+    "supported": false
+  },
+  "mcnemar_paired_test": {
+    "n_eval": 87,
+    "n_both_correct": 58,
+    "n_phys_correct_raw_wrong": 0,
+    "n_phys_wrong_raw_correct": 3,
+    "n_both_incorrect": 26,
+    "discordant_total": 3,
+    "chi2_statistic": 1.3333333333333333
+  },
+  "hypothesis_h4_shift_detection": {
+    "metric": "Mahalanobis Latent Distance",
+    "misclassification_auroc": 0.9530321046373365,
+    "falsification_threshold": 0.6,
+    "supported": true
+  },
+  "hypothesis_h5_selective_abstention": {
+    "risk_full_coverage": 0.3333333333333333,
+    "risk_half_coverage": 0.06976744186046512,
+    "monotonic_risk_reduction": true,
+    "risk_curve": [
+      {
+        "coverage": 0.1,
+        "risk": 0.0,
+        "n_accepted": 8
+      },
+      {
+        "coverage": 0.2,
+        "risk": 0.0,
+        "n_accepted": 17
+      },
+      {
+        "coverage": 0.30000000000000004,
+        "risk": 0.0,
+        "n_accepted": 26
+      },
+      {
+        "coverage": 0.4,
+        "risk": 0.0,
+        "n_accepted": 34
+      },
+      {
+        "coverage": 0.5,
+        "risk": 0.06976744186046512,
+        "n_accepted": 43
+      },
+      {
+        "coverage": 0.6,
+        "risk": 0.057692307692307696,
+        "n_accepted": 52
+      },
+      {
+        "coverage": 0.7000000000000001,
+        "risk": 0.06666666666666667,
+        "n_accepted": 60
+      },
+      {
+        "coverage": 0.8,
+        "risk": 0.15942028985507245,
+        "n_accepted": 69
+      },
+      {
+        "coverage": 0.9,
+        "risk": 0.2564102564102564,
+        "n_accepted": 78
+      },
+      {
+        "coverage": 1.0,
+        "risk": 0.3333333333333333,
+        "n_accepted": 87
+      }
+    ],
+    "supported": true
+  }
+}

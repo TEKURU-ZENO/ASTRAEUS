@@ -212,10 +212,106 @@ class PhotometricHarmonizer:
     ) -> float:
         """
         Computes analytical magnitude covariance between transformed ATLAS_c and ATLAS_o
-        arising from shared (g, r) measurements:
+        arising from shared (g, r) measurements (partial uncertainty model with independent inputs):
           Cov(c, o) = (0.593 * 0.222) * Var(g) + (0.407 * 0.778) * Var(r)
         """
         return float(0.593 * 0.222 * (g_err_mag ** 2) + 0.407 * 0.778 * (r_err_mag ** 2))
+
+    @classmethod
+    def compute_atlas_full_covariance(
+        cls,
+        g_err_mag: float,
+        r_err_mag: float,
+        cov_gr_mag: float = 0.0,
+        sigma_cal_mag: float = 0.010,
+        sigma_model_c: float = 0.015,
+        sigma_model_o: float = 0.015,
+        cov_model_co: float = 0.0001,
+        dt_mismatch_days: float = 0.0,
+        mag_rate_per_day: float = 0.0,
+    ) -> np.ndarray:
+        """
+        Computes the complete 2x2 covariance matrix in magnitude space between transformed ATLAS_c and ATLAS_o:
+          Sigma_target = J * Sigma_source * J^T + J * Sigma_cal * J^T + Sigma_model + Sigma_temporal
+
+        Where:
+        - J = [[0.593, 0.407], [0.222, 0.778]]
+        - Sigma_source = [[Var(g), Cov(g,r)], [Cov(g,r), Var(r)]]
+        - Sigma_cal is shared zero-point/calibration covariance across input bands
+        - Sigma_model captures transformation model residual variance and covariance
+        - Sigma_temporal accounts for light-curve evolution across intra-epoch time mismatch dt
+        """
+        J = np.array([
+            [0.593, 0.407],
+            [0.222, 0.778]
+        ], dtype=np.float64)
+
+        # 1. Source input measurement covariance
+        sigma_source = np.array([
+            [g_err_mag ** 2, cov_gr_mag],
+            [cov_gr_mag, r_err_mag ** 2]
+        ], dtype=np.float64)
+
+        # Propagate source measurement error
+        sigma_prop = J @ sigma_source @ J.T
+
+        # 2. Shared calibration covariance (zero-point systematic uncertainty)
+        sigma_cal = np.array([
+            [sigma_cal_mag ** 2, sigma_cal_mag ** 2],
+            [sigma_cal_mag ** 2, sigma_cal_mag ** 2]
+        ], dtype=np.float64)
+        sigma_cal_target = J @ sigma_cal @ J.T
+
+        # 3. Model residual covariance
+        sigma_model = np.array([
+            [sigma_model_c ** 2, cov_model_co],
+            [cov_model_co, sigma_model_o ** 2]
+        ], dtype=np.float64)
+
+        # 4. Temporal mismatch variance
+        var_temporal = (mag_rate_per_day * dt_mismatch_days) ** 2
+        sigma_temporal = np.array([
+            [var_temporal, 0.0],
+            [0.0, var_temporal]
+        ], dtype=np.float64)
+
+        # Full combined magnitude covariance
+        sigma_total = sigma_prop + sigma_cal_target + sigma_model + sigma_temporal
+        return sigma_total
+
+    @classmethod
+    def propagate_mag_covariance_to_flux(
+        cls,
+        cov_mag: np.ndarray,
+        flux_c_ujy: float,
+        flux_o_ujy: float,
+    ) -> np.ndarray:
+        """
+        Transforms the 2x2 magnitude covariance matrix into physical flux space (uJy^2)
+        via first-order Taylor expansion (Jacobian transformation):
+          F = F0 * 10^(-0.4 * m)
+          dF/dm = -(ln(10) / 2.5) * F
+          Sigma_flux = D_flux * Sigma_mag * D_flux^T
+        """
+        factor = LN10_OVER_2P5
+        D_flux = np.diag([
+            factor * flux_c_ujy,
+            factor * flux_o_ujy,
+        ])
+        return D_flux @ cov_mag @ D_flux.T
+
+    @classmethod
+    def transformation_condition_number(cls) -> float:
+        """
+        Returns the 2-norm condition number of the ZTF->ATLAS transformation matrix J.
+        kappa(J) = sigma_max / sigma_min ~ 2.85 (well-conditioned inversion).
+        """
+        J = np.array([
+            [0.593, 0.407],
+            [0.222, 0.778]
+        ], dtype=np.float64)
+        s = np.linalg.svd(J, compute_uv=False)
+        return float(s[0] / s[-1])
 
     @classmethod
     def atlas_to_ztf_flux(

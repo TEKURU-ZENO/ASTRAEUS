@@ -54,21 +54,26 @@ To avoid the prevalent pitfalls of machine learning in time-domain astronomy, Ph
   On the identical matched target-domain evaluation split, evaluate:
   - Model A: 27 Physical Features (rise slope, decline rate, color evolution, duration, physical model fits).
   - Model B: Survey-specific raw representation (direct flux vectors, unnormalized temporal bins).
-- **Statistical Metric:**
+- **Primary Estimand:**
   $$\Delta \text{Macro-F1} = \text{Macro-F1}_{\mathrm{phys}} - \text{Macro-F1}_{\mathrm{raw}}$$
-- **Hypothesis Test:**  
-  1. **Object-Level Stratified Bootstrap:** 10,000 paired resamples of the target evaluation set. Computes the empirical distribution of $\Delta \text{Macro-F1}$ and the one-sided empirical $p$-value:
-     $$p = P(\Delta \text{Macro-F1} \le 0 \mid \text{Data})$$
-  2. **Paired McNemar's Test on Classification Correctness:**  
-     Constructs the $2 \times 2$ contingency table across the $N_{\mathrm{eval}}$ matched candidates:
-     - $a$: Both models correct.
-     - $b$: Model A (Physical) correct, Model B (Raw) incorrect.
-     - $c$: Model A incorrect, Model B correct.
-     - $d$: Both models incorrect.
-     Computes the continuity-corrected McNemar statistic:
-     $$\chi^2_{\mathrm{McNemar}} = \frac{(|b - c| - 1)^2}{b + c} \sim \chi^2_1$$
-- **Falsification Threshold:**  
-  Falsified if $\Delta \text{Macro-F1} \le 0$ or if the paired McNemar test fails to reject the null hypothesis of equal performance at the $\alpha = 0.05$ significance level ($p \ge 0.05$).
+- **Primary Statistical Inference (Object-Level Paired Bootstrap):**  
+  Execute $B = 10,000$ paired bootstrap resamples clustered strictly at the **astrophysical object level** ($ASTRAEUS\_ID$) across the evaluation partition.
+  Construct the two-sided 95% Bias-Corrected and Accelerated (BCa) confidence interval:
+  $$\mathrm{CI}_{95}(\Delta \text{Macro-F1}) = [\Delta_{\mathrm{lower}}, \Delta_{\mathrm{upper}}]$$
+  **Directional Confirmation Criteria:** The physical harmonization representation is confirmed superior if the lower confidence bound exceeds the preregistered practical significance threshold:
+  $$\Delta_{\mathrm{lower}} > +0.020$$
+  Falsified if $\Delta_{\mathrm{lower}} \le 0.0$ or if empirical one-sided bootstrap $p = P(\Delta \text{Macro-F1} \le 0 \mid \text{Data}) \ge 0.05$.
+
+- **Complementary Paired Correctness Analysis (McNemar's Test):**  
+  Because Macro-F1 averages class-conditional F1 scores, a paired McNemar test on object classification correctness ($Y_i = \hat{Y}_i$) provides an orthogonal check on instance-level discordant predictions.
+  Construct the $2 \times 2$ contingency table across the $N_{\mathrm{eval}}$ matched candidates:
+  - $a$: Both models correct.
+  - $b$: Model A (Physical) correct, Model B (Raw) incorrect.
+  - $c$: Model A incorrect, Model B correct.
+  - $d$: Both models incorrect.
+  Computes the continuity-corrected McNemar statistic:
+  $$\chi^2_{\mathrm{McNemar}} = \frac{(|b - c| - 1)^2}{b + c} \sim \chi^2_1$$
+  Reported alongside odds ratio $\hat{\psi} = b / c$ and two-sided exact binomial $p$-value when $b + c < 25$. If multiple candidate sub-cohorts are evaluated, family-wise error is controlled via the Benjamini–Hochberg procedure at $\mathrm{FDR} \le 0.05$.
 
 ### 2.3 Testing Hypothesis H3: Survey-Specific Adaptation vs. Generalization
 - **Research Question:** Does domain adaptation improve performance on the target survey without causing catastrophic degradation on other surveys?
@@ -118,23 +123,50 @@ To avoid the prevalent pitfalls of machine learning in time-domain astronomy, Ph
 
 ## 3. Statistical Power & Sample Size Determination
 
-### Minimum Detectable Effect Size:
-To detect a true degradation of $\Delta \text{Macro-F1} = 0.080$ between source and target domains at significance level $\alpha = 0.05$ with statistical power $1 - \beta = 0.80$:
-$$N_{\mathrm{required}} \approx 2 \times \left(\frac{z_{1-\alpha/2} + z_{1-\beta}}{\delta / \sigma}\right)^2 \approx 85 \text{ matched transient events}$$
+### 3.1 McNemar Test Statistical Power Formulation
+For a paired comparison on $N_{\mathrm{eval}}$ independent astrophysical objects, statistical power depends on the total discordant pair proportion $p_{\mathrm{disc}} = p_{01} + p_{10}$ and the odds ratio $\psi = p_{01} / p_{10}$ (where $p_{01}$ represents Model A correct while Model B incorrect, and $p_{10}$ represents Model A incorrect while Model B correct).
 
-### Planned Evaluation Sample Sizes:
+Under two-sided significance level $\alpha = 0.05$ ($z_{1-\alpha/2} = 1.95996$) and target power $1 - \beta = 0.80$ ($z_{1-\beta} = 0.84162$), the required sample size of independent transient objects is given by (Connor 1987; Lachenbruch 1992):
+
+$$N_{\mathrm{required}} \ge \frac{\left( z_{1-\alpha/2} \sqrt{p_{\mathrm{disc}}} + z_{1-\beta} \sqrt{p_{\mathrm{disc}} - (p_{01} - p_{10})^2} \right)^2}{(p_{01} - p_{10})^2}$$
+
+#### Power Sensitivity Table across Discordant Proportions and Effect Sizes:
+| Discordant Proportion ($p_{\mathrm{disc}}$) | Odds Ratio ($\psi = p_{01}/p_{10}$) | $p_{01}$ | $p_{10}$ | $|p_{01} - p_{10}|$ | Required Evaluation Sample ($N_{\mathrm{eval}}$) |
+| :---: | :---: | :---: | :---: | :---: | :---: |
+| **0.30** | **2.0** | 0.200 | 0.100 | 0.100 | **84** |
+| **0.25** | **2.2** | 0.172 | 0.078 | 0.094 | **78** |
+| **0.25** | **2.0** | 0.167 | 0.083 | 0.083 | **101** |
+| **0.20** | **2.5** | 0.143 | 0.057 | 0.086 | **76** |
+| **0.20** | **2.0** | 0.133 | 0.067 | 0.067 | **126** |
+| **0.15** | **3.0** | 0.112 | 0.038 | 0.075 | **75** |
+
+An evaluation cohort size of $N_{\mathrm{eval}} \ge 85$ achieves $> 80\%$ power whenever the discordant rate $p_{\mathrm{disc}} \ge 0.25$ and $\psi \ge 2.1$, or when $p_{\mathrm{disc}} \ge 0.30$ and $\psi \ge 2.0$. If the observed discordant rate is lower ($p_{\mathrm{disc}} < 0.20$), power is preserved by evaluating the object-level paired bootstrap on $\Delta \text{Macro-F1}$ as the primary inferential tool.
+
+### 3.2 Planned Empirical Cohorts:
 - **Primary Matched Cohort (ZTF + ATLAS):** Target $N = 250\text{--}400$ secure matched supernovae.
 - **Secondary Replication Cohort (ZTF + DECam DDF):** Target $N = 50\text{--}100$ matched transients.
 - **High-Power SN Ia & SN CC Classes:** $> 100$ events per class, providing $> 90\%$ power for individual class-level comparisons.
 - **Rare-Class Transparency:** Phase 5 explicitly re-asserts that rare classes (TDEs, SLSNe, FBOTs) have severely limited sample sizes ($N < 10$ across overlapping surveys). In accordance with Gate 4 findings, rare classes are evaluated under descriptive and open-set discovery protocols, not high-power confirmatory tests.
 
-### Cohort Partitioning & Power Governance Rule:
-The preregistered partition concept targets:
-- 50% Unlabeled Target Domain Adaptation
-- 20% Labeled Target Domain Adaptation
-- 30% Sealed Independent Evaluation Split ($N_{\mathrm{eval}} \ge 100$)
+### 3.3 Preregistered Deterministic Cohort Allocation Algorithm:
+To prevent post-hoc data snooping or tuning the partition based on observed model performance, the allocation algorithm is fixed *a priori* before inspecting any evaluation labels:
 
-Under this ratio, achieving $N_{\mathrm{eval}} \ge 100$ requires a total matched population of $N_{\mathrm{total}} \ge 100 / 0.30 \approx 334$ secure matched events. If the empirical matched yield is smaller (e.g. 150–250 events), the 50/20/30 split must NOT be prematurely forced onto an undersized cohort. Instead, the final partition sizes and power analysis will be dynamically calibrated and preregistered post-retrieval, prioritizing the statistical power of the sealed evaluation cohort ($N_{\mathrm{eval}} \ge 85$). All resampling and hypothesis tests are strictly conducted at the **astrophysical object level**, never at the photometric-epoch level.
+1. **Stratification & Deterministic Hashing:**
+   Candidates are stratified by verified physical class ($SN\_Ia$, $SN\_CC$, $TDE$, $SLSN$, $OTHER$). Within each class stratum, candidate assignment is governed by deterministic SHA-256 modular hashing on `astraeus_id`:
+   $$h_i = \operatorname{int}(\operatorname{SHA256}(\text{astraeus\_id})[:8], 16) \pmod{100}$$
+
+2. **Allocation Rules:**
+   - **Regime A ($N_{\mathrm{total}} \ge 334$):**
+     - $0 \le h_i < 50$: Unlabeled Target Domain Adaptation (50%)
+     - $50 \le h_i < 70$: Labeled Target Domain Adaptation (20%)
+     - $70 \le h_i < 100$: Sealed Independent Evaluation Cohort (30%, yielding $N_{\mathrm{eval}} \ge 100$).
+   - **Regime B ($N_{\mathrm{total}} < 334$):**
+     To guarantee adequate statistical power for the evaluation endpoint, allocate:
+     $$f_{\mathrm{eval}} = \max\left(0.30, \frac{\min(85, N_{\mathrm{total}})}{N_{\mathrm{total}}}\right)$$
+     The evaluation threshold is $h_{\mathrm{eval}} = \lfloor 100 \times (1.0 - f_{\mathrm{eval}}) \rfloor$.
+     The remaining fraction $(1.0 - f_{\mathrm{eval}})$ is split 60/40 between unlabeled adaptation and labeled adaptation.
+
+All resampling, confidence interval estimation, and hypothesis tests are conducted strictly at the **astrophysical object level** ($ASTRAEUS\_ID$), never at the photometric-epoch level.
 
 ---
 

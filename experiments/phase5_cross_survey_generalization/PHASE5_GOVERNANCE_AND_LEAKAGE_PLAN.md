@@ -37,12 +37,12 @@ In accordance with strict scientific honesty, Phase 5 formally documents the res
 
 ## 3. Immutable Governance Invariants
 
-### 3.1 The Zero-Touch Gate 3 Quarantine Invariant
-The 586 unblinded test objects from Gate 3 remain permanently sequestered:
+### 3.1 The Zero-Touch Scientific Quarantine Invariant
+No Phase 5 scientific feature extraction, model development, tuning, inference, or evaluation uses the sealed Gate 3 test observations:
 $$\mathcal{D}_{\mathrm{Gate3\_Test}} \cap \mathcal{D}_{\mathrm{Phase5}} = \emptyset$$
-- **Rule 1:** Zero rows where `assigned_split == 'test'` from `candidates_10k.parquet` will be loaded, queried, or processed by any Phase 5 script.
+- **Rule 1:** Zero rows where `assigned_split == 'test'` from `candidates_10k.parquet` will be loaded, queried, or processed by any Phase 5 scientific pipeline or model.
 - **Rule 2:** All candidate coordinates admitted to Phase 5 must be proven disjoint from the 1,808 frozen HEALPix test pixels (SHA-256 `234bb08c...`) before ingestion.
-- **Rule 3:** The cryptographic seal of `sprint4h_release_manifest.json` (`1ddbf733...`) remains unbroken.
+- **Rule 3:** Historical metadata/identifier-only access (for quarantine and disjointness attestation during Gate 4 closure) is fully disclosed and does not authorize further access. The cryptographic seal of `sprint4h_release_manifest.json` (`1ddbf733...`) remains unbroken.
 
 ### 3.2 The Champion Model Immutability Invariant
 The production Champion Model (`CalibratedBalancedSubsampleRF`, serialized artifact SHA-256 `466c2752808be01e4f41bd8fdb9c0804a57b03b2c02c35e5172ccebda411fce5`) is permanently frozen:

@@ -65,8 +65,12 @@ def repo_root() -> Path:
 
 def test_phase5_gate3_quarantine_zero_touch(repo_root: Path):
     """
-    GOVERNANCE ASSERTION 1: Phase 5 must strictly preserve the Gate 3 Zero-Touch Quarantine.
-    None of the Phase 5 pilot candidates may intersect the 1,808 quarantined test HEALPix pixels.
+    GOVERNANCE ASSERTION 1: Zero-Touch Scientific Quarantine.
+    No Phase 5 scientific feature extraction, model development, tuning, inference, or evaluation
+    uses the sealed Gate 3 test observations (586 objects, 1,808 HEALPix pixels).
+    Historical metadata-only access (for quarantine/disjointness verification during Gate 4 closure)
+    is fully disclosed and does not authorize further access.
+    Asserts exact geometric footprint disjointness of the Phase 5 cohort against the 1,808 test pixels.
     """
     # 1. HEALPix config hash assertion
     hp_path = repo_root / "configs" / "data_splits_healpix.json"

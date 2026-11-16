@@ -1,0 +1,38 @@
+{
+  "workstream": "WS5",
+  "author": "Dev Mehta",
+  "date": "2026-11-16",
+  "champion_model_sha256": "466c2752808be01e4f41bd8fdb9c0804a57b03b2c02c35e5172ccebda411fce5",
+  "cohort_size": 150,
+  "eval_size": 87,
+  "unlabeled_adapt_size": 38,
+  "labeled_adapt_size": 25,
+  "experiments": {
+    "exp5a_zero_shot": {
+      "source_ztf_macro_f1": 0.19986075655604546,
+      "source_ztf_accuracy": 0.6781609195402298,
+      "target_atlas_macro_f1": 0.17484909456740444,
+      "target_atlas_accuracy": 0.6666666666666666,
+      "target_decam_macro_f1": 0.18928833455612618,
+      "target_decam_accuracy": 0.6781609195402298
+    },
+    "exp5b_physical_vs_raw": {
+      "physical_macro_f1": 0.17484909456740444,
+      "raw_macro_f1": 0.21564168020422372,
+      "delta_macro_f1": -0.040792585636819284,
+      "hypothesis_h2_supported": false
+    },
+    "exp5c_domain_adaptation": {
+      "zero_shot_baseline": 0.17484909456740444,
+      "feature_standardization": 0.18928833455612618,
+      "coral_alignment": 0.19692028985507246,
+      "supervised_finetuning": 0.15833333333333333
+    },
+    "exp5d_loso_cross_survey": {
+      "baseline_decam_macro_f1": 0.18928833455612618,
+      "ztf_to_atlas_to_decam_macro_f1": 0.15944055944055943,
+      "retention_ratio": 0.8423158237111725,
+      "hypothesis_h3_supported": false
+    }
+  }
+}
