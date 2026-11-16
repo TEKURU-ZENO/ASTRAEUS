@@ -3,7 +3,7 @@
 
 **Document Identifier:** `ASTRAEUS-ROADMAP-001`  
 **Classification:** Strategic Planning & Milestone Verification  
-**Version:** 2.2.1 (Formal Scientific Sign-Off Post-Independent Audit v2.2.1)  
+**Version:** 2.3.0 (Post-Gate 4 Scientific Reconciliation: Phase 5 Realigned to Independent Cross-Survey Generalization)  
 
 ---
 
@@ -13,9 +13,9 @@
 Months 1-2    Months 3-4     Months 5-6     Months 7-8     Months 9-10    Months 11-12   Months 13-14   Month 15
 ┌───────────┐ ┌────────────┐ ┌────────────┐ ┌────────────┐ ┌────────────┐ ┌────────────┐ ┌────────────┐ ┌────────────┐
 │ Phase 1:  │ │ Phase 2:   │ │ Phase 3:   │ │ Phase 4:   │ │ Phase 5:   │ │ Phase 6:   │ │ Phase 7:   │ │ Phase 8:   │
-│ Scientific│ │ Multimodal │ │ Knowledge  │ │ Multi-Agent│ │ Differenti-│ │ Experiment │ │ Full Closed│ │ Open-Source│
-│ Data      │ │ Latent     │ │ Fabric &   │ │ Adversarial│ │ able Cosmic│ │ Intelligence│ │ Loop       │ │ Research   │
-│ Foundation│ │ Foundation │ │ Graph RAG  │ │ Reasoning  │ │ Surrogates │ │ & RL Sched │ │ Integration│ │ Ecosystem  │
+│ Scientific│ │ Multimodal │ │ Knowledge  │ │ Multi-Agent│ │ Cross-Survey│ │ Computat.  │ │ Full Closed│ │ Open-Source│
+│ Data      │ │ Latent     │ │ Fabric &   │ │ Adversarial│ │ Generaliz- │ │ Universe & │ │ Loop       │ │ Research   │
+│ Foundation│ │ Foundation │ │ Graph RAG  │ │ Reasoning  │ │ ation & Rob│ │ RL Sched    │ │ Integration│ │ Ecosystem  │
 └───────────┘ └────────────┘ └────────────┘ └────────────┘ └────────────┘ └────────────┘ └────────────┘ └────────────┘
 ```
 
@@ -29,8 +29,8 @@ Months 1-2    Months 3-4     Months 5-6     Months 7-8     Months 9-10    Months
 | **Phase 2 (M3-4)** | **Multimodal Foundations** | Cross-modal contrastive encoders, masked autoencoders, missing-modality masks, conformal quantile heads. | Cross-survey zero-shot evaluation exceeds unimodal baselines by $\ge 15\%$ on property estimation ($R^2$ / CRPS). |
 | **Phase 3 (M5-6)** | **Knowledge Fabric** | Neo4j property graph, Qdrant vector index, NASA ADS literature ingestion, citation verification engine. | $\ge 90\%$ accuracy on expert-curated citation verification; 0% hallucinated bibcodes. |
 | **Phase 4 (M7-8)** | **Multi-Agent Reasoning** | LangGraph orchestration engine, 24 specialized agents, isolated sandboxes, REGROUND debate protocol. | REGROUND verification rejects 100% of injected false premises and instrumental artifacts in validation tests. |
-| **Phase 5 (M9-10)** | **Computational Universe** | JAX `pmwd` integration, PINO hydrodynamic surrogates trained on CAMELS and IllustrisTNG. | Neural surrogate achieves $>10^3\times$ speedup over full hydrodynamics with $<3\%$ relative field error. |
-| **Phase 6 (M11-12)** | **Experimental Intelligence** | Constrained PPO telescope scheduler, Bayesian optimal experimental design (BED) follow-up planner. | RL scheduler delivers $\ge 20\%$ higher scientific Expected Information Gain over greedy dispatch under weather noise. |
+| **Phase 5 (M9-10)** | **Cross-Survey Generalization & Domain Robustness** | Photometric/temporal harmonization, ZTF-ATLAS-DECam-PS1 benchmark, zero-shot & domain adaptation experiments, shift & uncertainty validation. *(Computational Universe deferred to Phase 6)*. | Rigorous falsification of H1–H5; quantified negative transfer & selective prediction operating envelope across $\ge 2$ independent external survey domains; zero-leakage sealed audit. |
+| **Phase 6 (M11-12)** | **Computational Universe & Experimental Intelligence** | JAX `pmwd` integration, PINO hydrodynamic surrogates trained on CAMELS and IllustrisTNG; Constrained PPO telescope scheduler. | Neural surrogate achieves $>10^3\times$ speedup over full hydrodynamics with $<3\%$ relative field error; RL scheduler delivers $\ge 20\%$ higher EIG. |
 | **Phase 7 (M13-14)** | **Closed-Loop Integration** | End-to-end integration: alert ingestion $\to$ triage $\to$ debate $\to$ simulation $\to$ follow-up planning. | Automated end-to-end processing of simulated Rubin/GW alert bursts without manual pipeline intervention. |
 | **Phase 8 (M15)** | **Community Release** | Open-source release under Apache-2.0, technical documentation, ASTRAEUS-Bench public leaderboard. | Reproducible installation runbooks, open-weight model weights, complete scientific benchmark suite. |
 
@@ -96,3 +96,30 @@ Months 1-2    Months 3-4     Months 5-6     Months 7-8     Months 9-10    Months
 ### Compute Strategy:
 - **Local Prototyping:** RTX 5050 Laptop GPU (8 GB VRAM) allocated for small-batch profiling, single-curve tokenizers, unit test execution, and pipeline validation.
 - **Pretraining at Scale:** Survey-scale masked autoencoding across $\ge 10^6$ light curves allocated to cloud/institutional GPU clusters (A100/H100 nodes).
+
+---
+
+## 5. Phase 5 Master Research Programme (M9–10)
+
+**Theme:** Independent Cross-Survey Generalization and Domain Robustness  
+**Lead Investigator:** Dev Mehta  
+**Governance Invariant:** Frozen Gate 4 Champion Model (`466c2752808b...`), Quarantined Gate 3 Spatial Test Set (586 objects), Zero Leakage.  
+
+### Core Scientific Objective:
+Determine whether ASTRAEUS preserves astrophysical information, physical parameter estimates, classification performance, and uncertainty calibration when observations originate from genuinely independent survey instruments and processing pipelines without relying on survey-specific observational artifacts.
+
+### Multi-Survey Strategy:
+1. **ZTF (Source Domain):** Reference calibration system, frozen training and validation partitions.
+2. **ATLAS (Primary External Domain):** Forced photometry across all-sky positions; primary external light-curve source for temporal overlap and Cadence/Filter shift analysis.
+3. **DECam DDF (Secondary External Domain):** Deep Drilling Fields (e.g. COSMOS, ECDFS); independent replication for high-cadence and faint transient experiments.
+4. **Pan-STARRS1 (Complementary Domain):** Medium Deep fields, 3π archival reference, host-galaxy context, and deep multi-band stack photometry.
+5. **Rubin LSST (Prospective Extension):** Public alert interface adapter; full inclusion conditional on data rights and processed product access.
+
+### Sequential Workstreams:
+- **Workstream 1:** Scientific Preflight and Protocol Freeze (`PHASE5_SCIENTIFIC_PROTOCOL.md`)
+- **Workstream 2:** Survey Reconnaissance and Feasibility Audit (`PHASE5_SURVEY_FEASIBILITY_AUDIT.md`)
+- **Workstream 3:** Cross-Survey Identity and Provenance Resolution (`PHASE5_DATASET_AND_COHORT_DESIGN.md`)
+- **Workstream 4:** Photometric and Temporal Harmonization Framework
+- **Workstream 5:** Zero-Shot and Domain-Adaptation Experiments
+- **Workstream 6:** Uncertainty, Robustness, and Scientific Validation (`PHASE5_STATISTICAL_ANALYSIS_PLAN.md`)
+- **Workstream 7:** Independent Audit, Reconciliation, and Manuscript Release
