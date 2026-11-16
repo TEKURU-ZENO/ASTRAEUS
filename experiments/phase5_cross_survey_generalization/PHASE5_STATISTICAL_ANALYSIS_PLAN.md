@@ -128,6 +128,14 @@ $$N_{\mathrm{required}} \approx 2 \times \left(\frac{z_{1-\alpha/2} + z_{1-\beta
 - **High-Power SN Ia & SN CC Classes:** $> 100$ events per class, providing $> 90\%$ power for individual class-level comparisons.
 - **Rare-Class Transparency:** Phase 5 explicitly re-asserts that rare classes (TDEs, SLSNe, FBOTs) have severely limited sample sizes ($N < 10$ across overlapping surveys). In accordance with Gate 4 findings, rare classes are evaluated under descriptive and open-set discovery protocols, not high-power confirmatory tests.
 
+### Cohort Partitioning & Power Governance Rule:
+The preregistered partition concept targets:
+- 50% Unlabeled Target Domain Adaptation
+- 20% Labeled Target Domain Adaptation
+- 30% Sealed Independent Evaluation Split ($N_{\mathrm{eval}} \ge 100$)
+
+Under this ratio, achieving $N_{\mathrm{eval}} \ge 100$ requires a total matched population of $N_{\mathrm{total}} \ge 100 / 0.30 \approx 334$ secure matched events. If the empirical matched yield is smaller (e.g. 150–250 events), the 50/20/30 split must NOT be prematurely forced onto an undersized cohort. Instead, the final partition sizes and power analysis will be dynamically calibrated and preregistered post-retrieval, prioritizing the statistical power of the sealed evaluation cohort ($N_{\mathrm{eval}} \ge 85$). All resampling and hypothesis tests are strictly conducted at the **astrophysical object level**, never at the photometric-epoch level.
+
 ---
 
 ## 4. Statistical Analysis Certification

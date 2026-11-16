@@ -24,8 +24,8 @@ This document establishes:
 ## 2. Canonical Transient Identity & Provenance Registry
 
 Every astrophysical event in Phase 5 is assigned a unique, immutable internal identifier:
-$$\text{ASTRAEUS\_ID} = \text{ASTRAEUS-P5-YYMMDD-XXXXXXXX}$$
-where `XXXXXXXX` is a deterministic 8-character hex hash computed from canonical equatorial coordinates (J2000) and discovery MJD.
+$$\text{ASTRAEUS\_ID} = \text{ASTRAEUS-EVT-XXXXXXXX}$$
+from the durable `StableEntityRegistry`, decoupling permanent identity from measurement coordinates. Spatial coordinate hashes (`ASTRAEUS-P5-YYMMDD-XXXXXXXX`) serve strictly as non-unique spatial lookup indexing keys.
 
 ### Cross-Survey Identity Record Structure:
 Each candidate record maintains a complete identity mapping table:
@@ -129,6 +129,8 @@ Within Population 1, external target-domain transients are partitioned into thre
    - **PERMANENTLY SEALED & UNTOUCHED.**
    - Must never participate in feature selection, standardization fitting, domain alignment, hyperparameter search, or threshold tuning.
    - Evaluated strictly once at final closure review.
+
+*Note on Sample-Size & Partition Strategy:* The 50/20/30 split and $N_{\mathrm{eval}} \ge 100$ requirement is a design target assuming $N \ge 100 / 0.30 \approx 334$ secure matched events. If the empirical matched yield is smaller (e.g. 150–250 events), this split will not be prematurely forced. Instead, the final partition sizes and power analysis will be dynamically calibrated post-retrieval, prioritizing the statistical power of the sealed evaluation cohort ($N_{\mathrm{eval}} \ge 85$). All resampling and hypothesis tests are strictly conducted at the **astrophysical object level**, never at the photometric-epoch level.
 
 ---
 
