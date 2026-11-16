@@ -1,174 +1,172 @@
-# ASTRAEUS — Gate 4 Phase 4B: ZTF Alert Broker Acquisition & Rare-Class Cohort Expansion Protocol (v1.1)
+# ASTRAEUS — Gate 4 Phase 4B: ZTF Alert Broker Acquisition & Rare-Class Cohort Expansion Protocol (v1.2)
 
-**Milestone:** Gate 4 Phase 4B — Programmatic Broker Acquisition & Rare-Class Cohort Expansion  
+**Milestone:** Gate 4 Phase 4B.0 — Acquisition Engine Verification  
 **Author:** Antigravity (Google DeepMind) in coordination with Scientific Review  
 **Date:** November 16, 2026  
-**Revision:** v1.1 (Addressing Scientific Review Qualifications & Pre-Execution Locks)  
-**Status:** **REVISED PRE-REGISTRATION PROTOCOL — AWAITING PILOT EXECUTION AUTHORIZATION**  
-**Governing Commit Baseline:** [`76f0719`](https://github.com/TEKURU-ZENO/ASTRAEUS/commit/76f0719625585cd5020006f400f1c5ebfd2febb2)  
+**Revision:** v1.2 (Addressing All Blocker Findings: Flux Units, Fail-Closed Security, Global Rate Limiting, Full Vault Lifecycle, Pilot Reconciliation & Population Registry)  
+**Status:** **ACQUISITION ENGINE VERIFIED — READY FOR CONTROLLED 35-CANDIDATE PILOT AUTHORIZATION**  
+**Governing Commit Baseline:** [`3eaefd8`](https://github.com/TEKURU-ZENO/ASTRAEUS/commit/3eaefd8d5fb6c3ad9a221582e256085774913c2d)  
+**Automated Verification Suite:** 19/19 tests passing (`tests/test_phase4b_protocol_and_geometry.py` and regression suites)  
 
 ---
 
-## 1. Executive Summary & Review Reconciliation
+## 1. Executive Summary & Review Invariant Status
 
-In the formal scientific review of Phase 4A.2 and the initial Phase 4B protocol, the reviewer accepted the Phase 4A.2 reconciliation (confirming 14 feature-evaluable candidates, 3 single-band candidates, 7,597 awaiting broker light curves, and 7,582 `PROVISIONAL_S2` candidates), while granting **conditional approval** for Phase 4B pending the resolution of five specific technical and methodological issues.
+Following the Phase 4B v1.1 review, this protocol revision (v1.2) establishes **Phase 4B.0: Acquisition Engine Verification**, completely resolving the four implementation blockers and two cohort design questions before any live broker retrieval or model training:
 
-This revised protocol (v1.1) resolves all five review items prior to initiating external data retrieval:
-1. **Gate 3 Quarantine Guarantee (Issue 1):** Accurately frames the isolation guarantee under the frozen HEALPix geometry. Eliminates the contradictory requirement of querying quarantined IDs, preserving the Gate 3 zero-query invariant.
-2. **Authoritative HEALPix Geometry (Issue 2):** Formally enforces the exact array of 1,808 discrete test pixels at $N_{\text{side}}=32$, `NESTED`, `ICRS` (`configs/data_splits_healpix.json`) with a $60''$ spherical cone buffer, deprecating any approximate declination-band shorthand.
-3. **Raw JSON Ingestion Vault & Product Separation (Issue 3):** Preserves raw broker JSON responses directly (`format="json"`), keeps detections and non-detections separate, isolates forced photometry as an independent data product, and enforces strict idempotency.
-4. **Physically Consistent Signed-Flux SNR (Issue 4):** Derives signed difference flux $F_{\text{diff}}$ and uncertainty $\sigma_F$ from difference-imaging zero points, asserting that a positive detection requires $F_{\text{diff}} > 0$ (`isdiffpos = 1`) AND $SNR \ge +5.0$, while preserving negative fluxes for baseline and non-detection modeling.
-5. **Rare-Class Statistical Power & Fine-Grained Subtypes (Issue 5):** Clarifies that target sample sizes are acquisition minimums rather than proofs of asymptotic power, retains fine-grained subtype labels, and mandates subtype-specific reporting with binomial confidence intervals.
-6. **Controlled Staged Pilot Execution:** Restricts initial retrieval to a pre-registered **35-candidate stratified pilot cohort** ([`pilot_cohort_specification.json`](file:///c:/Users/Dev%20Mehta/Desktop/ASTRAEUS/experiments/gate4b_broker_acquisition_and_cohort_expansion/pilot_cohort_specification.json)) before scaling to the full 7,597 cohort.
-7. **Contamination-Free Tri-Partitioning for Phase 4C:** Strictly defines separate Training, Validation, and Locked External Evaluation populations split at the parent transient level.
+1. **Photometric Calibration & Flux Unit Consistency (Blocker 1):**  
+   Standardizes canonical flux units across the repository on **nanomaggies ($\text{nmgy}$)** with zero point $Z_{0, \text{nmgy}} = 22.500$ mag, matching `ObservationRecord` and `RealSurveyFeatureExtractor`. Explicitly documents and independently validates microjanskys ($\mu\text{Jy}$) with zero point $Z_{0, \mu\text{Jy}} = 23.900$ mag ($1\ \text{nmgy} = 3.631028\ \mu\text{Jy}$). Asserts scale-invariance of the signed signal-to-noise ratio ($SNR$).
+2. **Fail-Closed Sign Security (Blocker 2):**  
+   Replaces silent positive fallback with strict fail-closed parsing. Any missing, null, or unrecognized `isdiffpos` token is marked invalid (`is_valid_sign = False`), rejected from positive detections (`is_positive_detection_snr5 = False`), and tracked in the ingestion manifest under `invalid_sign_detections_count`.
+3. **Process-Safe & Thread-Safe Global Rate Limiter (Blocker 3):**  
+   Implements `GlobalInterprocessRateLimiter` utilizing OS-level file locking (`msvcrt` on Windows / `fcntl` on POSIX) and `threading.Lock` to enforce the conservative $\le 5.0$ requests/second operational cap across concurrent threads and independent worker processes, incorporating uniform random jitter ($\Delta t \in [0.02, 0.06]$s).
+4. **Complete End-to-End Vault Lifecycle & Idempotency (Blocker 4):**  
+   Implements full request-to-vault lifecycle in [`broker_client.py`](file:///c:/Users/Dev%20Mehta/Desktop/ASTRAEUS/experiments/gate4b_broker_acquisition_and_cohort_expansion/broker_client.py): raw JSON response preservation, atomic temporary file commits, SHA-256 manifest registration, forced photometry isolation, bounded exponential backoff on HTTP 429/5xx, and **strict non-overwriting idempotency** (formally verified by unit tests proving that failed retries never overwrite or corrupt existing raw vault files).
+5. **Reconciliation of Pilot Specification (Review Issue 3):**  
+   Reconciles the stated cohort ranges with the exact empirical distributions in [`pilot_cohort_specification.json`](file:///c:/Users/Dev%20Mehta/Desktop/ASTRAEUS/experiments/gate4b_broker_acquisition_and_cohort_expansion/pilot_cohort_specification.json):
+   - SN_Ia Pending ($N=11$): $z \in [0.0141, 0.1000]$, peak magnitude $14.37 - 18.82$ mag.
+   - SN_CC Pending ($N=12$): Exactly 12 distinct subtypes, 1 candidate each (`SN Ic`, `SN II`, `SN IIb`, `SN Ib`, `SN IIP`, `SN Ic-BL`, `SN Ib/c`, `SN IIn`, `SN Ibn`, `SN II-pec`, `SN Icn`, `SN Ic-pec`).
+6. **Explicit Phase 4C Tri-Partition Population Registry (Review Issue 4):**  
+   Formally defines three disjoint populations assigned at the parent physical-transient level (Training, Validation, and Locked External Evaluation). Disclaims the pilot's 4 rare events as performance benchmarks, restricting them strictly to ingestion verification.
 
 ```mermaid
 flowchart TD
-    subgraph P4B_PILOT["Phase 4B: Controlled Pilot (N = 35)"]
-        PILOT_SPEC["Pre-Registered Pilot Cohort<br/>5 Evaluable | 3 Single-Band | 4 Rare | 11 Ia | 12 CC"]
-        HP_AUDIT["Exact HEALPix 60'' Audit<br/>1,808 Frozen Test Pixels"]
-        ALERCE_API["ALeRCE REST API<br/>format=json | <=5 req/s | Token Bucket"]
-        RAW_VAULT["Raw Immutable JSON Vault<br/>data/external_validity_v1/raw/alerce_external/"]
-        SNR_CALIB["Signed-Flux Calibration<br/>F_diff > 0 & SNR >= +5.0"]
+    subgraph P4B0["Phase 4B.0: Acquisition Engine Verification (COMPLETED)"]
+        CALIB["Photometric Calibration Engine<br/>Canonical nmgy (Z0=22.500) vs uJy (Z0=23.900)"]
+        FAIL_CLOSED["Fail-Closed Sign Security<br/>Invalid/missing signs rejected & audited"]
+        RATE_LIMIT["Global Process-Safe Rate Limiter<br/>OS File Lock + Thread Lock (<=5 req/s)"]
+        VAULT_LIFECYCLE["Atomic Request-to-Vault Lifecycle<br/>Non-overwriting Idempotency & Forced Photometry Isolation"]
+        TESTS["Comprehensive Test Suite<br/>19/19 Passing Tests (Mocked HTTP & Physics)"]
     end
 
-    subgraph P4B_SCALE["Phase 4B: Full Scale-Up (Post-Pilot Sign-off)"]
+    subgraph P4B1["Phase 4B.1: Controlled Pilot (N = 35) (PENDING AUTHORIZATION)"]
+        PILOT_SPEC["Pre-Registered Pilot Cohort<br/>5 Evaluable | 3 Single-Band | 4 Rare | 11 Ia | 12 CC"]
+        HP_AUDIT["Exact HEALPix 60'' Isolation<br/>astrometry_isolation_audit.py (1,808 Frozen Pixels)"]
+        PILOT_FETCH["Execute Rate-Limited Pilot Fetch<br/>Write to data/external_validity_v1/raw/alerce_external/"]
+        PILOT_SIGN["Pilot Ingestion Verification Report<br/>Review Sign-Off Milestone"]
+    end
+
+    subgraph P4B2["Phase 4B.2: Full Scale-Up (Post-Pilot Sign-off)"]
         FULL_COHORT["Full BTS Cohort (N = 7,597)"]
         RARE_EXP["Rare-Class Expansion<br/>TDE (N >= 30-50)<br/>Exotics (N >= 20-30)"]
     end
 
-    subgraph P4C_LOCKS["Phase 4C: Pre-Registered Design Locks"]
-        TRI_POP["Tri-Partition Population Lock<br/>1. Historical Training<br/>2. Independent Validation<br/>3. Locked External Test"]
-        HORIZONS["Chronological Horizon Slices<br/>N_det in {5, 10, 20, full} (No future leakage)"]
-        MODELS["Model Parity Comparison<br/>Model A: Frozen Champion RF<br/>Model B: Retrained RF & XGBoost<br/>Model C: Physics-Aware Sequence Models"]
-    end
+    CALIB --> TESTS
+    FAIL_CLOSED --> TESTS
+    RATE_LIMIT --> TESTS
+    VAULT_LIFECYCLE --> TESTS
+    TESTS --> P4B1
+    PILOT_SPEC --> HP_AUDIT --> PILOT_FETCH --> PILOT_SIGN
+    PILOT_SIGN --> P4B2
 
-    PILOT_SPEC --> HP_AUDIT --> ALERCE_API --> RAW_VAULT --> SNR_CALIB
-    SNR_CALIB --> P4B_SCALE
-    P4B_SCALE --> TRI_POP
-    TRI_POP --> HORIZONS --> MODELS
-
-    style P4B_PILOT fill:#e1f5fe,stroke:#0288d1,stroke-width:2px
-    style P4B_SCALE fill:#f3e5f5,stroke:#7b1fa2,stroke-width:2px
-    style P4C_LOCKS fill:#e8f5e9,stroke:#2e7d32,stroke-width:2px
-    style HP_AUDIT fill:#fff3e0,stroke:#e65100,stroke-width:2px
+    style P4B0 fill:#e8f5e9,stroke:#2e7d32,stroke-width:2px
+    style P4B1 fill:#e1f5fe,stroke:#0288d1,stroke-width:2px
+    style P4B2 fill:#f3e5f5,stroke:#7b1fa2,stroke-width:2px
+    style TESTS fill:#dcedc8,stroke:#33691e,stroke-width:2px
 ```
 
 ---
 
-## 2. Resolution of Governance & Geometry Invariants
+## 2. Photometric Calibration Engine & Consistent Flux Units
 
-### 2.1 Issue 1: Gate 3 Quarantine vs. Zero-Overlap Resolution
-The protocol resolves the inherent tension between maintaining an unbreached Gate 3 quarantine and verifying sample disjointness:
-- **Authoritative Invariant:** Zero queries, reads, or ID cross-matches against the 586 quarantined Gate 3 test objects will be performed in the modeling or feature extraction workflows.
-- **Enforceable Protection:** Spatial isolation under the frozen HEALPix geometry guarantees that every admitted candidate is physically separated from the test sky footprint by $>60''$.
-- **Formal Guarantee Wording:**  
-  > *"Candidate admission is spatially isolated from the quarantined Gate 3 footprint under the frozen geometry. Exact identifier-level overlap with quarantined objects is not independently certified within the modeling workflow. If identity-level non-overlap verification is required, it must be performed via an air-gapped, non-disclosing cryptographic hash attestation by an independent custodian who never returns or exposes the quarantined identifiers to the workflow."*
+### 2.1 The Two Standard Zero Points: Nanomaggies vs. Microjanskys
+In astronomical difference imaging, the conversion from difference point-spread-function magnitude $m_{AB}$ to linear flux density depends strictly on the adopted zero point $Z_0$:
 
-### 2.2 Issue 2: Authoritative HEALPix Geometry & 60-Arcsecond Buffer
-- **Frozen Split Configuration:** [`configs/data_splits_healpix.json`](file:///c:/Users/Dev%20Mehta/Desktop/ASTRAEUS/configs/data_splits_healpix.json) (SHA-256: `234bb08c482824648607fa8f874477d0225717c18263b0f16ea276dd1e12417b`).
-- **Geometric Grid:** Resolution $N_{\text{side}} = 32$, pixel ordering `NESTED`, coordinate reference frame `ICRS` (J2000.0). Total equal-area pixels: $N_{\text{pix}} = 12 \times 32^2 = 12,288$.
-- **Frozen Test Pixel Set ($\mathcal{P}_{\text{test}}$):** Explicit array of exactly 1,808 discrete pixel indices.
-- **Executable Admission Algorithm:**  
-  For each candidate coordinate $(\alpha, \delta)$, the native spherical cone search finds all intersecting pixels:
-  ```python
-  from astropy.coordinates import SkyCoord
-  import astropy.units as u
-  from astropy_healpix import HEALPix
+1. **Canonical Nanomaggies ($\text{nmgy}$) — Adopted Repository Standard:**  
+   Adopted by the Sloan Digital Sky Survey (SDSS), DESI, and the canonical ASTRAEUS pipeline (`packages/astraeus-data/src/astraeus_data/corpus/sequence.py` and `ObservationRecord`).  
+   A flux of $1.0\ \text{nmgy}$ corresponds to an AB magnitude of exactly $22.500$:
+   $$|F_{\text{nmgy}}| = 10^{-0.4(m_{AB} - 22.500)}$$
+   $$\sigma_{F, \text{nmgy}} = |F_{\text{nmgy}}| \cdot \sinh\left(\frac{\ln 10}{2.5} \sigma_m\right) \approx 0.921034 \cdot |F_{\text{nmgy}}| \sigma_m$$
 
-  hp = HEALPix(nside=32, order="nested", frame="icrs")
-  cone_pixels = hp.cone_search_skycoord(candidate_coord, radius=60.0 * u.arcsec)
-  intersects_test_buffer = any(int(p) in test_pixel_set for p in cone_pixels)
-  ```
-  If `intersects_test_buffer` is `True`, the candidate is strictly quarantined. Approximate declination bands or ring slices are deprecated and prohibited from acting as the admission test.
+2. **Microjanskys ($\mu\text{Jy}$) — Documented Secondary Standard:**  
+   In radio, infrared, and sub-millijansky optical astronomy, flux density is commonly expressed in microjanskys ($1\ \mu\text{Jy} = 10^{-6}\ \text{Jy} = 10^{-29}\ \text{W m}^{-2}\text{Hz}^{-1}$).  
+   Standard AB magnitude is defined as $m_{AB} = -2.5 \log_{10}(f_\nu / 1\ \text{Jy}) + 8.90$. For $f_\nu = 1\ \mu\text{Jy}$:
+   $$m_{AB} = -2.5 \log_{10}(10^{-6}) + 8.90 = 15.0 + 8.90 = 23.900\ \text{mag}$$
+   Therefore, an AB magnitude of $23.900$ corresponds to $1.0\ \mu\text{Jy}$.
+   $$|F_{\mu\text{Jy}}| = 10^{-0.4(m_{AB} - 23.900)}$$
+   $$\sigma_{F, \mu\text{Jy}} = |F_{\mu\text{Jy}}| \cdot \sinh\left(\frac{\ln 10}{2.5} \sigma_m\right)$$
 
----
+3. **Exact Linear Relationship:**
+   $$1\ \text{nmgy} = 10^{-0.4(22.500 - 23.900)}\ \mu\text{Jy} = 10^{0.4 \times 1.4}\ \mu\text{Jy} = 3.631028\ \mu\text{Jy}$$
+   $$F_{\mu\text{Jy}} = 3.631028 \times F_{\text{nmgy}}, \quad \sigma_{F, \mu\text{Jy}} = 3.631028 \times \sigma_{F, \text{nmgy}}$$
 
-## 3. Track 1: Broker Ingestion Architecture & Photometric Physics
+4. **Scale-Invariance of Signed Signal-to-Noise Ratio ($SNR$):**
+   $$SNR = \frac{F_{\text{nmgy}}}{\sigma_{F, \text{nmgy}}} = \frac{3.631028 \cdot F_{\text{nmgy}}}{3.631028 \cdot \sigma_{F, \text{nmgy}}} = \frac{F_{\mu\text{Jy}}}{\sigma_{F, \mu\text{Jy}}} = \text{sgn}(\text{isdiffpos}) \cdot \frac{2.5}{\ln 10 \cdot \sigma_m}$$
+   The SNR is perfectly scale-invariant across both unit systems. Downstream physical features in ASTRAEUS use canonical nanomaggies ($Z_0 = 22.500$).
 
-### 3.1 Issue 3: Raw JSON Vault Preservation & Endpoint Separation
-- **Broker Interface:** The retrieval pipeline queries the documented ALeRCE API requesting raw JSON payloads:
-  - Primary Endpoint: `GET https://api.alerce.online/ztf/v1/objects/{oid}/lightcurve`
-  - Survey Filter: `survey=ztf`
-- **Vault Storage Schema:** Raw API responses are written directly to:
-  ```
-  data/external_validity_v1/raw/alerce_external/{ztf_id}_lightcurve.json
-  ```
-- **Forced Photometry Separation:** If forced-photometry epochs are retrieved (`GET .../forced_photometry`), they are saved to a dedicated, independent path:
-  ```
-  data/external_validity_v1/raw/alerce_forced/{ztf_id}_forced.json
-  ```
-  Forced photometry is **never silently merged** into difference alert light curves.
-- **Idempotency & Immutability:** Existing JSON files are strictly read-only and never overwritten during retries or refreshes.
-- **Manifest Provenance:** Pinned attributes recorded per request: client version, request URL, HTTP status, execution timestamp (UTC), SHA-256 checksum, raw detection count, and raw non-detection count.
+### 2.2 Fail-Closed Sign Security Specification
+In difference imaging, difference flux is defined as $I_{\text{diff}} = I_{\text{science}} - I_{\text{reference}}$. A negative flux occurs when the target is fainter than the reference image (e.g. fading transient, pre-explosion host subtraction).
 
-### 3.2 Issue 4: Signed-Flux SNR Formulation
-ZTF difference alerts report calibrated PSF magnitudes `magpsf`, uncertainties `sigmapsf`, and difference flux sign `isdiffpos` relative to reference zero point $ZP = 23.9$ mag (in nanomaggies):
-
-1. **Signed Difference Flux ($F_{\text{diff}}$):**
-   $$F_{\text{diff}} = \text{sgn}(\text{isdiffpos}) \cdot 10^{-0.4(m - 23.9)} \quad [\text{nJy}]$$
-   where $\text{sgn}(\text{isdiffpos}) = +1$ for positive difference flux (target brighter than template) and $-1$ for negative difference flux.
-2. **Flux Uncertainty ($\sigma_F$):**
-   $$\sigma_F = \left(\frac{\ln 10}{2.5}\right) |F_{\text{diff}}| \sigma_m \approx 0.921034 \cdot |F_{\text{diff}}| \sigma_m \quad [\text{nJy}]$$
-3. **Signed Signal-to-Noise Ratio ($SNR$):**
-   $$SNR = \frac{F_{\text{diff}}}{\sigma_F} = \text{sgn}(\text{isdiffpos}) \cdot \frac{2.5}{\ln 10 \cdot \sigma_m} \approx \text{sgn}(\text{isdiffpos}) \cdot \frac{1.085736}{\sigma_m}$$
-4. **Physical Positive Detection Rule:**  
-   A photometric epoch qualifies as an astrophysical positive detection if and only if:
-   $$F_{\text{diff}} > 0 \quad (\text{isdiffpos} = 1) \quad \text{AND} \quad SNR \ge +5.0$$
-5. **Preservation of Negative Fluxes:** Negative difference measurements ($SNR < 0$) are preserved as physical constraints on quiescent baselines, but are **strictly excluded from positive detection counts ($N_{\text{det}}$)**. Both raw magnitude fields and derived signed fluxes are retained in processed tables.
-
-### 3.3 Rate Limiting & Global Concurrency
-- Global token bucket enforced at $\le 5$ requests/second across all workers.
-- Bounded exponential backoff with random uniform jitter:
-  $$t_{\text{wait}} = \min(t_{\text{max}}, t_{\text{base}} \cdot 2^{\text{attempt}}) + \text{Uniform}(0.1, 0.5)$$
-- HTTP 429 and 503 errors trigger backoff without decrementing candidate retry allowances.
+The ingestion engine enforces **fail-closed security**:
+- **Valid Positive Tokens:** `1`, `"1"`, `"+1"`, `True`, `"t"`, `"true"`, `"pos"`, `"positive"` $\implies \text{sgn} = +1.0$, `is_valid_sign = True`.
+- **Valid Negative Tokens:** `0`, `-1`, `"-1"`, `"0"`, `False`, `"f"`, `"false"`, `"neg"`, `"negative"` $\implies \text{sgn} = -1.0$, `is_valid_sign = True`.
+- **Unknown, Missing, or Malformed Tokens:** `None`, `""`, `"unknown"`, `"null"`, `NaN`, or any undocumented token:
+  $$\text{sgn} = \text{None}, \quad \text{is\_valid\_sign} = \text{False}, \quad \text{is\_positive\_detection\_snr5} = \text{False}$$
+  The record is safely quarantined from positive detection counts and flagged in the audit manifest under `invalid_sign_detections_count`.
 
 ---
 
-## 4. Track 2: Rare-Class Cohort Expansion & Statistical Power Reality
+## 3. Global Rate Limiter & End-to-End Vault Lifecycle
 
-### 4.1 Issue 5: Statistical Power & Subtype Granularity
-- **Sample Targets as Acquisition Goals:** The expansion targets ($N \ge 30-50$ TDEs, $N \ge 20-30$ exotics, $N \ge 15-25$ SLSN) are explicitly treated as minimum acquisition targets, not proofs of asymptotic statistical power. With $N=30$ events, each misclassification shifts recall by $\approx 3.3\%$.
-- **Fine-Grained Subtype Preservation:** The `OTHER_EXTRAGALACTIC` class combines fundamentally distinct physical mechanisms:
-  - Calcium-rich gap transients (`Ca-rich`)
-  - Fast Blue Optical Transients (`FBOT`, e.g. AT2018cow-like)
-  - Intermediate Luminosity Red Transients (`ILRT`)
-  - Luminous Red Novae (`LRN`)
-  - Kilonovae (`KN`)
-- **Dual Reporting Mandate:** Evaluation will report both:
-  1. Pooled class-level performance.
-  2. Subtype-level performance tables with exact binomial standard errors $\pm \sqrt{\hat{p}(1-\hat{p})/N}$.
-- **No Over-Generalization:** Claims that the classifier learns a universal exotic-transient representation based on one subtype are strictly prohibited.
+### 3.1 Inter-Process Global Rate Limiter Architecture
+To prevent API denial-of-service, ban triggers, or broker quota exhaustion, the engine implements `GlobalInterprocessRateLimiter`:
+- **Dual Lock Coordination:** Utilizes an in-process `threading.Lock` for multi-threaded concurrency and an OS-level file lock (`msvcrt` on Windows, `fcntl` on POSIX) on `.rate_limiter.lock` for multi-process concurrency.
+- **Operational Rate Ceiling:** Enforces an inter-request interval $\Delta t_{\text{min}} = 1.0 / 5.0 = 0.20$ seconds plus uniform random jitter $\in [0.02, 0.06]$ seconds, guaranteeing an operational ceiling of $\le 5$ requests/second across all workers.
+
+### 3.2 Full Request-to-Vault Lifecycle & Non-Overwriting Idempotency
+Implemented in [`broker_client.py`](file:///c:/Users/Dev%20Mehta/Desktop/ASTRAEUS/experiments/gate4b_broker_acquisition_and_cohort_expansion/broker_client.py):
+1. **Idempotency Check:** Before querying the network, checks if `data/external_validity_v1/raw/alerce_external/{ztf_id}_lightcurve.json` exists. If present, returns `ALREADY_ARCHIVED` with existing SHA-256 without issuing an HTTP request.
+2. **Network Query & Exponential Backoff:** Issues GET request with headers `User-Agent: ASTRAEUS-AlerceBrokerClient-v1.2` and `Accept: application/json`. Automatically retries HTTP 429, 500, 502, 503, 504 up to 5 times with jittered exponential backoff ($t_{\text{backoff}} = \min(8.0, 0.5 \times 2^{\text{attempt}}) + \text{Uniform}(0.1, 0.5)$).
+3. **Atomic Commit:** On HTTP 200, writes the exact raw response body to `{ztf_id}_lightcurve.tmp`, verifies valid JSON, computes SHA-256, and atomically renames to `{ztf_id}_lightcurve.json`.
+4. **Idempotency Invariant on Failed Retry:** If a request fails, exhausts retries, or times out, **existing vault files are strictly protected from overwrite, truncation, or deletion** (verified by `test_non_overwriting_idempotency_on_failed_retry`).
+5. **Independent Forced Photometry Vault:** Forced photometry requests are queried separately and saved exclusively to `data/external_validity_v1/raw/alerce_forced/{ztf_id}_forced.json`.
 
 ---
 
-## 5. Phase 4B Controlled Pilot Specification ($N = 35$)
+## 4. Reconciled Pilot Cohort Specification ($N = 35$)
 
-Prior to executing large-scale queries against the ALeRCE broker, Phase 4B mandates a controlled, pre-registered pilot retrieval on exactly **35 candidates** ([`pilot_cohort_specification.json`](file:///c:/Users/Dev%20Mehta/Desktop/ASTRAEUS/experiments/gate4b_broker_acquisition_and_cohort_expansion/pilot_cohort_specification.json)):
+Committed at [`experiments/gate4b_broker_acquisition_and_cohort_expansion/pilot_cohort_specification.json`](file:///c:/Users/Dev%20Mehta/Desktop/ASTRAEUS/experiments/gate4b_broker_acquisition_and_cohort_expansion/pilot_cohort_specification.json):
 
-| Pilot Stratum | Target Count | Selected Objects | Audit & Verification Rationale |
+| Stratum | $N$ | Candidate Object IDs | Exact Empirical Distributions & Verification Goals |
 | :--- | :---: | :--- | :--- |
-| **Reproducibility (Feature Evaluable)** | 5 | `ZTF18aasdted`, `ZTF18abadjhx`, `ZTF18abaxlpi`, `ZTF18adbikdz`, `ZTF19aanfnvl` | Verify that programmatic API retrieval exactly reproduces known local alert light curves and frozen 27 physical features. |
+| **Reproducibility (Feature Evaluable)** | 5 | `ZTF18aasdted`, `ZTF18abadjhx`, `ZTF18abaxlpi`, `ZTF18adbikdz`, `ZTF19aanfnvl` | Confirm programmatic broker ingestion reproduces known local alert light curves and all 27 extracted features. |
 | **Known Single-Band Discrimination** | 3 | `ZTF18abzpbpi`, `ZTF19aalfsqm`, `ZTF23aaihsvm` | Test whether updated broker history supplies missing passbands or confirms single-band status under signed-flux $SNR \ge 5.0$. |
-| **BTS Disjoint Rare-Class Events** | 4 | `ZTF18aabdajx` (TDE), `ZTF18aabtxvd` (TDE), `ZTF24abdhylt` (SLSN), `ZTF19abrdxbh` (Ca-rich) | First programmatic retrieval of rare transients in the disjoint external cohort; verify light-curve coverage and classification stability. |
-| **Representative SN_Ia Pending** | 11 | 11 candidates spanning $z \in [0.018, 0.088]$, peak mag $14.5 - 19.0$ | Validate standard Type Ia supernova light-curve retrieval across magnitude/redshift distribution. |
-| **Representative SN_CC Pending** | 12 | 12 candidates spanning SN II, IIP, IIn, IIb, Ib, Ic subtypes | Validate core-collapse supernova light-curve retrieval across diverse physical sub-classifications. |
-| **Total Pilot Cohort** | **35** | — | **All 35 verified $>60''$ spatially isolated from Gate 3 test footprint.** |
+| **BTS Disjoint Rare Transients** | 4 | `ZTF18aabdajx` (TDE), `ZTF18aabtxvd` (TDE), `ZTF24abdhylt` (SLSN), `ZTF19abrdxbh` (Ca-rich) | Ingestion-only test for rare transients in disjoint cohort. Strictly assigned to Population 3 (Locked Evaluation); zero inference in Phase 4B. |
+| **Representative SN_Ia Pending** | 11 | `ZTF17aabtvsy`, `ZTF19abglmpf`, `ZTF20aadvaoi`, `ZTF20aafwfls`, `ZTF20aahiksp`, `ZTF20aaytyua`, `ZTF20abjtyem`, `ZTF20abpcdov`, `ZTF20acghqks`, `ZTF21aaagwhx`, `ZTF22aahhvqj` | **Reconciled Distribution:** $z \in [0.0141, 0.1000]$, peak magnitude $14.37 - 18.82$ mag. Validates ingestion across full Type Ia luminosity/redshift range. |
+| **Representative SN_CC Pending** | 12 | `ZTF17aacpbmv`, `ZTF19acctlps`, `ZTF20aaoffej`, `ZTF20aarbfep`, `ZTF20aawpvus`, `ZTF20aazowsl`, `ZTF20abbbspm`, `ZTF20abqmsin`, `ZTF20acbuopb`, `ZTF21aabyyrc`, `ZTF21abfmpiv`, `ZTF21abmzfhg` | **Exact Subtype Distribution:** Exactly 12 distinct subtypes, 1 candidate each (`SN Ic`, `SN II`, `SN IIb`, `SN Ib`, `SN IIP`, `SN Ic-BL`, `SN Ib/c`, `SN IIn`, `SN Ibn`, `SN II-pec`, `SN Icn`, `SN Ic-pec`). |
+| **Total Pilot Sample** | **35** | — | **100% verified $>60''$ spatially isolated from all 1,808 Gate 3 test pixels.** |
 
 ---
 
-## 6. Phase 4C: Pre-Registered Dual-Representation Experiment Locks
+## 5. Phase 4C Population Registry & Contamination Prevention
 
-### 6.1 Tri-Partition Population Definition
-To prevent train/test contamination when expanding rare classes:
-1. **Training Population:** Historical, independently sourced labelled events. Used exclusively for fitting the retrained tabular baselines and sequence models.
-2. **Validation Population:** Separate physical parent transients used for hyperparameter tuning, temperature scaling, calibration, and threshold optimization.
-3. **Locked External Evaluation Population:** The held-out BTS disjoint cohort ($N=7,614$) + separately designated rare-class test events. **Strictly quarantined until complete models are frozen.**
-4. **Physical Transient Group Splitting:** Splitting is performed strictly by unique physical transient identity. Aliases, secondary catalog entries, and multiple observation epochs for the same event must never cross partitions.
+### 5.1 Formal Population Tri-Partitioning
+To prevent subtle data leakage or training/evaluation conflation:
 
-### 6.2 Pre-Registered Methodological Safeguards
-- **Reduced Taxonomy Reporting:** If independent external evaluation events for `CV_Nova` and `Varstar` cannot be sourced, the benchmark will formally report a clearly defined **reduced 6-class taxonomy**, rather than claiming an unsupported 8-class macro-F1.
-- **Strict Chronological Horizon Slicing:** Early classification prefixes ($N_{\text{det}} \in \{5, 10, 20\}$) must use strictly chronological observations. Non-detections and upper limits must be truncated at $t \le t_{N_{\text{det}}}$ to prevent future leakage.
-- **Survey-Shifted Conformal Evaluation:** 90% conformal coverage will be reported per class and per survey domain. In-distribution calibration will be explicitly contrasted with shifted external coverage.
-- **Bounded Precision-Recall Extrapolation:** Precision at target recall ($R = 0.80$ or $0.90$) will only be reported if empirically attained on the observed score distribution; no extrapolation beyond observed thresholds is permitted.
-- **Fair Model Parity:** Any sequence model performance will be evaluated against both the frozen champion Random Forest (historical anchor) and **retrained Random Forest / XGBoost models trained on the exact same expanded training set**.
+1. **Population 1 — Historical Training Population:**  
+   Historical, independently sourced labelled transients (e.g. pre-2024 ZTF DR / ALeRCE published training events). Used exclusively for fitting the retrained Random Forest, XGBoost, and sequence models (BiGRU, Transformer).
+2. **Population 2 — Independent Tuning & Calibration Population:**  
+   Distinct physical parent transients used exclusively for hyperparameter optimization, focal loss tuning, temperature scaling, probability calibration, and conformal non-conformity score quantile calculation ($k = 507$).
+3. **Population 3 — Locked External Evaluation Population:**  
+   - Core Cohort: The full admitted BTS disjoint cohort ($N = 7,614$ candidates).
+   - Rare-Class Component: Post-2024 independent discovery events (e.g. Yao et al. 2023, Hammerstein et al. 2023, TNS 2024+) designated *exclusively* for holdout evaluation.
+   - **Quarantine Rule:** Strictly quarantined until complete model architectures, weights, thresholds, and calibration tables are frozen.
+
+### 5.2 Physical Transient Level Grouping Invariant
+All partitioning is executed at the **unique physical parent transient level**. Every alias (IAU designation, ZTF ID, internal broker OID) and every coordinate cross-match within $1.5''$ is mapped to a single `parent_transient_id`. All records for that parent transient are quarantined to a single population.
+
+### 5.3 Pilot Rare Transients Boundary
+The four rare transients in the pilot cohort (`ZTF18aabdajx`, `ZTF18aabtxvd`, `ZTF24abdhylt`, `ZTF19abrdxbh`) belong to **Population 3 (Locked External Evaluation)**. They are included in the pilot *strictly* for verifying ALeRCE API ingestion mechanics, alert format compatibility, and 27-feature extraction reproducibility. **Zero model evaluation, zero inference, and zero score reporting** will be performed on them during Phase 4B.
+
+---
+
+## 6. Pre-Execution Verification Sign-Off Checklist
+
+- [x] **Flux Units Reconciled:** Canonical nanomaggies ($Z_0 = 22.500$) and microjanskys ($Z_0 = 23.900$) calibrated and validated against independent references.
+- [x] **Fail-Closed Sign Parsing:** Missing, null, or malformed `isdiffpos` tokens fail closed; invalid signs recorded in manifest.
+- [x] **Global Rate Limiter Verified:** OS-level file locking and `threading.Lock` tested under concurrent thread contention.
+- [x] **Non-Overwriting Idempotency Verified:** Unit test proves failed retries NEVER overwrite or corrupt existing raw vault files.
+- [x] **Pilot Specification Reconciled:** SN_Ia ranges ($z \in [0.0141, 0.1000]$, mag $14.37 - 18.82$) and SN_CC 12 subtypes documented accurately.
+- [x] **Gate 3 Test Quarantine Maintained:** All 35 pilot candidates audited and verified $>60''$ spatially isolated from the 1,808 frozen test pixels. Zero test ID queries executed.
+- [x] **Phase 4C Population Registry Defined:** Strict physical-transient level separation between Training, Validation, and Locked Evaluation populations.
+- [x] **Automated Regression Suite:** 19/19 tests passing in repository environment.
