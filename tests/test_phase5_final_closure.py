@@ -195,3 +195,67 @@ def test_phase5_all_workstreams_reconciled_status(repo_root: Path):
         assert ws_id in workstreams
         status_str = workstreams[ws_id]
         assert any(k in status_str for k in ("CLOSED", "FROZEN", "PENDING", "BENCHMARK", "SYNTHETIC", "RECONCILED", "VALIDATED"))
+
+
+def test_phase5_ws6_bca_bootstrap_independent_numerical_validation(repo_root: Path):
+    """
+    MASTER AUDIT ASSERTION 6: Independent Numerical Validation of BCa Bootstrap.
+    Verifies that bias correction parameter z0, jackknife acceleration a,
+    adjusted quantiles (alpha1, alpha2), and resulting intervals match an
+    independent reference calculation from first principles with fixed random seed.
+    """
+    from scipy import stats
+    from sklearn.metrics import f1_score
+    from experiments.phase5_cross_survey_generalization.run_phase5_uncertainty_and_validation import compute_bca_interval
+
+    p5_dir = repo_root / "experiments" / "phase5_cross_survey_generalization"
+    df_res = pd.read_parquet(p5_dir / "phase5_domain_adaptation_results.parquet")
+
+    y_true = df_res["true_label"].values
+    y_pred_zero = df_res["pred_atlas_zero_shot"].values
+    y_pred_raw = df_res["pred_atlas_raw"].values
+    n_eval = len(y_true)
+
+    theta_hat = float(f1_score(y_true, y_pred_zero, average="macro", zero_division=0) - f1_score(y_true, y_pred_raw, average="macro", zero_division=0))
+    assert abs(theta_hat - (-0.0407925856)) < 1e-5
+
+    # Run fixed seed bootstrap
+    np.random.seed(42)
+    n_boot = 500
+    boot_deltas = np.zeros(n_boot, dtype=np.float64)
+    for b in range(n_boot):
+        idx = np.random.choice(n_eval, size=n_eval, replace=True)
+        boot_deltas[b] = f1_score(y_true[idx], y_pred_zero[idx], average="macro", zero_division=0) - f1_score(y_true[idx], y_pred_raw[idx], average="macro", zero_division=0)
+
+    # 1. Independent z0
+    prop_less = float(np.mean(boot_deltas < theta_hat))
+    ref_z0 = float(stats.norm.ppf(prop_less))
+
+    # 2. Independent jackknife acceleration a
+    jack_deltas = np.zeros(n_eval, dtype=np.float64)
+    all_idx = np.arange(n_eval)
+    for i in range(n_eval):
+        jack_idx = np.delete(all_idx, i)
+        jack_deltas[i] = f1_score(y_true[jack_idx], y_pred_zero[jack_idx], average="macro", zero_division=0) - f1_score(y_true[jack_idx], y_pred_raw[jack_idx], average="macro", zero_division=0)
+
+    u = np.mean(jack_deltas) - jack_deltas
+    ref_a = float(np.sum(u ** 3) / (6.0 * (np.sum(u ** 2) ** 1.5)))
+
+    # 3. Independent adjusted quantiles
+    z_low = float(stats.norm.ppf(0.025))
+    z_high = float(stats.norm.ppf(0.975))
+    ref_a1 = float(stats.norm.cdf(ref_z0 + (ref_z0 + z_low) / (1.0 - ref_a * (ref_z0 + z_low))))
+    ref_a2 = float(stats.norm.cdf(ref_z0 + (ref_z0 + z_high) / (1.0 - ref_a * (ref_z0 + z_high))))
+
+    ref_bca_low = float(np.percentile(boot_deltas, 100.0 * ref_a1))
+    ref_bca_high = float(np.percentile(boot_deltas, 100.0 * ref_a2))
+
+    # Call module implementation
+    bca_low, bca_high, perc_low, perc_high = compute_bca_interval(
+        theta_hat, boot_deltas, y_true, y_pred_zero, y_pred_raw, alpha=0.05
+    )
+
+    assert abs(bca_low - ref_bca_low) < 1e-7
+    assert abs(bca_high - ref_bca_high) < 1e-7
+    assert bca_high <= 0.0
+    assert perc_low < perc_high

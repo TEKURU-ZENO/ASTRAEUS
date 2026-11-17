@@ -4,7 +4,9 @@ Wraps the frozen ASTROMER backbone with task-specific readout heads for T1/T2 an
 Audits pretraining overlap against MACHO/OGLE alert training catalogs.
 """
 
-from typing import Dict, List, Tuple, Optional
+from __future__ import annotations
+
+from typing import Any, Dict, List, Tuple, Optional
 import math
 import numpy as np
 import torch

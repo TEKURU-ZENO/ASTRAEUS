@@ -134,7 +134,7 @@ Using non-conformity scores $s_i = 1 - P(Y_i \mid \mathbf{x}_i)$ calibrated on $
 
 | Hypothesis | Description | Evaluated Estimand / Statistical Test | Empirical Outcome | Pre-Registered Falsification Boundary | Scientific Disposition |
 | :---: | :--- | :--- | :---: | :---: | :---: |
-| **H1** | Astrophysical Parameter Consistency | ODR regression slope & Bland-Altman mean bias $\bar{d}/\sigma_{\mathrm{pop}}$ | $\bar{d}/\sigma_{\mathrm{pop}} = 0.082$ (Prototype / Simulation) | $|\bar{d}|/\sigma_{\mathrm{pop}} > 0.20$ (Mean bias $> 20\%$ of pop scatter) | **EMPIRICAL EVALUATION PENDING** |
+| **H1** | Astrophysical Parameter Consistency | ODR regression slope & Bland-Altman mean bias $\bar{d}/\sigma_{\mathrm{pop}}$ | $\bar{d}/\sigma_{\mathrm{pop}} = 0.082$ (Prototype / Simulation) | $|\bar{d}|/\sigma_{\mathrm{pop}} > 0.20$ (Mean bias $> 20\%$ of pop scatter) OR $> 25\%$ events deviate $> 2.0\sqrt{\sigma_1^2 + \sigma_2^2 - 2\,\mathrm{cov}}$ | **EMPIRICAL EVALUATION PENDING** |
 | **H2** | Physical Transfer Superiority | Object-Level Paired Bootstrap ($B=10,000$) on $\Delta \text{Macro-F1}$ | $\Delta = -0.0408$ (point estimate)<br>$\Delta_{\mathrm{boot}} = -0.0497$ [$95\%$ BCa: $-0.0993, 0.0000$; Perc: $-0.1171, 0.0000$] | $\Delta \le 0.0$ or $p \ge 0.05$ | **FALSIFIED IN BENCHMARK** |
 | **H3** | Bounded Domain Adaptation | 3-Way LOSO Retention Ratio ($\text{ZTF} \to \text{ATLAS} \to \text{DECam}$) | $84.2\%$ | Retention $< 90\%$ | **UNMET CRITERION** |
 | **H4** | Covariate Shift Detectability | Label-Conditioned Synthetic Confidence Demonstration | $\mathrm{AUROC} = 0.9530$ (simulation harness) | $\mathrm{AUROC} \le 0.60$ | **NOT VALID EVIDENCE (LABEL-CONDITIONED)** |

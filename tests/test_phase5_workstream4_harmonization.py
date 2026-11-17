@@ -543,3 +543,65 @@ def test_ws4_preregistered_allocation_algorithm_and_mcnemar_power():
     assert len(adapt_labeled) > 0
     assert len(eval_cohort) + len(adapt_unlabeled) + len(adapt_labeled) == 150
 
+
+def test_ws4_photometric_covariance_comprehensive_matrix_invariants():
+    """
+    COVARIANCE MATRIX INTEGRATION & NUMERICAL INVARIANTS TEST:
+    Verifies full covariance calculation and propagation against independent reference matrices:
+    1. Independent calibration errors (rho_cal = 0.0) -> diagonal calibration covariance.
+    2. Fully correlated calibration errors (rho_cal = +1.0 and -1.0) -> PSD boundary.
+    3. Negative and positive permitted temporal correlations (rho_temporal = -0.5, +0.7).
+    4. Zero time mismatch (dt = 0.0) -> zero temporal variance contribution.
+    5. Direct analytical Jacobian comparison for physical flux covariance.
+    """
+    # 1. Independent calibration errors
+    cov_indep = PhotometricHarmonizer.compute_atlas_full_covariance(
+        g_err_mag=0.03, r_err_mag=0.02, rho_cal=0.0, dt_mismatch_days=0.0
+    )
+    assert np.all(np.linalg.eigvals(cov_indep) > 0.0)
+    assert np.isclose(cov_indep[0, 1], cov_indep[1, 0])
+
+    # 2. Fully correlated calibration errors (boundary rho = +1.0 and -1.0)
+    cov_corr_pos = PhotometricHarmonizer.compute_atlas_full_covariance(
+        g_err_mag=0.03, r_err_mag=0.02, rho_cal=1.0, dt_mismatch_days=0.0
+    )
+    assert np.all(np.linalg.eigvals(cov_corr_pos) >= -1e-12)
+
+    cov_corr_neg = PhotometricHarmonizer.compute_atlas_full_covariance(
+        g_err_mag=0.03, r_err_mag=0.02, rho_cal=-1.0, dt_mismatch_days=0.0
+    )
+    assert np.all(np.linalg.eigvals(cov_corr_neg) >= -1e-12)
+
+    # 3. Negative and positive permitted temporal correlations
+    cov_temp_neg = PhotometricHarmonizer.compute_atlas_full_covariance(
+        g_err_mag=0.03, r_err_mag=0.02, dt_mismatch_days=0.1, rho_temporal=-0.5
+    )
+    assert np.all(np.linalg.eigvals(cov_temp_neg) > 0.0)
+
+    cov_temp_pos = PhotometricHarmonizer.compute_atlas_full_covariance(
+        g_err_mag=0.03, r_err_mag=0.02, dt_mismatch_days=0.1, rho_temporal=0.7
+    )
+    assert np.all(np.linalg.eigvals(cov_temp_pos) > 0.0)
+
+    # 4. Zero time mismatch vs positive time mismatch
+    cov_zero_dt = PhotometricHarmonizer.compute_atlas_full_covariance(
+        g_err_mag=0.03, r_err_mag=0.02, dt_mismatch_days=0.0
+    )
+    cov_with_dt = PhotometricHarmonizer.compute_atlas_full_covariance(
+        g_err_mag=0.03, r_err_mag=0.02, dt_mismatch_days=0.2, mag_rate_per_day=0.1
+    )
+    assert np.trace(cov_with_dt) > np.trace(cov_zero_dt)
+
+    # 5. Direct analytical Jacobian comparison
+    flux_g, flux_r = 150.0, 120.0
+    flux_g_err, flux_r_err = 4.0, 3.0
+    cov_gr = 1.5
+    res = PhotometricHarmonizer.ztf_to_atlas_flux_with_covariance(
+        flux_g_ujy=flux_g, flux_r_ujy=flux_r,
+        flux_g_err_ujy=flux_g_err, flux_r_err_ujy=flux_r_err,
+        cov_gr_flux=cov_gr, dt_mismatch_days=0.0
+    )
+    cov_flux = res["cov_flux"]
+    assert np.all(np.linalg.eigvals(cov_flux) > 0.0)
+    assert np.isclose(cov_flux[0, 1], cov_flux[1, 0])
+

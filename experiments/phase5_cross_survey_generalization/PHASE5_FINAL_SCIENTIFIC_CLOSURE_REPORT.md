@@ -32,8 +32,11 @@ Following an independent scientific audit of commit `f3570af`, this report forma
 
 ## 1. Governance Invariants & Compliance Certification
 
-1. **Zero-Touch Scientific Quarantine Invariant:**  
-   The 586 quarantined test candidates from Gate 3 and their 1,808 frozen HEALPix pixels (`configs/data_splits_healpix.json`, SHA-256 `234bb08c...`) remained completely sealed throughout Phase 5. Exactly zero Phase 5 routines, queries, or model runs accessed these test records. Historical metadata-only access during Gate 4 closure is fully disclosed and creates no authorization for downstream access. All Phase 5 pilot coordinates were verified disjoint from the test pixels.
+1. **Zero-Touch Scientific Quarantine Invariant & Historical Distinction:**  
+   - **Historical Access Disclosure:** Historical metadata-only access occurred during Gate 4 closure (`candidates_10k.parquet` identifier reconciliation).
+   - **Zero Phase 5 Scientific Access:** Exactly zero Phase 5 scientific feature extraction, model development, tuning, inference, or evaluation used the sealed Gate 3 test observations (586 objects, 1,808 HEALPix pixels in `configs/data_splits_healpix.json`, SHA-256 `234bb08c...`).
+   - **Future Query Prohibition:** No future verification or testing pipeline is permitted to query the quarantined candidate records.
+   - **Authoritative Permitted Evidence:** Independent custodian attestation and geometric disjointness across NSIDE=32 HEALPix pixels constitute the only permitted verification evidence.
 2. **Champion Model Bit-Level Immutability:**  
    The Gate 4 Champion Model (`CalibratedBalancedSubsampleRF`, serialized artifact SHA-256 `466c2752808be01e4f41bd8fdb9c0804a57b03b2c02c35e5172ccebda411fce5`) remained permanently immutable. It was evaluated strictly in zero-shot transfer mode.
 3. **Deterministic Evaluation Partition Integrity:**  
@@ -42,6 +45,8 @@ Following an independent scientific audit of commit `f3570af`, this report forma
    All temporal conversions, coordinate lookups, and photometric transformations fail closed with explicit exceptions or quarantine tagging. No silent fallbacks to default telescopes or time scales exist.
 5. **Non-Destructive Negative Flux Preservation:**  
    Negative difference-imaging fluxes ($\Delta F \le 0$) were natively preserved in State 3 without unphysical clipping or logarithmic conversion.
+6. **Epistemic Principle — Cryptographic Integrity vs. Scientific Validity:**  
+   A cryptographic manifest (`phase5_final_evidence_manifest.json`) strictly proves byte-level provenance and tamper evidence. It does **not** prove that source observations were empirically acquired, that synthetic simulations represent real survey systematics, that astronomical algorithms are physically correct, that observations are statistically independent, or that preregistered protocol criteria were satisfied. Scientific claims must stand on empirical evidence, not hash anchors.
 
 ---
 
@@ -50,7 +55,7 @@ Following an independent scientific audit of commit `f3570af`, this report forma
 Across the 5 formal pre-registered hypotheses, results are recorded strictly in accordance with empirical and simulation findings:
 
 1. **Hypothesis H1 (Astrophysical Parameter Consistency) — EMPIRICAL EVALUATION PENDING:**  
-   Preregistered falsification boundary: $|\bar{d}| / \sigma_{\mathrm{pop}} > 0.20$ (mean bias exceeding 20% of population dispersion). While exploratory prototype matching and simulations yielded $|\bar{d}| / \sigma_{\mathrm{pop}} = 0.082$, formal empirical validation across independent survey telescopes is gated on live broker ingestion of ATLAS and DECam light curves. H1 remains open and pending empirical data.
+   Preregistered falsification boundary: Falsified if $|\bar{d}| / \sigma_{\mathrm{pop}} > 0.20$ (mean bias exceeding 20% of population dispersion) OR if $> 25\%$ of securely matched events deviate by $> 2.0\sqrt{\sigma_{S1}^2 + \sigma_{S2}^2 - 2\,\mathrm{cov}(S_1, S_2)}$ (accounting for correlated calibration covariance and shared systematic uncertainties). While exploratory prototype matching and simulations yielded $|\bar{d}| / \sigma_{\mathrm{pop}} = 0.082$, formal empirical validation across independent survey telescopes is gated on live broker ingestion of ATLAS and DECam light curves. H1 remains open and pending empirical data.
 2. **Hypothesis H2 (Physical Feature Transfer Superiority) — FALSIFIED IN BENCHMARK:**  
    In the simulation benchmark, 27 physical summary features underperformed raw representations by $4.08$ percentage points (point estimate $\Delta = -0.0408$; bootstrap mean $\Delta = -0.0497$, $95\%$ BCa CI: $[-0.0993, 0.0000]$, $95\%$ percentile CI: $[-0.1171, 0.0000]$, $p = 1.00$). McNemar test showed 0 wins and 3 losses ($p = 0.25$, exact two-sided binomial test on discordant pairs). The hypothesis of physical feature transfer superiority is falsified in this benchmark.
 3. **Hypothesis H3 (Bounded Domain Adaptation) — UNMET CRITERION:**  
