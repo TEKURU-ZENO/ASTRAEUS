@@ -50,15 +50,15 @@ Following an independent scientific audit of commit `f3570af`, this report forma
 Across the 5 formal pre-registered hypotheses, results are recorded strictly in accordance with empirical and simulation findings:
 
 1. **Hypothesis H1 (Astrophysical Parameter Consistency) — EMPIRICAL EVALUATION PENDING:**  
-   While exploratory prototype matching and simulations yielded $|\bar{d}| / \sigma_{\mathrm{pop}} = 0.082$, formal empirical validation across independent survey telescopes is gated on live broker ingestion of ATLAS and DECam light curves. H1 remains open and pending empirical data.
+   Preregistered falsification boundary: $|\bar{d}| / \sigma_{\mathrm{pop}} > 0.20$ (mean bias exceeding 20% of population dispersion). While exploratory prototype matching and simulations yielded $|\bar{d}| / \sigma_{\mathrm{pop}} = 0.082$, formal empirical validation across independent survey telescopes is gated on live broker ingestion of ATLAS and DECam light curves. H1 remains open and pending empirical data.
 2. **Hypothesis H2 (Physical Feature Transfer Superiority) — FALSIFIED IN BENCHMARK:**  
-   In the simulation benchmark, 27 physical summary features underperformed raw representations by $4.08$ percentage points (point estimate $\Delta = -0.0408$; bootstrap mean $\Delta = -0.0497$, $95\%$ BCa CI: $[-0.1171, 0.0000]$, $p = 1.00$). McNemar test showed 0 wins and 3 losses. The hypothesis of physical feature transfer superiority is falsified in this benchmark.
+   In the simulation benchmark, 27 physical summary features underperformed raw representations by $4.08$ percentage points (point estimate $\Delta = -0.0408$; bootstrap mean $\Delta = -0.0497$, $95\%$ BCa CI: $[-0.0993, 0.0000]$, $95\%$ percentile CI: $[-0.1171, 0.0000]$, $p = 1.00$). McNemar test showed 0 wins and 3 losses ($p = 0.25$, exact two-sided binomial test on discordant pairs). The hypothesis of physical feature transfer superiority is falsified in this benchmark.
 3. **Hypothesis H3 (Bounded Domain Adaptation) — UNMET CRITERION:**  
    While CORAL recovers target Macro-F1 from $0.1748$ to $0.1969$, the Leave-One-Survey-Out (LOSO) cross-evaluation retention ratio is $84.2\%$, failing the preregistered threshold of $\ge 90\%$.
-4. **Hypothesis H4 (Covariate Shift Detectability) — SIMULATION BENCHMARK RESULT:**  
-   In the simulation harness, an uncertainty-correlated perturbation score predicts classification errors with an $\mathrm{AUROC} = \mathbf{0.9530}$ (falsification threshold $\le 0.60$). True empirical cross-survey Mahalanobis distance AUROC remains unmeasured pending live survey data.
-5. **Hypothesis H5 (Calibrated Selective Abstention) — STRICT MONOTONICITY UNMET:**  
-   While selective abstention suppresses empirical error from $33.33\%$ at $c=1.00$ to **$6.98\%$** at $c=0.50$, the curve dips to $5.77\%$ at $c=0.60$ due to discrete small-sample acceptance of 9 correct objects. Under the strict preregistered criterion requiring monotonicity across all coverage deciles, H5 is not confirmed.
+4. **Hypothesis H4 (Covariate Shift Detectability) — NOT VALID EVIDENCE (LABEL-CONDITIONED SYNTHETIC):**  
+   In the simulation harness, target probabilities were generated conditioned on prediction correctness ($c_{\mathrm{true}} == c_{\mathrm{pred}}$), artificially inflating the misclassification detection AUROC to $0.9530$. Reclassified as a label-conditioned synthetic confidence demonstration rather than genuine covariate-shift detection. Independent empirical shift detection via feature-space Mahalanobis distance remains unmeasured pending live survey data ingestion. H4 is not supported.
+5. **Hypothesis H5 (Calibrated Selective Abstention) — CRITERION UNMET (SYNTHETIC & NON-MONOTONIC):**  
+   Evaluated on synthetic probability distribution; while selective abstention suppresses error from $33.33\%$ at $c=1.00$ to **$6.98\%$** at $c=0.50$, the curve dips to $5.77\%$ at $c=0.60$ due to discrete small-sample acceptance of 9 correct objects. Under the strict preregistered criterion requiring monotonicity across all coverage deciles, and absent empirical probabilities, H5 is not confirmed.
 
 ---
 

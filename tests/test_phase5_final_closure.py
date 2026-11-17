@@ -123,11 +123,12 @@ def test_phase5_ws6_conformal_calibration_and_shift_detection(repo_root: Path):
     assert res["conformal_calibration"]["mean_set_size"] < 3.0
     assert "exchangeability_qualification" in res["conformal_calibration"]
 
-    # 2. Covariate Shift Detection AUROC (Hypothesis H4)
+    # 2. Covariate Shift Detection AUROC (Hypothesis H4 - Label-Conditioned Synthetic Demonstration)
     auroc = res["hypothesis_h4_shift_detection"]["misclassification_auroc"]
     assert auroc > 0.60, f"Shift AUROC {auroc} failed threshold > 0.60!"
-    assert res["hypothesis_h4_shift_detection"]["supported"] is True
-    assert res["hypothesis_h4_shift_detection"]["metric"] == "Uncertainty-Correlated Perturbation Score (Simulation Harness)"
+    assert res["hypothesis_h4_shift_detection"]["supported"] is False
+    assert res["hypothesis_h4_shift_detection"]["metric"] == "Label-Conditioned Synthetic Confidence Demonstration"
+    assert "NOT_VALID_EVIDENCE" in res["hypothesis_h4_shift_detection"]["disposition"]
 
     # 3. Selective Abstention Monotonicity (Hypothesis H5)
     r_full = res["hypothesis_h5_selective_abstention"]["risk_full_coverage"]
@@ -136,6 +137,18 @@ def test_phase5_ws6_conformal_calibration_and_shift_detection(repo_root: Path):
     # Strict monotonicity across all deciles is false due to 50% -> 60% dip
     assert res["hypothesis_h5_selective_abstention"]["monotonic_risk_reduction"] is False
     assert res["hypothesis_h5_selective_abstention"]["supported"] is False
+    assert "CRITERION_UNMET" in res["hypothesis_h5_selective_abstention"]["disposition"]
+
+    # 4. Hypothesis H2 BCa and Percentile Bootstrap Verification
+    h2_boot = res["hypothesis_h2_bootstrap"]
+    assert "ci_95_bca" in h2_boot
+    assert "ci_95_percentile" in h2_boot
+    assert h2_boot["supported"] is False
+    assert h2_boot["ci_95_bca"][0] > h2_boot["ci_95_percentile"][0]
+
+    # 5. Exact Paired McNemar Binomial Test
+    assert res["mcnemar_paired_test"]["exact_binomial_p"] == 0.25
+    assert "asymptotic_power_qualification" in res["mcnemar_paired_test"]
 
 
 def test_phase5_research_paper_and_governance_invariants(repo_root: Path):

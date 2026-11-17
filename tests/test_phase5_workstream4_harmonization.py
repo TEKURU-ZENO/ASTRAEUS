@@ -470,6 +470,44 @@ def test_ws4_photometric_general_calibration_and_temporal_covariance():
     )
     assert np.allclose(cov_default, cov_explicit)
 
+    # 3. Fail-closed validation tests
+    with pytest.raises(ValueError, match="Calibration correlation rho_cal"):
+        PhotometricHarmonizer.compute_atlas_full_covariance(
+            g_err_mag=0.02, r_err_mag=0.02, rho_cal=1.5
+        )
+
+    with pytest.raises(ValueError, match="Temporal correlation rho_temporal"):
+        PhotometricHarmonizer.compute_atlas_full_covariance(
+            g_err_mag=0.02, r_err_mag=0.02, rho_temporal=-1.2
+        )
+
+    with pytest.raises(ValueError, match="Source measurement covariance is not positive semi-definite"):
+        PhotometricHarmonizer.compute_atlas_full_covariance(
+            g_err_mag=0.01, r_err_mag=0.01, cov_gr_mag=0.005  # 0.005 > 0.01 * 0.01 = 0.0001
+        )
+
+    with pytest.raises(ValueError, match="Model residual covariance is not positive semi-definite"):
+        PhotometricHarmonizer.compute_atlas_full_covariance(
+            g_err_mag=0.02, r_err_mag=0.02, sigma_model_c=0.01, sigma_model_o=0.01, cov_model_co=0.005
+        )
+
+    # 4. End-to-end forward transformation with covariance
+    res_e2e = PhotometricHarmonizer.ztf_to_atlas_flux_with_covariance(
+        flux_g_ujy=200.0,
+        flux_r_ujy=180.0,
+        flux_g_err_ujy=5.0,
+        flux_r_err_ujy=4.0,
+        cov_gr_flux=2.0,
+        dt_mismatch_days=0.05,
+        mag_rate_per_day=0.05,
+    )
+    assert "fluxes" in res_e2e and "cov_flux" in res_e2e
+    assert "ATLAS_c" in res_e2e["fluxes"] and "ATLAS_o" in res_e2e["fluxes"]
+    cov_flux_e2e = res_e2e["cov_flux"]
+    assert cov_flux_e2e.shape == (2, 2)
+    assert np.isclose(cov_flux_e2e[0, 1], cov_flux_e2e[1, 0])
+    assert np.all(np.linalg.eigvals(cov_flux_e2e) > 0.0)
+
 
 def test_ws4_preregistered_allocation_algorithm_and_mcnemar_power():
     """

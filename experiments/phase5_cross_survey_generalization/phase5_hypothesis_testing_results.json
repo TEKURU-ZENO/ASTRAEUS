@@ -18,6 +18,10 @@
     "point_estimate_delta_macro_f1": -0.040792585636819284,
     "mean_delta_macro_f1": -0.049721925389592546,
     "ci_95_bca": [
+      -0.09930818377868125,
+      0.0
+    ],
+    "ci_95_percentile": [
       -0.11710967254737084,
       0.0
     ],
@@ -33,15 +37,17 @@
     "n_both_incorrect": 26,
     "discordant_total": 3,
     "chi2_statistic": 1.3333333333333333,
-    "exact_binomial_p": 0.25
+    "exact_binomial_p": 0.25,
+    "asymptotic_power_qualification": "Discordant sample size (D=3) lacks statistical power; tabulated values follow Connor (1987) asymptotic sample-size approximation."
   },
   "hypothesis_h4_shift_detection": {
-    "metric": "Uncertainty-Correlated Perturbation Score (Simulation Harness)",
+    "metric": "Label-Conditioned Synthetic Confidence Demonstration",
     "misclassification_auroc": 0.9530321046373365,
     "exploratory_subset_auroc": 0.724,
     "falsification_threshold": 0.6,
-    "supported": true,
-    "qualification": "Evaluated as an uncertainty-correlated perturbation score within the simulation harness; true empirical cross-survey Mahalanobis distance remains unmeasured pending live survey data ingestion."
+    "supported": false,
+    "disposition": "NOT_VALID_EVIDENCE (LABEL_CONDITIONED_SYNTHETIC)",
+    "qualification": "Target probability generator was conditioned on prediction correctness (c_true == c_pred); AUROC measures generator confidence gap rather than independent covariate-shift detection. True empirical cross-survey covariate-shift detection remains unmeasured pending live survey data ingestion."
   },
   "hypothesis_h5_selective_abstention": {
     "risk_full_coverage": 0.3333333333333333,
@@ -100,6 +106,7 @@
       }
     ],
     "supported": false,
-    "qualification": "Strict monotonicity is violated: risk decreases from 33.33% to 6.98% at c=0.50, but dips to 5.77% at c=0.60 before rising to 6.67% at c=0.70 due to small-sample discrete acceptance artifacts."
+    "disposition": "CRITERION_UNMET (SYNTHETIC & NON-MONOTONIC)",
+    "qualification": "Evaluated on synthetic probability distribution; strict monotonicity across all deciles is violated (risk decreases from 33.33% to 6.98% at c=0.50, but dips to 5.77% at c=0.60 before rising to 6.67% at c=0.70 due to small-sample discrete acceptance artifacts). Empirical selective abstention remains unverified."
   }
 }

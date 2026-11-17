@@ -254,6 +254,53 @@ class PhotometricHarmonizer:
              [rho_temp * (rate_c * dt) * (rate_o * dt), (rate_o * dt)^2]]
           Allows separate band rates and cross-band temporal correlation.
         """
+        # Fail-closed input validation
+        for name, val in [
+            ("g_err_mag", g_err_mag),
+            ("r_err_mag", r_err_mag),
+            ("cov_gr_mag", cov_gr_mag),
+            ("sigma_cal_mag", sigma_cal_mag),
+            ("sigma_model_c", sigma_model_c),
+            ("sigma_model_o", sigma_model_o),
+            ("cov_model_co", cov_model_co),
+            ("dt_mismatch_days", dt_mismatch_days),
+            ("mag_rate_per_day", mag_rate_per_day),
+        ]:
+            if not np.isfinite(val):
+                raise ValueError(f"Input '{name}' must be finite, got {val}")
+
+        if g_err_mag < 0.0 or r_err_mag < 0.0:
+            raise ValueError(f"Measurement errors must be non-negative: g_err={g_err_mag}, r_err={r_err_mag}")
+        if sigma_cal_mag < 0.0:
+            raise ValueError(f"Calibration uncertainty sigma_cal_mag={sigma_cal_mag} must be non-negative.")
+        if sigma_cal_g_mag is not None and (not np.isfinite(sigma_cal_g_mag) or sigma_cal_g_mag < 0.0):
+            raise ValueError(f"sigma_cal_g_mag must be non-negative and finite, got {sigma_cal_g_mag}")
+        if sigma_cal_r_mag is not None and (not np.isfinite(sigma_cal_r_mag) or sigma_cal_r_mag < 0.0):
+            raise ValueError(f"sigma_cal_r_mag must be non-negative and finite, got {sigma_cal_r_mag}")
+        if not (-1.0 <= rho_cal <= 1.0):
+            raise ValueError(f"Calibration correlation rho_cal={rho_cal} out of valid range [-1.0, 1.0]")
+        if not (-1.0 <= rho_temporal <= 1.0):
+            raise ValueError(f"Temporal correlation rho_temporal={rho_temporal} out of valid range [-1.0, 1.0]")
+        if dt_mismatch_days < 0.0:
+            raise ValueError(f"dt_mismatch_days={dt_mismatch_days} must be non-negative.")
+        if mag_rate_per_day < 0.0:
+            raise ValueError(f"mag_rate_per_day={mag_rate_per_day} must be non-negative.")
+
+        # Positive semi-definiteness checks on input covariance blocks
+        max_source_cov = (g_err_mag * r_err_mag) + 1e-12
+        if abs(cov_gr_mag) > max_source_cov:
+            raise ValueError(
+                f"Source measurement covariance is not positive semi-definite: "
+                f"|cov_gr_mag|={abs(cov_gr_mag):.6f} exceeds g_err * r_err = {g_err_mag * r_err_mag:.6f}"
+            )
+
+        max_model_cov = (sigma_model_c * sigma_model_o) + 1e-12
+        if abs(cov_model_co) > max_model_cov:
+            raise ValueError(
+                f"Model residual covariance is not positive semi-definite: "
+                f"|cov_model_co|={abs(cov_model_co):.6f} exceeds sigma_c * sigma_o = {sigma_model_c * sigma_model_o:.6f}"
+            )
+
         J = np.array([
             [0.593, 0.407],
             [0.222, 0.778]
@@ -382,4 +429,97 @@ class PhotometricHarmonizer:
         return {
             "ZTF_g": (flux_g, flux_g_err),
             "ZTF_r": (flux_r, flux_r_err),
+        }
+
+    @classmethod
+    def ztf_to_atlas_flux_with_covariance(
+        cls,
+        flux_g_ujy: float,
+        flux_r_ujy: float,
+        flux_g_err_ujy: float,
+        flux_r_err_ujy: float,
+        cov_gr_flux: float = 0.0,
+        sigma_cal_mag: float = 0.010,
+        sigma_model_c: float = 0.015,
+        sigma_model_o: float = 0.015,
+        cov_model_co: float = 0.0001,
+        dt_mismatch_days: float = 0.0,
+        mag_rate_per_day: float = 0.0,
+        *,
+        sigma_cal_g_mag: Optional[float] = None,
+        sigma_cal_r_mag: Optional[float] = None,
+        rho_cal: float = 1.0,
+        mag_rate_c_per_day: Optional[float] = None,
+        mag_rate_o_per_day: Optional[float] = None,
+        rho_temporal: float = 0.0,
+    ) -> Dict[str, Any]:
+        """
+        Transforms synchronous ZTF (g, r) fluxes into ATLAS (c, o) fluxes with full
+        end-to-end 2x2 physical flux covariance matrix propagation.
+        """
+        if flux_g_ujy <= 0.0 or flux_r_ujy <= 0.0:
+            raise ValueError(
+                "Non-positive difference flux cannot be transformed across filters via empirical color polynomials. "
+                "Per ASTRAEUS-P5-HARMON-002, negative difference flux must be retained in its native passband."
+            )
+
+        snr_g = flux_g_ujy / flux_g_err_ujy
+        snr_r = flux_r_ujy / flux_r_err_ujy
+        if snr_g < 3.0 or snr_r < 3.0:
+            raise ValueError(
+                f"Insufficient SNR for empirical color transformation (SNR_g={snr_g:.2f}, SNR_r={snr_r:.2f}). "
+                "Minimum SNR >= 3.0 required per ASTRAEUS-P5-HARMON-002."
+            )
+
+        g_mag, g_err = cls.flux_ujy_to_mag(flux_g_ujy, flux_g_err_ujy)
+        r_mag, r_err = cls.flux_ujy_to_mag(flux_r_ujy, flux_r_err_ujy)
+        if g_mag is None or r_mag is None or g_err is None or r_err is None:
+            raise ValueError("Failed to convert positive flux to AB magnitude.")
+
+        factor = LN10_OVER_2P5
+        cov_gr_mag = cov_gr_flux / ((factor * flux_g_ujy) * (factor * flux_r_ujy)) if cov_gr_flux != 0.0 else 0.0
+
+        # Tonry et al. (2018) forward polynomials:
+        # c = g - 0.407 * (g - r) + 0.016 = 0.593 * g + 0.407 * r + 0.016
+        # o = r + 0.222 * (g - r) - 0.035 = 0.222 * g + 0.778 * r - 0.035
+        c_mag = 0.593 * g_mag + 0.407 * r_mag + 0.016
+        o_mag = 0.222 * g_mag + 0.778 * r_mag - 0.035
+
+        cov_mag = cls.compute_atlas_full_covariance(
+            g_err_mag=g_err,
+            r_err_mag=r_err,
+            cov_gr_mag=cov_gr_mag,
+            sigma_cal_mag=sigma_cal_mag,
+            sigma_model_c=sigma_model_c,
+            sigma_model_o=sigma_model_o,
+            cov_model_co=cov_model_co,
+            dt_mismatch_days=dt_mismatch_days,
+            mag_rate_per_day=mag_rate_per_day,
+            sigma_cal_g_mag=sigma_cal_g_mag,
+            sigma_cal_r_mag=sigma_cal_r_mag,
+            rho_cal=rho_cal,
+            mag_rate_c_per_day=mag_rate_c_per_day,
+            mag_rate_o_per_day=mag_rate_o_per_day,
+            rho_temporal=rho_temporal,
+        )
+
+        c_err = float(np.sqrt(cov_mag[0, 0]))
+        o_err = float(np.sqrt(cov_mag[1, 1]))
+
+        flux_c, flux_c_err = cls.mag_to_flux_ujy(c_mag, c_err)
+        flux_o, flux_o_err = cls.mag_to_flux_ujy(o_mag, o_err)
+
+        cov_flux = cls.propagate_mag_covariance_to_flux(cov_mag, flux_c, flux_o)
+
+        return {
+            "fluxes": {
+                "ATLAS_c": (flux_c, flux_c_err),
+                "ATLAS_o": (flux_o, flux_o_err),
+            },
+            "magnitudes": {
+                "ATLAS_c": (c_mag, c_err),
+                "ATLAS_o": (o_mag, o_err),
+            },
+            "cov_mag": cov_mag,
+            "cov_flux": cov_flux,
         }

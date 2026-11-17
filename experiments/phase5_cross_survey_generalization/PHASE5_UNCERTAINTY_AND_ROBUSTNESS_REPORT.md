@@ -52,11 +52,10 @@ Under cross-survey domain shift, this assumption is strictly violated ($\mathcal
 To detect out-of-distribution observations without ground-truth labels, ASTRAEUS computes the Mahalanobis distance from source reference class centroids:
 $$D_M(\mathbf{x}) = \min_{c} \sqrt{(\mathbf{x} - \hat{\mu}_c)^T \mathbf{\Sigma}_{\mathrm{pooled}}^{-1} (\mathbf{x} - \hat{\mu}_c)}$$
 
-### 3.2 Misclassification Predictability & Audit Reconciliation
-- In the primary simulation harness run, the misclassification detection AUROC was **$0.9530$** on the full evaluation set ($N_{\mathrm{eval}} = 87$).
+### 3.2 Misclassification Predictability & Methodological Reclassification
+- In the simulation harness, target probabilities were generated conditioned on prediction correctness ($c_{\mathrm{true}} == c_{\mathrm{pred}}$), artificially inflating the misclassification detection AUROC to **$0.9530$** on the full evaluation set ($N_{\mathrm{eval}} = 87$).
 - An exploratory early subset calculation yielded an AUROC of **$0.724$**.
-- **Audit Reconciliation:** The discrepancy between $0.9530$ (in `phase5_hypothesis_testing_results.json`) and $0.724$ is hereby reconciled: $0.9530$ represents the final simulation run metric on the full 87-object partition, while $0.724$ was an un-reconciled preliminary draft figure.
-- **Independence & Simulation Qualification:** In the committed simulation code, shift scores were generated using predictive uncertainty plus random perturbations rather than computed on genuine physical latent features from actual ATLAS/DECam light curves. True empirical cross-survey shift detection AUROC remains unmeasured pending live survey data.
+- **Audit Reconciliation & Reclassification:** The discrepancy between $0.9530$ (in `phase5_hypothesis_testing_results.json`) and $0.724$ is reconciled ($0.9530$ represents the final simulation run metric on the full 87-object partition). However, because the target probability generator was conditioned on prediction accuracy, this experiment demonstrates label-conditioned confidence/error calibration rather than independent covariate-shift detection. True empirical cross-survey shift detection via feature-space Mahalanobis distance remains unmeasured pending live survey data. **Hypothesis H4 is not supported (disposition: NOT VALID EVIDENCE / METHODOLOGICALLY CIRCULAR).**
 
 ---
 
@@ -86,7 +85,7 @@ The recorded risk-coverage values across the 10 deciles are:
 - Overall, abstaining on the 50% most uncertain candidates substantially suppresses error from $33.33\%$ to $6.98\%$.
 - However, the curve is **NOT strictly monotonic**: between $c=0.50$ and $c=0.60$, the 9 additionally admitted candidates happen to be all correctly classified, causing the cumulative error rate to dip from $3/43 = 6.98\%$ to $3/52 = 5.77\%$.
 - **Typo Correction:** The prior text citation of $18.4\%$ was an un-reconciled draft placeholder; the actual recorded value in the machine-readable dataset is $6.98\%$.
-- Under the strict preregistered criterion requiring monotonicity across all coverage deciles, **Hypothesis H5 is NOT satisfied**.
+- Under the strict preregistered criterion requiring monotonicity across all coverage deciles, and absent empirical probabilities, **Hypothesis H5 is NOT satisfied (disposition: CRITERION UNMET / SYNTHETIC EVIDENCE ONLY)**.
 
 ---
 
@@ -94,11 +93,11 @@ The recorded risk-coverage values across the 10 deciles are:
 
 | Hypothesis | Investigated Property | Estimand / Test Metric | Empirical Outcome | Falsification Boundary | Scientific Disposition |
 | :--- | :--- | :--- | :---: | :---: | :---: |
-| **H1** | Astrophysical Parameter Consistency | ODR residual slope & Bland-Altman LoA | $\bar{d} / \sigma = 0.082$ (Prototype / Simulation) | Residual bias $> 25\%$ | **EMPIRICAL EVALUATION PENDING** |
-| **H2** | Physical Transfer Superiority | Object-Level Paired Bootstrap $\Delta \text{Macro-F1}$ | $\Delta = -0.0408$ (point estimate)<br>$\Delta_{\mathrm{boot}} = -0.0497$ [$95\%$ BCa: $-0.117, 0.000$] | $\Delta \le 0.0$ or $p \ge 0.05$ | **FALSIFIED IN BENCHMARK** |
+| **H1** | Astrophysical Parameter Consistency | ODR residual slope & Bland-Altman LoA | $\bar{d} / \sigma_{\mathrm{pop}} = 0.082$ (Prototype / Simulation) | $|\bar{d}|/\sigma_{\mathrm{pop}} > 0.20$ (Mean bias $> 20\%$ of pop scatter) | **EMPIRICAL EVALUATION PENDING** |
+| **H2** | Physical Transfer Superiority | Object-Level Paired Bootstrap $\Delta \text{Macro-F1}$ | $\Delta = -0.0408$ (point estimate)<br>$\Delta_{\mathrm{boot}} = -0.0497$ [$95\%$ BCa: $-0.0993, 0.0000$; Perc: $-0.1171, 0.0000$] | $\Delta \le 0.0$ or $p \ge 0.05$ | **FALSIFIED IN BENCHMARK** |
 | **H3** | Bounded Domain Adaptation | 3-Way LOSO Retention Ratio ($\text{ZTF} \to \text{ATLAS} \to \text{DECam}$) | $84.2\%$ | Retention $< 90\%$ | **UNMET CRITERION** |
-| **H4** | Covariate Shift Detectability | Uncertainty-Correlated Perturbation Score | $\mathrm{AUROC} = 0.9530$ (simulation harness) | $\text{AUROC} \le 0.60$ | **SIMULATION BENCHMARK** |
-| **H5** | Calibrated Selective Abstention | Monotonic Risk Reduction across Coverage Deciles | $R(0.50)=0.0698 < R(1.00)=0.3333$, but dips at $c=0.60$ ($0.0577$) | Non-monotonic curve | **STRICT MONOTONICITY UNMET** |
+| **H4** | Covariate Shift Detectability | Label-Conditioned Synthetic Confidence Demonstration | $\mathrm{AUROC} = 0.9530$ (simulation harness) | $\text{AUROC} \le 0.60$ | **NOT VALID EVIDENCE (LABEL-CONDITIONED)** |
+| **H5** | Calibrated Selective Abstention | Monotonic Risk Reduction across Coverage Deciles | $R(0.50)=0.0698 < R(1.00)=0.3333$, but dips at $c=0.60$ ($0.0577$) | Non-monotonic curve | **CRITERION UNMET (SYNTHETIC EVIDENCE ONLY)** |
 
 ---
 

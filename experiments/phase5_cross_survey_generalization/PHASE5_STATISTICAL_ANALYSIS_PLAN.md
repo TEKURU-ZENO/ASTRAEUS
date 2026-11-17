@@ -131,7 +131,7 @@ Under two-sided significance level $\alpha = 0.05$ ($z_{1-\alpha/2} = 1.95996$) 
 
 $$N_{\mathrm{required}} \ge \frac{\left( z_{1-\alpha/2} \sqrt{p_{\mathrm{disc}}} + z_{1-\beta} \sqrt{p_{\mathrm{disc}} - (p_{01} - p_{10})^2} \right)^2}{(p_{01} - p_{10})^2}$$
 
-#### Recalculated Power Sensitivity Table across Discordant Proportions and Effect Sizes:
+#### Recalculated Power Sensitivity Table (Asymptotic Sample-Size Approximation):
 | Discordant Proportion ($p_{\mathrm{disc}}$) | Odds Ratio ($\psi = p_{01}/p_{10}$) | $p_{01}$ | $p_{10}$ | $|p_{01} - p_{10}|$ | Required Evaluation Sample ($N_{\mathrm{eval}}$) |
 | :---: | :---: | :---: | :---: | :---: | :---: |
 | **0.30** | **2.0** | 0.200 | 0.100 | 0.100 | **234** |
@@ -140,6 +140,8 @@ $$N_{\mathrm{required}} \ge \frac{\left( z_{1-\alpha/2} \sqrt{p_{\mathrm{disc}}}
 | **0.20** | **2.5** | 0.143 | 0.057 | 0.086 | **212** |
 | **0.20** | **2.0** | 0.133 | 0.067 | 0.067 | **351** |
 | **0.15** | **3.0** | 0.112 | 0.038 | 0.075 | **207** |
+
+*Methodological Note:* The required sample sizes tabulated above represent an asymptotic large-sample approximation based on normal approximations of discordant binomial proportions (Connor 1987; Lachenbruch 1992), rather than an exact non-central hypergeometric or exact conditional power calculation. They serve as design benchmarks for cohort sizing rather than exact finite-sample power guarantees.
 
 #### Decoupling Primary Macro-F1 Bootstrap from Secondary McNemar Analysis:
 As demonstrated by the recalculated table, achieving $80\%$ power for a discrete McNemar test under moderate effect sizes ($\psi \approx 2.0$) requires an evaluation cohort of $N_{\mathrm{eval}} \approx 210\text{--}350$ independent objects. 

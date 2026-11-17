@@ -23,7 +23,7 @@
   "scope": "28 core Phase 5 specification, implementation, execution script, data, and paper assets cryptographically verified",
   "artifact_sha256_digests": {
     "PHASE5_SCIENTIFIC_PROTOCOL.md": "6570180232317dfe67224b9f4ab38bec7ec6a842aee4428540befd4ec26562d3",
-    "PHASE5_STATISTICAL_ANALYSIS_PLAN.md": "1b9f83a3356c88b9a7f5255e2ae27917c78e7f701605ec40c76bc9f76eb44b8d",
+    "PHASE5_STATISTICAL_ANALYSIS_PLAN.md": "0185eda5a688db05eddd595f01a70c597bbccc78a1d613279d2178e2ffa13c3a",
     "PHASE5_DATASET_AND_COHORT_DESIGN.md": "d42736d25e0dae6d435c1071453ba42fa88976eca8e13b3faf4984c2170de35b",
     "PHASE5_GOVERNANCE_AND_LEAKAGE_PLAN.md": "f75d1e7066dae9fe22955e79dee4187b63bd4223ff84f67979406d01cec246d1",
     "PHASE5_SURVEY_FEASIBILITY_AUDIT.md": "2542b5fba97faf2ae2791460be25c7c4d918cc63dbd9a2464acc7bb7e6e3b91f",
@@ -44,11 +44,11 @@
     "run_phase5_domain_adaptation.py": "5bc25f44b8bc4910b7b365bbf9d728251255cb00bebb80a899b4ab8050539d04",
     "phase5_domain_adaptation_results.parquet": "a1fdae237175b69ee5f7a98b39548461a2cc45d58d75d9966d1a62266f675810",
     "phase5_domain_adaptation_summary.json": "1f83487fedcfe9da13f461825d48c782ff2fcdc31138a9a5d1ff756edffd2a6e",
-    "PHASE5_UNCERTAINTY_AND_ROBUSTNESS_REPORT.md": "20c8b941df7672e261bd567973ece6e4dfe8bc3d06cb9042d87aeca863597c72",
-    "run_phase5_uncertainty_and_validation.py": "182bf9668e77d194914e47d89bd57ad30b24dff14945f0b4b36dd8ee73c7c967",
-    "phase5_hypothesis_testing_results.json": "856025b6ab587cadf007a6fa5475e03ebc593f57a60bc79c866f153526c63be4",
+    "PHASE5_UNCERTAINTY_AND_ROBUSTNESS_REPORT.md": "203b4db495e4d2c3e06b732554f2807e845a182c73b936462c6a121f462b699b",
+    "run_phase5_uncertainty_and_validation.py": "6321bddbc277766f375c6d1620a26a58b108c4f0d851d8d5e19800ab7be11bbe",
+    "phase5_hypothesis_testing_results.json": "50679ed5caed8d067408d4355cf18db11ff8da131a35a9fceacdc8beb05167fc",
     "phase5_uncertainty_metrics.parquet": "8ae0241f1dacd89727c686caecf8830f4204f6fe2857e89a530b1166dfb904db",
-    "PHASE5_RESEARCH_PAPER.md": "9b7543735a4b0a6d787c055667de5a2bf66e8acb95c331e2f9f5affbeb50f848",
-    "PHASE5_FINAL_SCIENTIFIC_CLOSURE_REPORT.md": "919713cefc86f9f31f24f3c4e23bc981ac1b9d45aa63b89c982b97c9b9f9f013"
+    "PHASE5_RESEARCH_PAPER.md": "eddb0cc3e7beacea03ea3edbb79fc362a2576dea336c6463181a2e1c3c342cc1",
+    "PHASE5_FINAL_SCIENTIFIC_CLOSURE_REPORT.md": "5e3d701dd8223669366ee8c647c815d24798a045971c0488b7661ba4e5aa65c9"
   }
 }
