@@ -52,7 +52,7 @@ The production classifier (`CalibratedBalancedSubsampleRF`, serialized artifact 
 The feasibility cohort comprises $N = 150$ spectroscopically confirmed astrophysical transients spanning 5 physical classes ($96\,\mathrm{SN\_Ia}$, $50\,\mathrm{SN\_CC}$, $2\,\mathrm{TDE}$, $1\,\mathrm{SLSN}$, $1\,\mathrm{OTHER\_EXTRAGALACTIC}$). 
 
 To protect statistical power under empirical yield regimes where $N_{\mathrm{total}} < 334$, the cohort was allocated using a preregistered deterministic SHA-256 modular hashing algorithm:
-- **Sealed Independent Evaluation Holdout:** $N_{\mathrm{eval}} = 87$ ($58.0\%$), satisfying the power threshold $N_{\mathrm{eval}} \ge 85$.
+- **Sealed Independent Evaluation Holdout:** $N_{\mathrm{eval}} = 87$ ($58.0\%$), satisfying the power threshold $N_{\mathrm{eval}} \ge 85$ for object-level paired bootstrap evaluation on continuous $\Delta \text{Macro-F1}$. Secondary discrete McNemar testing remains underpowered at this sample size ($N_{\mathrm{req}} \approx 210\text{--}350$ required for $\psi \approx 2.0$).
 - **Unlabeled Target Adaptation Set:** $N_{\mathrm{unlab}} = 38$ ($25.3\%$), used strictly for covariance alignment and feature re-centering.
 - **Labeled Target Adaptation Set:** $N_{\mathrm{label}} = 25$ ($16.7\%$), used for few-shot probability calibration.
 
@@ -120,8 +120,8 @@ Using non-conformity scores $s_i = 1 - P(Y_i \mid \mathbf{x}_i)$ calibrated on $
 - **Theoretical Limitation:** Split-conformal coverage guarantees assume exchangeability ($P_{\mathrm{source}} = P_{\mathrm{target}}$). Under domain shift, exchangeability is violated. While empirical coverage reached $95.4\%$ in this simulation due to conservative thresholding, this does not constitute a mathematical guarantee for empirical survey data without covariate-shift importance weighting.
 
 ### 5.2 Covariate Shift Detection (Hypothesis H4)
-- In the simulation harness, the misclassification detection AUROC was **$0.9530$** (falsification threshold $\le 0.60$).
-- *Reconciliation Note:* A preliminary exploratory draft reported $0.724$; the final simulation run metric is $0.9530$. Because the shift score was generated using synthetic perturbations, true empirical survey shift AUROC remains unmeasured pending live survey data.
+- In the simulation harness, the misclassification detection AUROC evaluated via an uncertainty-correlated perturbation score ($s_{\mathrm{shift}} = u(\mathbf{x}) + \epsilon$) was **$0.9530$** (falsification threshold $\le 0.60$).
+- *Reconciliation Note:* A preliminary exploratory draft reported $0.724$; the final simulation run metric is $0.9530$. Because the shift score was generated using synthetic perturbations within the simulation harness rather than true physical latent Mahalanobis distances on actual ATLAS/DECam light curves, true empirical cross-survey shift detection AUROC remains unmeasured pending live survey data.
 
 ### 5.3 Calibrated Selective Abstention (Hypothesis H5)
 - Full coverage error ($c = 1.00$): $33.33\%$.
@@ -134,10 +134,10 @@ Using non-conformity scores $s_i = 1 - P(Y_i \mid \mathbf{x}_i)$ calibrated on $
 
 | Hypothesis | Description | Evaluated Estimand / Statistical Test | Empirical Outcome | Pre-Registered Falsification Boundary | Scientific Disposition |
 | :---: | :--- | :--- | :---: | :---: | :---: |
-| **H1** | Astrophysical Parameter Consistency | ODR regression slope & Bland-Altman mean bias $\bar{d}/\sigma$ | $\bar{d}/\sigma = 0.082$ | Residual discrepancy $> 25\%$ | **CONFIRMED** |
+| **H1** | Astrophysical Parameter Consistency | ODR regression slope & Bland-Altman mean bias $\bar{d}/\sigma$ | $\bar{d}/\sigma = 0.082$ (Prototype / Simulation) | Residual discrepancy $> 25\%$ | **EMPIRICAL EVALUATION PENDING** |
 | **H2** | Physical Transfer Superiority | Object-Level Paired Bootstrap ($B=10,000$) on $\Delta \text{Macro-F1}$ | $\Delta = -0.0408$ (point estimate)<br>$\Delta_{\mathrm{boot}} = -0.0497$ [$95\%$ BCa: $-0.117, 0.000$] | $\Delta \le 0.0$ or $p \ge 0.05$ | **FALSIFIED IN BENCHMARK** |
 | **H3** | Bounded Domain Adaptation | 3-Way LOSO Retention Ratio ($\text{ZTF} \to \text{ATLAS} \to \text{DECam}$) | $84.2\%$ | Retention $< 90\%$ | **UNMET CRITERION** |
-| **H4** | Covariate Shift Detectability | Mahalanobis Distance Misclassification AUROC | $\mathrm{AUROC} = 0.9530$ (simulation harness) | $\mathrm{AUROC} \le 0.60$ | **SIMULATION BENCHMARK** |
+| **H4** | Covariate Shift Detectability | Uncertainty-Correlated Perturbation Score | $\mathrm{AUROC} = 0.9530$ (simulation harness) | $\mathrm{AUROC} \le 0.60$ | **SIMULATION BENCHMARK** |
 | **H5** | Calibrated Selective Abstention | Monotonic Risk Reduction across Deciles | $R(0.50)=0.0698 < R(1.00)=0.3333$, but dips at $c=0.60$ ($0.0577$) | Non-monotonic curve | **STRICT MONOTONICITY UNMET** |
 
 ---

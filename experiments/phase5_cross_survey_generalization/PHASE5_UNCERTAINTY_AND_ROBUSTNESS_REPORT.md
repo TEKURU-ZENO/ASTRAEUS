@@ -94,10 +94,10 @@ The recorded risk-coverage values across the 10 deciles are:
 
 | Hypothesis | Investigated Property | Estimand / Test Metric | Empirical Outcome | Falsification Boundary | Scientific Disposition |
 | :--- | :--- | :--- | :---: | :---: | :---: |
-| **H1** | Astrophysical Parameter Consistency | ODR residual slope & Bland-Altman LoA | $\bar{d} / \sigma = 0.082$ | Residual bias $> 25\%$ | **CONFIRMED** |
+| **H1** | Astrophysical Parameter Consistency | ODR residual slope & Bland-Altman LoA | $\bar{d} / \sigma = 0.082$ (Prototype / Simulation) | Residual bias $> 25\%$ | **EMPIRICAL EVALUATION PENDING** |
 | **H2** | Physical Transfer Superiority | Object-Level Paired Bootstrap $\Delta \text{Macro-F1}$ | $\Delta = -0.0408$ (point estimate)<br>$\Delta_{\mathrm{boot}} = -0.0497$ [$95\%$ BCa: $-0.117, 0.000$] | $\Delta \le 0.0$ or $p \ge 0.05$ | **FALSIFIED IN BENCHMARK** |
 | **H3** | Bounded Domain Adaptation | 3-Way LOSO Retention Ratio ($\text{ZTF} \to \text{ATLAS} \to \text{DECam}$) | $84.2\%$ | Retention $< 90\%$ | **UNMET CRITERION** |
-| **H4** | Covariate Shift Detectability | Mahalanobis Misclassification AUROC | $\mathrm{AUROC} = 0.9530$ (simulation harness) | $\text{AUROC} \le 0.60$ | **SIMULATION BENCHMARK** |
+| **H4** | Covariate Shift Detectability | Uncertainty-Correlated Perturbation Score | $\mathrm{AUROC} = 0.9530$ (simulation harness) | $\text{AUROC} \le 0.60$ | **SIMULATION BENCHMARK** |
 | **H5** | Calibrated Selective Abstention | Monotonic Risk Reduction across Coverage Deciles | $R(0.50)=0.0698 < R(1.00)=0.3333$, but dips at $c=0.60$ ($0.0577$) | Non-monotonic curve | **STRICT MONOTONICITY UNMET** |
 
 ---

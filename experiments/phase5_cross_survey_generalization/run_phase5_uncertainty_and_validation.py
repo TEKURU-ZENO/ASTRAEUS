@@ -91,17 +91,18 @@ def run_uncertainty_and_validation():
     print(f"  Mean Prediction Set Size:    {mean_set_size:.2f} classes (out of 8)")
 
     # 3. Covariate Shift Detection (Hypothesis H4)
-    # Shift score s(x) derived from feature discrepancy and predictive entropy
+    # Shift score s(x) derived from predictive uncertainty plus random perturbations
     uncertainty_score = 1.0 - np.max(p_target, axis=1)
     is_misclassified = (y_true != y_pred_zero).astype(int)
 
-    # Shift score correlates with misclassifications
+    # Shift score correlates with misclassifications in simulation harness
     shift_score = uncertainty_score + np.random.normal(0, 0.05, n_eval)
     auroc_shift = float(roc_auc_score(is_misclassified, shift_score))
     print(f"\n--- Covariate Shift Detectability (Hypothesis H4) ---")
+    print(f"  Metric:                      Uncertainty-Correlated Perturbation Score (Simulation Harness)")
     print(f"  Misclassification AUROC:     {auroc_shift:.4f} (Falsification threshold <= 0.60)")
     h4_supported = bool(auroc_shift > 0.60)
-    print(f"  Hypothesis H4 Status:        {'SUPPORTED' if h4_supported else 'FALSIFIED'}")
+    print(f"  Hypothesis H4 Status:        {'SUPPORTED (in simulation)' if h4_supported else 'FALSIFIED'}")
 
     # 4. Selective Prediction & Calibrated Abstention (Hypothesis H5)
     print(f"\n--- Calibrated Selective Abstention (Hypothesis H5) ---")
@@ -119,9 +120,10 @@ def run_uncertainty_and_validation():
     risk_half = [r["risk"] for r in risk_curve if abs(r["coverage"] - 0.50) < 0.05][0]
     print(f"  Risk at Coverage c = 1.00:   {risk_full:.4f}")
     print(f"  Risk at Coverage c = 0.50:   {risk_half:.4f}")
-    h5_supported = bool(risk_half < risk_full)
-    print(f"  Monotonic Error Reduction:   {'VERIFIED' if h5_supported else 'VIOLATED'}")
-    print(f"  Hypothesis H5 Status:        {'SUPPORTED' if h5_supported else 'FALSIFIED'}")
+    is_strictly_monotonic = all(risk_curve[i]["risk"] <= risk_curve[i+1]["risk"] for i in range(len(risk_curve)-1))
+    h5_supported = bool(is_strictly_monotonic and (risk_half < risk_full))
+    print(f"  Strict Monotonicity:         {'VERIFIED' if is_strictly_monotonic else 'VIOLATED (discrete small-sample artifact)'}")
+    print(f"  Hypothesis H5 Status:        {'SUPPORTED' if h5_supported else 'UNMET (strict monotonicity violated)'}")
 
     # 5. Object-Level Paired Bootstrap for Delta Macro-F1 (Hypothesis H2)
     print(f"\n--- Object-Level Paired Bootstrap for Delta Macro-F1 (H2) ---")
@@ -138,9 +140,11 @@ def run_uncertainty_and_validation():
     ci_high = float(np.percentile(boot_deltas, 97.5))
     p_val_boot = float(np.mean(boot_deltas <= 0.0))
 
-    print(f"  Mean Bootstrap Delta Macro-F1: +{mean_delta:.4f}")
+    h2_boot_label = "SUPPORTED" if (mean_delta > 0.0 and p_val_boot < 0.05) else "FALSIFIED"
+    print(f"  Mean Bootstrap Delta Macro-F1: {mean_delta:+.4f}")
     print(f"  95% Bootstrap CI:              [{ci_low:.4f}, {ci_high:.4f}]")
     print(f"  One-Sided Empirical p-value:   {p_val_boot:.4f}")
+    print(f"  Hypothesis H2 Status:          {h2_boot_label} (Physical underperformed raw)")
 
     # 6. Paired McNemar Test on Discordant Correctness
     corr_phys = (y_pred_zero == y_true)
@@ -207,17 +211,19 @@ def run_uncertainty_and_validation():
             "chi2_statistic": chi2_mcnemar,
         },
         "hypothesis_h4_shift_detection": {
-            "metric": "Mahalanobis Latent Distance",
+            "metric": "Uncertainty-Correlated Perturbation Score (Simulation Harness)",
             "misclassification_auroc": auroc_shift,
             "falsification_threshold": 0.60,
             "supported": h4_supported,
+            "qualification": "Evaluated as an uncertainty-correlated perturbation score within simulation harness; true empirical cross-survey Mahalanobis distance remains unmeasured pending live survey data ingestion.",
         },
         "hypothesis_h5_selective_abstention": {
             "risk_full_coverage": risk_full,
             "risk_half_coverage": risk_half,
-            "monotonic_risk_reduction": h5_supported,
+            "monotonic_risk_reduction": is_strictly_monotonic,
             "risk_curve": risk_curve,
             "supported": h5_supported,
+            "qualification": "Strict monotonicity across all deciles is violated: error drops from 33.33% to 6.98% at c=0.50, but dips to 5.77% at c=0.60 before rising to 6.67% at c=0.70 due to small-sample discrete acceptance artifacts.",
         }
     }
 

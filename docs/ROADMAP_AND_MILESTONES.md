@@ -133,7 +133,7 @@ Determine whether ASTRAEUS preserves astrophysical information, physical paramet
   - Raw payload vaulting architecture preserving byte-exact provider responses with SHA-256 digests.
   - Non-destructive preservation of negative difference-flux measurements.
   - Four-tier outcome disaggregation: Request status, Payload schema validity, Counterpart identity confidence, and Photometric feature evaluability.
-- **Workstream 4:** Photometric and Temporal Harmonization Framework [COMPLETE & VALIDATED]:
+- **Workstream 4:** Photometric and Temporal Harmonization Framework [REMEDIATION IMPLEMENTED; EMPIRICAL VALIDATION PENDING]:
   - Master scientific protocol: `PHASE5_WORKSTREAM4_HARMONIZATION_PROTOCOL.md` (3-state taxonomy, negative flux preservation).
   - Temporal harmonization specification: `PHASE5_TEMPORAL_HARMONIZATION_SPEC.md` (UTC/TAI/TT/TDB, Roemer delay across 7 major observatories, BMJD_TDB).
   - Photometric harmonization specification: `PHASE5_PHOTOMETRIC_HARMONIZATION_SPEC.md` (photon-weighted $\langle F_\nu \rangle$, total system throughput, full covariance propagation).

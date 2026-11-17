@@ -123,24 +123,32 @@ To avoid the prevalent pitfalls of machine learning in time-domain astronomy, Ph
 
 ## 3. Statistical Power & Sample Size Determination
 
-### 3.1 McNemar Test Statistical Power Formulation
-For a paired comparison on $N_{\mathrm{eval}}$ independent astrophysical objects, statistical power depends on the total discordant pair proportion $p_{\mathrm{disc}} = p_{01} + p_{10}$ and the odds ratio $\psi = p_{01} / p_{10}$ (where $p_{01}$ represents Model A correct while Model B incorrect, and $p_{10}$ represents Model A incorrect while Model B correct).
+### 3.1 McNemar Test Statistical Power Formulation & Exact Recalculation
+For a paired comparison on $N_{\mathrm{eval}}$ independent astrophysical objects, statistical power depends on the total discordant pair proportion $p_{\mathrm{disc}} = p_{01} + p_{10}$ and the odds ratio $\psi = p_{01} / p_{10}$ (where $p_{01}$ represents Model A correct while Model B incorrect, and $p_{10}$ represents Model A incorrect while Model B correct). The difference in discordant proportions is:
+$$p_{01} - p_{10} = p_{\mathrm{disc}} \left(\frac{\psi - 1}{\psi + 1}\right)$$
 
-Under two-sided significance level $\alpha = 0.05$ ($z_{1-\alpha/2} = 1.95996$) and target power $1 - \beta = 0.80$ ($z_{1-\beta} = 0.84162$), the required sample size of independent transient objects is given by (Connor 1987; Lachenbruch 1992):
+Under two-sided significance level $\alpha = 0.05$ ($z_{1-\alpha/2} = 1.95996$) and target power $1 - \beta = 0.80$ ($z_{1-\beta} = 0.84162$), the required sample size of independent transient objects is given by the asymptotic formulation (Connor 1987; Lachenbruch 1992):
 
 $$N_{\mathrm{required}} \ge \frac{\left( z_{1-\alpha/2} \sqrt{p_{\mathrm{disc}}} + z_{1-\beta} \sqrt{p_{\mathrm{disc}} - (p_{01} - p_{10})^2} \right)^2}{(p_{01} - p_{10})^2}$$
 
-#### Power Sensitivity Table across Discordant Proportions and Effect Sizes:
+#### Recalculated Power Sensitivity Table across Discordant Proportions and Effect Sizes:
 | Discordant Proportion ($p_{\mathrm{disc}}$) | Odds Ratio ($\psi = p_{01}/p_{10}$) | $p_{01}$ | $p_{10}$ | $|p_{01} - p_{10}|$ | Required Evaluation Sample ($N_{\mathrm{eval}}$) |
 | :---: | :---: | :---: | :---: | :---: | :---: |
-| **0.30** | **2.0** | 0.200 | 0.100 | 0.100 | **84** |
-| **0.25** | **2.2** | 0.172 | 0.078 | 0.094 | **78** |
-| **0.25** | **2.0** | 0.167 | 0.083 | 0.083 | **101** |
-| **0.20** | **2.5** | 0.143 | 0.057 | 0.086 | **76** |
-| **0.20** | **2.0** | 0.133 | 0.067 | 0.067 | **126** |
-| **0.15** | **3.0** | 0.112 | 0.038 | 0.075 | **75** |
+| **0.30** | **2.0** | 0.200 | 0.100 | 0.100 | **234** |
+| **0.25** | **2.2** | 0.172 | 0.078 | 0.094 | **221** |
+| **0.25** | **2.0** | 0.167 | 0.083 | 0.083 | **281** |
+| **0.20** | **2.5** | 0.143 | 0.057 | 0.086 | **212** |
+| **0.20** | **2.0** | 0.133 | 0.067 | 0.067 | **351** |
+| **0.15** | **3.0** | 0.112 | 0.038 | 0.075 | **207** |
 
-An evaluation cohort size of $N_{\mathrm{eval}} \ge 85$ achieves $> 80\%$ power whenever the discordant rate $p_{\mathrm{disc}} \ge 0.25$ and $\psi \ge 2.1$, or when $p_{\mathrm{disc}} \ge 0.30$ and $\psi \ge 2.0$. If the observed discordant rate is lower ($p_{\mathrm{disc}} < 0.20$), power is preserved by evaluating the object-level paired bootstrap on $\Delta \text{Macro-F1}$ as the primary inferential tool.
+#### Decoupling Primary Macro-F1 Bootstrap from Secondary McNemar Analysis:
+As demonstrated by the recalculated table, achieving $80\%$ power for a discrete McNemar test under moderate effect sizes ($\psi \approx 2.0$) requires an evaluation cohort of $N_{\mathrm{eval}} \approx 210\text{--}350$ independent objects. 
+
+Consequently, an evaluation holdout of $N_{\mathrm{eval}} \ge 85$ is **substantially underpowered for detecting discrete McNemar differences** unless discordant rates are exceptionally high or odds ratios extreme ($\psi \ge 4\text{--}5$). For instance, in an evaluation set with only 3 discordant pairs, exact McNemar testing yields $p = 0.25$, which is inherently underpowered to reject equality.
+
+For this reason, Project ASTRAEUS formally decouples the two statistical testing layers:
+1. **Primary Inferential Decision Metric:** The **object-level paired bootstrap** on continuous Macro-F1 ($\Delta \text{Macro-F1}$ with $B = 10,000$ resamples and 95% BCa confidence intervals) serves as the primary decisive inferential tool for Hypothesis H2. The bootstrap directly leverages continuous class-conditional F1 statistics across all evaluation objects, preserving statistical power at $N_{\mathrm{eval}} \ge 85$.
+2. **Secondary Diagnostic Check:** The **paired McNemar test** on instance-level binary classification correctness ($Y_i = \hat{Y}_i$) is retained strictly as an exploratory, orthogonal diagnostic check on discrete discordant pairs. When $b + c < 25$, exact two-sided binomial $p$-values are reported, and failure to achieve significance under small discordant counts ($b+c \ll 25$) is recognized as low statistical power, not evidence of underlying equivalence.
 
 ### 3.2 Planned Empirical Cohorts:
 - **Primary Matched Cohort (ZTF + ATLAS):** Target $N = 250\text{--}400$ secure matched supernovae.

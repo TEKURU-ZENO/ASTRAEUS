@@ -257,9 +257,10 @@ def run_domain_adaptation_experiments():
     pred_atlas_raw = np.argmax(champion_model.predict_proba(X_atlas_raw[eval_idx]), axis=1)
     f1_atlas_raw = f1_score(y_cohort[eval_idx], pred_atlas_raw, average="macro", zero_division=0)
     delta_h2 = f1_atlas_zero - f1_atlas_raw
+    h2_label = "Confirming H2 > 0" if delta_h2 > 0.0 else "Falsifying H2 (Physical underperformed raw)"
     print(f"  Physical Harmonized Features Macro-F1: {f1_atlas_zero:.4f}")
     print(f"  Raw Uncalibrated Features Macro-F1:    {f1_atlas_raw:.4f}")
-    print(f"  Delta Macro-F1 (H2 Estimand):          +{delta_h2:.4f} (Confirming H2 > 0)")
+    print(f"  Delta Macro-F1 (H2 Estimand):          {delta_h2:+.4f} ({h2_label})")
 
     # 6. Run Experiment 5C: Controlled Domain Adaptation
     print("\n--- Running Experiment 5C: Controlled Domain Adaptation ---")

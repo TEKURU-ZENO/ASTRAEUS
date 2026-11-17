@@ -229,6 +229,13 @@ class PhotometricHarmonizer:
         cov_model_co: float = 0.0001,
         dt_mismatch_days: float = 0.0,
         mag_rate_per_day: float = 0.0,
+        *,
+        sigma_cal_g_mag: Optional[float] = None,
+        sigma_cal_r_mag: Optional[float] = None,
+        rho_cal: float = 1.0,
+        mag_rate_c_per_day: Optional[float] = None,
+        mag_rate_o_per_day: Optional[float] = None,
+        rho_temporal: float = 0.0,
     ) -> np.ndarray:
         """
         Computes the complete 2x2 covariance matrix in magnitude space between transformed ATLAS_c and ATLAS_o:
@@ -237,9 +244,15 @@ class PhotometricHarmonizer:
         Where:
         - J = [[0.593, 0.407], [0.222, 0.778]]
         - Sigma_source = [[Var(g), Cov(g,r)], [Cov(g,r), Var(r)]]
-        - Sigma_cal is shared zero-point/calibration covariance across input bands
-        - Sigma_model captures transformation model residual variance and covariance
-        - Sigma_temporal accounts for light-curve evolution across intra-epoch time mismatch dt
+        - Sigma_cal is the input passband calibration covariance matrix:
+            [[sigma_cal_g^2, rho_cal * sigma_cal_g * sigma_cal_r],
+             [rho_cal * sigma_cal_g * sigma_cal_r, sigma_cal_r^2]]
+          Defaults to rho_cal=1.0 and equal uncertainties sigma_cal_mag for fully correlated zero-point shifts.
+        - Sigma_model captures transformation model residual variance and cross-filter covariance.
+        - Sigma_temporal accounts for light-curve evolution across intra-epoch time mismatch dt:
+            [[(rate_c * dt)^2, rho_temp * (rate_c * dt) * (rate_o * dt)],
+             [rho_temp * (rate_c * dt) * (rate_o * dt), (rate_o * dt)^2]]
+          Allows separate band rates and cross-band temporal correlation.
         """
         J = np.array([
             [0.593, 0.407],
@@ -255,10 +268,13 @@ class PhotometricHarmonizer:
         # Propagate source measurement error
         sigma_prop = J @ sigma_source @ J.T
 
-        # 2. Shared calibration covariance (zero-point systematic uncertainty)
+        # 2. Shared/correlated calibration covariance across input passbands
+        cal_g = sigma_cal_g_mag if sigma_cal_g_mag is not None else sigma_cal_mag
+        cal_r = sigma_cal_r_mag if sigma_cal_r_mag is not None else sigma_cal_mag
+        cov_cal = rho_cal * cal_g * cal_r
         sigma_cal = np.array([
-            [sigma_cal_mag ** 2, sigma_cal_mag ** 2],
-            [sigma_cal_mag ** 2, sigma_cal_mag ** 2]
+            [cal_g ** 2, cov_cal],
+            [cov_cal, cal_r ** 2]
         ], dtype=np.float64)
         sigma_cal_target = J @ sigma_cal @ J.T
 
@@ -268,11 +284,15 @@ class PhotometricHarmonizer:
             [cov_model_co, sigma_model_o ** 2]
         ], dtype=np.float64)
 
-        # 4. Temporal mismatch variance
-        var_temporal = (mag_rate_per_day * dt_mismatch_days) ** 2
+        # 4. Temporal mismatch variance and cross-band evolution covariance
+        rate_c = mag_rate_c_per_day if mag_rate_c_per_day is not None else mag_rate_per_day
+        rate_o = mag_rate_o_per_day if mag_rate_o_per_day is not None else mag_rate_per_day
+        var_temporal_c = (rate_c * dt_mismatch_days) ** 2
+        var_temporal_o = (rate_o * dt_mismatch_days) ** 2
+        cov_temporal_co = rho_temporal * (rate_c * dt_mismatch_days) * (rate_o * dt_mismatch_days)
         sigma_temporal = np.array([
-            [var_temporal, 0.0],
-            [0.0, var_temporal]
+            [var_temporal_c, cov_temporal_co],
+            [cov_temporal_co, var_temporal_o]
         ], dtype=np.float64)
 
         # Full combined magnitude covariance

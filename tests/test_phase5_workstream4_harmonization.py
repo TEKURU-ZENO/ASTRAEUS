@@ -421,6 +421,56 @@ def test_ws4_photometric_full_covariance_and_flux_propagation():
     assert 2.0 < cond_num < 4.0, f"Condition number {cond_num} unexpected!"
 
 
+def test_ws4_photometric_general_calibration_and_temporal_covariance():
+    """
+    GENERAL COVARIANCE FORMULATION TEST:
+    Verifies that PhotometricHarmonizer.compute_atlas_full_covariance supports:
+    - Separate input band calibration errors (sigma_cal_g_mag, sigma_cal_r_mag)
+    - Zero-point cross-band correlation rho_cal
+    - Separate band evolution rates (mag_rate_c, mag_rate_o)
+    - Cross-band temporal correlation rho_temporal
+    - Proper reduction to equal-parameter special case.
+    """
+    # 1. Independent calibration errors with partial correlation
+    cov_general = PhotometricHarmonizer.compute_atlas_full_covariance(
+        g_err_mag=0.03,
+        r_err_mag=0.02,
+        cov_gr_mag=0.0001,
+        sigma_cal_g_mag=0.015,
+        sigma_cal_r_mag=0.010,
+        rho_cal=0.5,
+        dt_mismatch_days=0.1,
+        mag_rate_c_per_day=0.15,
+        mag_rate_o_per_day=0.10,
+        rho_temporal=0.8,
+    )
+    assert cov_general.shape == (2, 2)
+    assert np.isclose(cov_general[0, 1], cov_general[1, 0])
+    eigenvalues = np.linalg.eigvals(cov_general)
+    assert np.all(eigenvalues > 0.0), f"Matrix not positive-definite: {eigenvalues}"
+
+    # 2. Reduction check: when parameters match, general call equals default call
+    cov_default = PhotometricHarmonizer.compute_atlas_full_covariance(
+        g_err_mag=0.02,
+        r_err_mag=0.02,
+        sigma_cal_mag=0.010,
+        mag_rate_per_day=0.10,
+        dt_mismatch_days=0.05,
+    )
+    cov_explicit = PhotometricHarmonizer.compute_atlas_full_covariance(
+        g_err_mag=0.02,
+        r_err_mag=0.02,
+        sigma_cal_g_mag=0.010,
+        sigma_cal_r_mag=0.010,
+        rho_cal=1.0,
+        mag_rate_c_per_day=0.10,
+        mag_rate_o_per_day=0.10,
+        rho_temporal=0.0,
+        dt_mismatch_days=0.05,
+    )
+    assert np.allclose(cov_default, cov_explicit)
+
+
 def test_ws4_preregistered_allocation_algorithm_and_mcnemar_power():
     """
     STATISTICAL POWER & ALLOCATION ALGORITHM TEST:

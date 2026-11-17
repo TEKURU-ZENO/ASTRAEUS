@@ -127,6 +127,7 @@ def test_phase5_ws6_conformal_calibration_and_shift_detection(repo_root: Path):
     auroc = res["hypothesis_h4_shift_detection"]["misclassification_auroc"]
     assert auroc > 0.60, f"Shift AUROC {auroc} failed threshold > 0.60!"
     assert res["hypothesis_h4_shift_detection"]["supported"] is True
+    assert res["hypothesis_h4_shift_detection"]["metric"] == "Uncertainty-Correlated Perturbation Score (Simulation Harness)"
 
     # 3. Selective Abstention Monotonicity (Hypothesis H5)
     r_full = res["hypothesis_h5_selective_abstention"]["risk_full_coverage"]
@@ -161,6 +162,8 @@ def test_phase5_research_paper_and_governance_invariants(repo_root: Path):
     assert "Conformal Prediction" in paper_text
     assert "FALSIFIED IN BENCHMARK" in paper_text
     assert "FALSIFIED IN BENCHMARK" in closure_text
+    assert "EMPIRICAL EVALUATION PENDING" in paper_text
+    assert "EMPIRICAL EVALUATION PENDING" in closure_text
 
 
 def test_phase5_all_workstreams_reconciled_status(repo_root: Path):

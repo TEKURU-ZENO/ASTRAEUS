@@ -2,7 +2,7 @@
   "manifest_identifier": "ASTRAEUS-P5-FINAL-CLOSURE-EVIDENCE-001",
   "author": "Dev Mehta",
   "lead_investigator": "Dev Mehta",
-  "date": "2026-11-16",
+  "date": "2026-11-17",
   "milestone": "Phase 5 Scientific Reconciliation & Evidence Manifest",
   "governance_invariants": {
     "gate3_quarantine_test_objects": 586,
@@ -23,7 +23,7 @@
   "scope": "28 core Phase 5 specification, implementation, execution script, data, and paper assets cryptographically verified",
   "artifact_sha256_digests": {
     "PHASE5_SCIENTIFIC_PROTOCOL.md": "6570180232317dfe67224b9f4ab38bec7ec6a842aee4428540befd4ec26562d3",
-    "PHASE5_STATISTICAL_ANALYSIS_PLAN.md": "c8f3a66f4e98f75b755b577179912e78aebe17483f36788ad57101fdc7ea9eab",
+    "PHASE5_STATISTICAL_ANALYSIS_PLAN.md": "1b9f83a3356c88b9a7f5255e2ae27917c78e7f701605ec40c76bc9f76eb44b8d",
     "PHASE5_DATASET_AND_COHORT_DESIGN.md": "d42736d25e0dae6d435c1071453ba42fa88976eca8e13b3faf4984c2170de35b",
     "PHASE5_GOVERNANCE_AND_LEAKAGE_PLAN.md": "f75d1e7066dae9fe22955e79dee4187b63bd4223ff84f67979406d01cec246d1",
     "PHASE5_SURVEY_FEASIBILITY_AUDIT.md": "2542b5fba97faf2ae2791460be25c7c4d918cc63dbd9a2464acc7bb7e6e3b91f",
@@ -41,14 +41,14 @@
     "PHASE5_PHOTOMETRIC_HARMONIZATION_SPEC.md": "1b893b51c0fbddf695fd58a7ba317fe52d42167eab0a5953de8541baa0c7a59f",
     "PHASE5_HARMONIZATION_STATISTICAL_AND_GOVERNANCE_PLAN.md": "ad26c389b7a2c128d1b65ac9c30efcd95490929791f652287f35d774ec90ae29",
     "PHASE5_DOMAIN_ADAPTATION_EXPERIMENTS.md": "6965e9c245a79ed869175f18b9526af01cb263b656dd272f0c8ad9095a9cab17",
-    "run_phase5_domain_adaptation.py": "4827c6c259563da8ce1309a43374160bb4a1fcdcd783906534f3859cfad180fb",
+    "run_phase5_domain_adaptation.py": "5bc25f44b8bc4910b7b365bbf9d728251255cb00bebb80a899b4ab8050539d04",
     "phase5_domain_adaptation_results.parquet": "a1fdae237175b69ee5f7a98b39548461a2cc45d58d75d9966d1a62266f675810",
     "phase5_domain_adaptation_summary.json": "1f83487fedcfe9da13f461825d48c782ff2fcdc31138a9a5d1ff756edffd2a6e",
-    "PHASE5_UNCERTAINTY_AND_ROBUSTNESS_REPORT.md": "14d09644fd17919d497b1f9e9cac05cbfd1ae7df3001a99489f8698017ff7f48",
-    "run_phase5_uncertainty_and_validation.py": "341b453bf3360cb7edf1b0b83dc2e1fa0ba6be3a1958f5067d18ed8c87170b04",
-    "phase5_hypothesis_testing_results.json": "dc3128b089af81fd5be083fe21085f68c61e8135fb97f54ad979e6404f2bbfea",
+    "PHASE5_UNCERTAINTY_AND_ROBUSTNESS_REPORT.md": "20c8b941df7672e261bd567973ece6e4dfe8bc3d06cb9042d87aeca863597c72",
+    "run_phase5_uncertainty_and_validation.py": "182bf9668e77d194914e47d89bd57ad30b24dff14945f0b4b36dd8ee73c7c967",
+    "phase5_hypothesis_testing_results.json": "856025b6ab587cadf007a6fa5475e03ebc593f57a60bc79c866f153526c63be4",
     "phase5_uncertainty_metrics.parquet": "8ae0241f1dacd89727c686caecf8830f4204f6fe2857e89a530b1166dfb904db",
-    "PHASE5_RESEARCH_PAPER.md": "40a894b6f05fb666f2d0751e46e7cdcda435af1e8929352fa7a9ef056975b53c",
-    "PHASE5_FINAL_SCIENTIFIC_CLOSURE_REPORT.md": "ba3b96f2086df69f52bafdc9830d90fd79186e9415fc57d1868933364bb97229"
+    "PHASE5_RESEARCH_PAPER.md": "9b7543735a4b0a6d787c055667de5a2bf66e8acb95c331e2f9f5affbeb50f848",
+    "PHASE5_FINAL_SCIENTIFIC_CLOSURE_REPORT.md": "919713cefc86f9f31f24f3c4e23bc981ac1b9d45aa63b89c982b97c9b9f9f013"
   }
 }

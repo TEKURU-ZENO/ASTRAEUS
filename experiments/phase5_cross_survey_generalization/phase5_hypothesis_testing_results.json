@@ -36,12 +36,12 @@
     "exact_binomial_p": 0.25
   },
   "hypothesis_h4_shift_detection": {
-    "metric": "Mahalanobis Latent Distance (Simulation Harness)",
+    "metric": "Uncertainty-Correlated Perturbation Score (Simulation Harness)",
     "misclassification_auroc": 0.9530321046373365,
     "exploratory_subset_auroc": 0.724,
     "falsification_threshold": 0.6,
     "supported": true,
-    "qualification": "Evaluated within simulation harness; true empirical cross-survey AUROC remains unmeasured pending live survey data ingestion."
+    "qualification": "Evaluated as an uncertainty-correlated perturbation score within the simulation harness; true empirical cross-survey Mahalanobis distance remains unmeasured pending live survey data ingestion."
   },
   "hypothesis_h5_selective_abstention": {
     "risk_full_coverage": 0.3333333333333333,
