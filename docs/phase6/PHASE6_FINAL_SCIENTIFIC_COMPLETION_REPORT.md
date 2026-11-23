@@ -1,19 +1,21 @@
-# ASTRAEUS Phase 6: Computational Universe & Experimental Intelligence — Final Consolidated Scientific Completion Report
+# ASTRAEUS Phase 6: Computational Universe & Experimental Intelligence — Engineering Baseline & Scientific Audit Report
 
-**Document Identifier:** `ASTRAEUS-P6-FINAL-REPORT-001`  
+**Document Identifier:** `ASTRAEUS-P6-REPORT-001`  
 **Classification:** Scientific Release, Multi-Engine Integration & Governance Audit  
-**Version:** 1.0.0 (Consolidated Final Release)  
+**Version:** 1.1.0 (Engineering Baseline Frozen; Scientific Closure Gated on Phase 6.1)  
 **Author:** Dev Mehta (Lead Investigator & Mission Director, Project ASTRAEUS)  
 **Date:** November 23, 2026  
-**Status:** **COMPLETE — FULL MONOREPO REPRODUCIBILITY VERIFIED (136/136 TESTS PASSING)**  
+**Status:** **ENGINEERING BASELINE FROZEN — SCIENTIFIC CLOSURE GATED ON PHASE 6.1**  
 
 ---
 
 ## Executive Summary
 
-Phase 6 marks the definitive transition of Project ASTRAEUS from observational astronomical intelligence into computational astrophysics and autonomous scientific experimentation. Following the transition to the **Integrated Phase 6 Delivery Model**, all technical workstreams were consolidated into five parallel, tightly coupled engineering tracks, culminating in a single unified release verified against the highest scientific, numerical, and epistemic standards.
+Phase 6 marks the software and architectural transition of Project ASTRAEUS into computational astrophysics and autonomous experimentation. The software components and numerical operators for three computational engines (`engines/cosmology`, `engines/hydrodynamics`, and `engines/experimental_design`) have been implemented and pass 136 local unit/integration tests with zero regressions and strict zero-touch preservation of the Phase 5 Gate 3 quarantine covenant (586 test objects, 1,808 HEALPix pixels).
 
-Across three newly constructed computational engines (`engines/cosmology`, `engines/hydrodynamics`, and `engines/experimental_design`), 136 automated unit and integration tests now pass cleanly across the monorepo with **zero regressions**, **zero epistemic leakage**, and **strict zero-touch preservation of the Phase 5 Gate 3 quarantine covenant** (586 test objects, 1,808 HEALPix pixels).
+> [!IMPORTANT]
+> **Scientific Evidence Addendum & Scope Qualification (`ASTRAEUS-P6.1-CORRECTION-001`):**
+> Following a formal scientific audit, Project ASTRAEUS distinguishes between **functional software implementation** and **empirical scientific validation**. The engineering code in commit `21d211d` is frozen as the authoritative baseline. Empirical scientific claims regarding trained hydrodynamic surrogates, cosmological parameter recovery, and scheduling gain are withdrawn pending Phase 6.1 (`PHASE6_1_SCIENTIFIC_REMEDIATION_AND_TRAINING`). Transition to Phase 7 is deferred until Phase 6.1 closure is achieved. See [PHASE6_1_SCIENTIFIC_CORRECTION_ADDENDUM.md](file:///c:/Users/Dev%20Mehta/Desktop/ASTRAEUS/docs/phase6/PHASE6_1_SCIENTIFIC_CORRECTION_ADDENDUM.md).
 
 ```
 ╔══════════════════════════════════════════════════════════════════════════════════╗
@@ -182,8 +184,7 @@ tests/test_phase5_workstream4_harmonization.py                  13 passed
 
 ## 7. Strategic Disposition & Recommendation
 
-1. **Accept Phase 6 as Complete:** All pre-registered requirements for the Computational Universe and Experimental Intelligence programme have been met, implemented, and verified.
-2. **Transition to Phase 7:** Authorize entry into **Phase 7 (Closed-Loop Autonomous Intelligence)**, connecting alert triage, multi-agent reasoning, neural surrogate simulation, and automated telescope scheduling into a single end-to-end scientific loop.
-3. **Commit & Push:** Stage all newly created and updated files and execute the single consolidated Phase 6 release commit:
-   `feat(phase6): complete computational universe and experimental intelligence`
-   and push to `origin/master`.
+1. **Preserve Engineering Baseline:** Commit `21d211d` represents the verified software and numerical foundation for Phase 6.
+2. **Reopen Scientific Closure:** All empirical parameter recovery, trained neural surrogate, and RL telescope scheduling performance claims are reclassified under Phase 6.1 (`PHASE6_1_SCIENTIFIC_REMEDIATION_AND_TRAINING`).
+3. **Defer Phase 7:** Phase 7 (Closed-Loop Autonomous Intelligence) remains gated until Phase 6.1 achieves independent scientific verification.
+4. **Authoritative Evidence Addendum:** Formal rectifications are documented in `docs/phase6/PHASE6_1_SCIENTIFIC_CORRECTION_ADDENDUM.md`.

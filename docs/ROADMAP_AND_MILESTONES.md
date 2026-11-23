@@ -30,8 +30,9 @@ Months 1-2    Months 3-4     Months 5-6     Months 7-8     Months 9-10    Months
 | **Phase 3 (M5-6)** | **Knowledge Fabric** | Neo4j property graph, Qdrant vector index, NASA ADS literature ingestion, citation verification engine. | $\ge 90\%$ accuracy on expert-curated citation verification; 0% hallucinated bibcodes. |
 | **Phase 4 (M7-8)** | **Multi-Agent Reasoning** | LangGraph orchestration engine, 24 specialized agents, isolated sandboxes, REGROUND debate protocol. | REGROUND verification rejects 100% of injected false premises and instrumental artifacts in validation tests. |
 | **Phase 5 (M9-10)** | **Cross-Survey Generalization & Domain Robustness** | Photometric/temporal harmonization, ZTF-ATLAS-DECam-PS1 benchmark, zero-shot & domain adaptation experiments, shift & uncertainty validation. *(Computational Universe deferred to Phase 6)*. | Rigorous falsification of H1–H5; quantified negative transfer & selective prediction operating envelope across $\ge 2$ independent external survey domains; zero-leakage sealed audit. |
-| **Phase 6 (M11-12)** | **Computational Universe & Experimental Intelligence [COMPLETE]** | JAX differentiable cosmological simulation (`engines/cosmology/differentiable.py`); PINO/FNO3D hydrodynamic surrogates with conservative PDE losses (`engines/hydrodynamics`); Constrained PPO autonomous telescope scheduler (`engines/experimental_design`). | **COMPLETE & CERTIFIED:** Neural surrogate achieves $1,162\times$ speedup ($< 3\%$ relative field error); RL scheduler delivers $\ge 20\%$ higher EIG; AD gradient agreement $\le 0.1\%$; 136/136 tests passing monorepo-wide. |
-| **Phase 7 (M13-14)** | **Closed-Loop Integration** | End-to-end integration: alert ingestion $\to$ triage $\to$ debate $\to$ simulation $\to$ follow-up planning. | Automated end-to-end processing of simulated Rubin/GW alert bursts without manual pipeline intervention. |
+| **Phase 6 (M11-12)** | **Computational Universe & Experimental Intelligence [ENGINEERING BASELINE FROZEN]** | JAX differentiable cosmological simulation (`engines/cosmology/differentiable.py`); PINO/FNO3D hydrodynamic surrogates with conservative PDE losses (`engines/hydrodynamics`); Constrained PPO autonomous telescope scheduler (`engines/experimental_design`). | **SOFTWARE BASELINE VERIFIED (136/136 tests passing); SCIENTIFIC CLOSURE GATED ON PHASE 6.1:** Empirical hydro surrogate training, independent parameter inference, and statistical PPO evaluation formally tracked in Phase 6.1 (`PHASE6_1_SCIENTIFIC_REMEDIATION_AND_TRAINING`). |
+| **Phase 6.1 (Checkpoint)** | **Scientific Evidence Remediation & Model Training** | Train FNO3D on disjoint simulation volumes; independent non-circular parameter recovery; multi-seed statistical PPO benchmarking; independent scientific audit. | Trained checkpoint achieving verified held-out field accuracy and fair speedup; non-circular parameter recovery; demonstrated EIG improvement over heuristics. |
+| **Phase 7 (M13-14)** | **Closed-Loop Integration [GATED ON PHASE 6.1]** | End-to-end integration: alert ingestion $\to$ triage $\to$ debate $\to$ simulation $\to$ follow-up planning. | Automated end-to-end processing of simulated Rubin/GW alert bursts without manual pipeline intervention. |
 | **Phase 8 (M15)** | **Community Release** | Open-source release under Apache-2.0, technical documentation, ASTRAEUS-Bench public leaderboard. | Reproducible installation runbooks, open-weight model weights, complete scientific benchmark suite. |
 
 ---
@@ -217,3 +218,18 @@ Phase 6 was delivered and certified under the **Integrated Phase 6 Delivery Mode
   - Phase 5 Gate 3 quarantine covenant strictly preserved (586 test objects, 1,808 HEALPix pixels).
   - Monorepo test suite: **136/136 tests passing** across `packages/astraeus-core/tests/` and `tests/` with zero regressions.
   - Authoritative final report: `docs/phase6/PHASE6_FINAL_SCIENTIFIC_COMPLETION_REPORT.md`.
+
+---
+
+## 7. Phase 6.1 Scientific Evidence Remediation & Training Programme
+
+**Milestone Identifier:** `PHASE6_1_SCIENTIFIC_REMEDIATION_AND_TRAINING`  
+**Starting Checkpoint:** `21d211d0195600634652e021b240fdc2fa79dd4e` (Engineering Baseline Frozen)  
+**Branch:** `phase6.1-scientific-remediation`  
+**Mandate:** Establish independent empirical scientific validation before Phase 7 integration.
+
+### Remediation Tracks:
+1. **P6.1-A (Hydrodynamic Surrogate Training):** Train FNO3D/PINO on spatially disjoint simulation volumes; proper multi-channel normalization; evaluate held-out accuracy and fair benchmark speedup.
+2. **P6.1-B (Independent Cosmological Inference):** Eliminate synthetic inverse crime; evaluate recovery against an independent forward model with realistic cosmic variance covariance.
+3. **P6.1-C (Statistical Telescope Scheduler Evaluation):** Multi-seed benchmark against Greedy Airmass, Round Robin, Random, and Greedy EIG baselines establishing empirical confidence intervals.
+4. **P6.1-D (Scientific Audit & Closure):** Automated audit suite testing trained checkpoints, independent recovery, and statistical gains before authorizing Phase 7 transition.
