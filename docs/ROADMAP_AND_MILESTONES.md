@@ -3,7 +3,7 @@
 
 **Document Identifier:** `ASTRAEUS-ROADMAP-001`  
 **Classification:** Strategic Planning & Milestone Verification  
-**Version:** 2.3.0 (Post-Gate 4 Scientific Reconciliation: Phase 5 Realigned to Independent Cross-Survey Generalization)  
+**Version:** 2.4.0 (Phase 6 Initialized: Computational Universe & Experimental Intelligence Foundation)  
 
 ---
 
@@ -162,3 +162,50 @@ Determine whether ASTRAEUS preserves astrophysical information, physical paramet
   - Master cryptographic evidence manifest: `phase5_final_evidence_manifest.json` sealing 28 assets (including Python execution engines), anchored in `phase5_final_evidence_manifest.sha256`.
   - Comprehensive closure test suite: `tests/test_phase5_final_closure.py`.
   - Phase 5 Reconciled Status: Software architecture and simulation benchmarks frozen; empirical cross-survey generalization remains open pending live external broker ingestion. Phase 6 empirical foundation modeling gated on real multi-survey acquisition.
+
+---
+
+## 6. Phase 6 Master Research Programme (M11–12)
+
+**Theme:** Computational Universe & Experimental Intelligence  
+**Lead Investigator:** Dev Mehta  
+**Scientific Mission:** Can ASTRAEUS build computationally efficient, differentiable and physically constrained models of astrophysical systems, then use those models to design better scientific experiments?  
+**Hardware Strategy:** 3-Tier Compute Architecture (Local RTX 5050 8 GB VRAM prototyping vs Cloud A100 training vs Institutional HPC supercomputing). Anti-overclaiming rules strictly enforced.  
+**Epistemic Governance Invariant:** Phase 5 checkpoint `0601beb` permanently frozen. Gate 3 Spatial Test Set (586 objects, 1808 HEALPix pixels) quarantined under zero-touch covenant. Open empirical obligations tracked in `docs/phase6/PHASE5_CONTINUATION_LEDGER.md`.
+
+### Flagship Research Questions:
+1. **RQ16:** Can differentiable cosmological simulations support reliable parameter inference?
+2. **RQ17:** Can physics-informed neural operators accelerate simulations while preserving physical fidelity?
+3. **RQ18:** Can information-theoretic autonomous agents improve observational experiment selection?
+
+### Three Decoupled Computational Engines:
+1. **Cosmology Engine (`engines/cosmology`):**
+   - Analytical background expansion $E(a)$, $H(a)$, comoving distance measures $\chi(z), d_A(z), d_L(z)$, conformal time $\tau(a)$, and ODE linear growth factor $D_1(a)$ / growth rate $f(a)$.
+   - 3D Particle-Mesh (PM) solver with trilinear Cloud-in-Cell (CIC) mass assignment and matching force interpolation guaranteeing exact momentum conservation ($\|\sum m_i \mathbf{g}_i\| \sim 10^{-13}$).
+   - 3D discrete 7-point finite-difference Green's function FFT Poisson solver with zero-mean cosmological potential boundary condition ($G(\mathbf{0}) = 0$).
+   - Symplectic Kick-Drift-Kick (KDK) leapfrog time integrator in comoving FLRW coordinates preserving phase space volume (Liouville's theorem) and evaluating Layzer-Irvine cosmic energy equation discrete residuals.
+   - Exact analytical benchmarks: 1D Zel'dovich pancake plane wave collapse solution and Keplerian two-body circular orbit solver.
+2. **Hydrodynamics Engine (`engines/hydrodynamics`):**
+   - Physics-Informed Neural Operator (PINO) surrogate architecture combining Fourier Neural Operators (FNO) with conservative PDE residual losses (continuity, Euler, energy).
+   - Data compatibility contracts for CAMELS-IllustrisTNG and CAMELS-SIMBA suites ($25^3\,(h^{-1}\mathrm{Mpc})^3$, $1000$ cosmological volumes across $(\Omega_m, \sigma_8, A_{\mathrm{SN1}}, A_{\mathrm{AGN1}}, \dots)$).
+3. **Experiment Engine (`engines/experimental_design`):**
+   - Bayesian experimental design with Expected Information Gain (EIG) utility objective: $U(d) = \mathbb{E}_{y|d} [ D_{\mathrm{KL}}(p(\theta|y, d) \parallel p(\theta)) ]$.
+   - Gymnasium-compatible telescope scheduling environment with slew dynamics, airmass limits, weather degradation, and ToO alert preemption.
+   - Constrained Proximal Policy Optimization (PPO) agent with safety Lagrangian multipliers.
+
+### Sequential Workstreams & Progress:
+- **Workstream 1: Scientific Computing Foundation [COMPLETE]:**
+  - Foundational specs authored: `PHASE6_RESEARCH_PROTOCOL.md`, `PHASE5_CONTINUATION_LEDGER.md`, `PHASE6_HARDWARE_AND_COMPUTE_FEASIBILITY.md`, `PHASE6_NUMERICAL_FOUNDATION_SPEC.md`.
+  - Modules implemented: `engines/cosmology/constants.py`, `engines/cosmology/background.py`, `engines/cosmology/mesh.py`, `engines/cosmology/integrator.py`, `engines/cosmology/analytic_tests.py`.
+  - Comprehensive unit & benchmark test suite implemented: `tests/phase6/test_phase6_ws1_cosmological_foundation.py` (15 tests passing, verifying expansion functions, distance reciprocity, EdS growth $D_1(a)=a$, CIC mass conservation, Poisson dipole antisymmetry, comoving momentum conservation to $10^{-11}$, symplectic time-reversibility to $10^{-8}$, Layzer-Irvine residuals, Kepler invariants, and Zel'dovich pancake convergence with $L_1 < 2.0\%$ and $L_\infty < 5.0\%$).
+  - Full repository regression validation: 98/98 tests passing across all packages with zero regressions.
+- **Workstream 2: Differentiable Cosmological Simulation (`pmwd` Integration) [SCHEDULED]:**
+  - Implement forward and adjoint sensitivity particle-mesh simulation in JAX; reverse-mode automatic differentiation through time integration.
+- **Workstream 3: Neural Hydrodynamic Surrogate Modeling (PINO) [SCHEDULED]:**
+  - Implement 3D FNO spectral convolution layers; CAMELS dataset loader; PDE residual physics loss.
+- **Workstream 4: Bayesian Experimental Design & Autonomous Scheduling [SCHEDULED]:**
+  - Gymnasium telescope scheduling environment; Mutual information / EIG estimator; Constrained PPO agent.
+- **Workstream 5: Joint Multi-Engine Experiments & Benchmarks [SCHEDULED]:**
+  - Execute pre-registered hypothesis tests H16–H21; evaluate speedup vs accuracy, EIG improvement, and posterior parameter recovery.
+- **Workstream 6: Independent Audit, Paper Preparation, and Community Release [SCHEDULED]:**
+  - Cryptographic evidence manifest; ApJ/MNRAS research manuscript; open-source release runbooks.
