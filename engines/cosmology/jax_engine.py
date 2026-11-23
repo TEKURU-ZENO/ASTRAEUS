@@ -198,7 +198,7 @@ class JaxParticleMeshSolver3D:
     ) -> jnp.ndarray:
         """Computes dimensionless density contrast delta = rho / rho_bar - 1."""
         if total_mass is None:
-            total_mass = float(jnp.sum(mass_grid))
+            total_mass = jnp.sum(mass_grid)
 
         mean_mass_per_cell = total_mass / (self.n_grid ** 3)
         delta_grid = (mass_grid / mean_mass_per_cell) - 1.0
@@ -212,7 +212,7 @@ class JaxParticleMeshSolver3D:
         using 3D FFT and the 7-point discrete Green's function.
         """
         if G_source_coeff is None:
-            G_source_coeff = 1.5 * self.cosmo.Omega_m * (self.cosmo.H0 ** 2) / max(a, 1e-10)
+            G_source_coeff = 1.5 * self.cosmo.Omega_m * (self.cosmo.H0 ** 2) / jnp.maximum(a, 1e-10)
 
         delta_k = jnp.fft.fftn(delta_grid)
         phi_k = delta_k * self.inv_laplacian_k * G_source_coeff
@@ -263,9 +263,9 @@ class JaxParticleMeshSolver3D:
         Complete forward Particle-Mesh force pipeline:
         Particles -> CIC deposit -> delta -> Poisson solve -> Central diff -> CIC interpolate.
         """
-        n_p = len(positions)
+        n_p = positions.shape[0]
         mass_grid, corners = self.cic_deposit(positions, masses)
-        total_mass = float(jnp.sum(masses))
+        total_mass = jnp.sum(masses)
         delta_grid = self.compute_density_contrast(mass_grid, total_mass=total_mass)
         phi_grid = self.solve_poisson(delta_grid, a=a, G_source_coeff=G_source_coeff)
         gx, gy, gz = self.compute_grid_acceleration(phi_grid)
