@@ -173,6 +173,15 @@ class PhysicsConservationLoss(nn.Module):
         res_mass = self.compute_mass_residual(rho, vx, vy, vz)
         res_mom = self.compute_momentum_residual(rho, vx, vy, vz, T)
 
+        # Magnetic solenoidality residual (if vector magnetic channels present)
+        if predicted.shape[1] >= 8:
+            bx = predicted[:, 5:6]
+            by = predicted[:, 6:7]
+            bz = predicted[:, 7:8]
+            res_b = self.compute_solenoidal_residual(bx, by, bz)
+        else:
+            res_b = torch.tensor(0.0, device=predicted.device)
+
         # 2. Data loss (if target provided)
         if target is not None:
             loss_data = F.mse_loss(predicted, target)
@@ -183,6 +192,7 @@ class PhysicsConservationLoss(nn.Module):
             self.lambda_data * loss_data
             + self.lambda_mass * res_mass
             + self.lambda_momentum * res_mom
+            + self.lambda_solenoidal * res_b
         )
 
         metrics = {
@@ -190,6 +200,7 @@ class PhysicsConservationLoss(nn.Module):
             "loss_data": float(loss_data.detach().cpu().item()),
             "res_mass": float(res_mass.detach().cpu().item()),
             "res_momentum": float(res_mom.detach().cpu().item()),
+            "res_solenoidal": float(res_b.detach().cpu().item()),
         }
 
         return total_loss, metrics

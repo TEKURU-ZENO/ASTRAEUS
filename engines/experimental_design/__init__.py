@@ -21,8 +21,11 @@ from engines.experimental_design.ppo_scheduler import (
     BaseScheduler,
     GreedyAirmassScheduler,
     RoundRobinScheduler,
+    RandomScheduler,
+    GreedyEIGScheduler,
     ConstrainedPPOScheduler,
     evaluate_baseline,
+    run_statistical_scheduler_benchmark,
 )
 
 __all__ = [
@@ -34,6 +37,9 @@ __all__ = [
     "BaseScheduler",
     "GreedyAirmassScheduler",
     "RoundRobinScheduler",
+    "RandomScheduler",
+    "GreedyEIGScheduler",
     "ConstrainedPPOScheduler",
     "evaluate_baseline",
+    "run_statistical_scheduler_benchmark",
 ]

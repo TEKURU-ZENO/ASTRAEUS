@@ -153,7 +153,7 @@ class PINO3DModel(nn.Module):
         self.out_channels = out_channels
         self.width = width
         self.include_grid = include_grid
-        self.positive_channels = positive_channels if positive_channels is not None else [0, 4]  # density and temperature
+        self.positive_channels = positive_channels  # None by default for standardized targets
 
         # Uplifting layer: input (+ 3 spatial coordinates if include_grid) -> width
         input_dim = in_channels + (3 if include_grid else 0)

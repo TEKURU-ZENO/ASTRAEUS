@@ -19,6 +19,12 @@ from engines.cosmology.jax_engine import (
     JaxSimulationState,
     JaxSymplecticKDKLeapfrog,
 )
+from engines.cosmology.differentiable import (
+    DifferentiableInitialConditions,
+    DifferentiableSimulator,
+    FisherParameterInference,
+    IndependentCosmologicalInference,
+)
 
 __all__ = [
     "CosmologicalParameters",
@@ -33,4 +39,8 @@ __all__ = [
     "JaxParticleMeshSolver3D",
     "JaxSimulationState",
     "JaxSymplecticKDKLeapfrog",
+    "DifferentiableInitialConditions",
+    "DifferentiableSimulator",
+    "FisherParameterInference",
+    "IndependentCosmologicalInference",
 ]

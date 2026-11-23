@@ -423,3 +423,197 @@ class FisherParameterInference:
             "final_err_s8": abs(curr_s8 - s8_true) / s8_true,
             "history": history,
         }
+
+
+class IndependentCosmologicalInference:
+    """
+    Independent Cosmological Parameter Inference Suite (Track P6.1-B).
+    Eliminates inverse-crime circularity by testing parameter recovery against
+    independent simulation realizations with distinct random phases,
+    realistic mode-dependent covariance C(k), and pre-registered Fisher identifiability bounds.
+    """
+
+    def __init__(
+        self,
+        simulator: DifferentiableSimulator,
+        ic_gen: DifferentiableInitialConditions,
+    ):
+        self.sim = simulator
+        self.ic = ic_gen
+
+    def generate_independent_mock_observation(
+        self,
+        theta_true: Tuple[float, float],
+        seed: int = 999,
+        noise_frac: float = 0.03,
+    ) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+        """
+        Generates an independent mock observation using a DISTINCT random seed
+        and Gaussian cosmic variance mode noise.
+        Returns: (k_centers, noisy_P_k, covariance_matrix)
+        """
+        Om_true, s8_true = theta_true
+        # Generate independent phases that the inference engine has never seen
+        indep_phases = self.ic.generate_gaussian_phases(seed=seed)
+
+        pos, mom, masses = self.ic.create_initial_mesh_state(Om_true, s8_true, indep_phases)
+        _, _, delta_fin = self.sim.simulate_trajectory(
+            pos, mom, masses, a_init=self.ic.a_init, a_target=0.08, n_steps=5, Omega_m=Om_true
+        )
+        k_centers, pk_true = self.sim.compute_power_spectrum(delta_fin)
+        k_centers_np = np.array(k_centers)
+        pk_true_np = np.array(pk_true)
+
+        # Realistic Gaussian cosmic variance + instrumental noise covariance
+        # Var(P_b) = (2 / N_modes_b) * P_true^2 + (noise_frac * P_true)^2
+        n_bins = len(pk_true_np)
+        approx_modes = np.array([max(8 * (b + 1) ** 2, 4) for b in range(n_bins)])
+        variance = (2.0 / approx_modes) * (pk_true_np ** 2) + ((noise_frac * pk_true_np) ** 2)
+        cov_matrix = np.diag(np.maximum(variance, 1e-12))
+
+        # Add Gaussian realization noise
+        rng = np.random.RandomState(seed + 77)
+        noise = rng.normal(0.0, np.sqrt(variance))
+        noisy_pk = np.maximum(pk_true_np + noise, 1e-10)
+
+        return k_centers_np, noisy_pk, cov_matrix
+
+    def evaluate_fisher_identifiability(
+        self,
+        theta_fid: Tuple[float, float],
+        inference_phases: np.ndarray,
+        cov_matrix: np.ndarray,
+        eps: float = 1e-3,
+    ) -> Dict[str, Any]:
+        """
+        Computes Fisher Information Matrix F = J^T C^-1 J and evaluates pre-registered identifiability:
+        1. Full rank: rank(F) == 2
+        2. Positive definite: min(eigvals) > 0
+        3. Condition number kappa(F) <= 10^4
+        4. Cramer-Rao bound sigma_CR = sqrt(diag(F^-1))
+        """
+        Om_fid, s8_fid = theta_fid
+
+        # Compute numerical sensitivity Jacobian
+        def eval_pk(om, s8):
+            pos, mom, masses = self.ic.create_initial_mesh_state(om, s8, inference_phases)
+            _, _, delta = self.sim.simulate_trajectory(
+                pos, mom, masses, a_init=self.ic.a_init, a_target=0.08, n_steps=5, Omega_m=om
+            )
+            _, pk = self.sim.compute_power_spectrum(delta)
+            return np.array(pk)
+
+        pk_om_plus = eval_pk(Om_fid + eps, s8_fid)
+        pk_om_minus = eval_pk(Om_fid - eps, s8_fid)
+        dpk_dom = (pk_om_plus - pk_om_minus) / (2.0 * eps)
+
+        pk_s8_plus = eval_pk(Om_fid, s8_fid + eps)
+        pk_s8_minus = eval_pk(Om_fid, s8_fid - eps)
+        dpk_ds8 = (pk_s8_plus - pk_s8_minus) / (2.0 * eps)
+
+        J = np.stack([dpk_dom, dpk_ds8], axis=1)  # (N_bins, 2)
+        inv_cov = np.linalg.pinv(cov_matrix)
+        F = J.T @ inv_cov @ J  # (2, 2)
+
+        eigvals = np.linalg.eigvalsh(F)
+        det_F = float(np.linalg.det(F))
+        min_eig = float(np.min(eigvals))
+        max_eig = float(np.max(eigvals))
+        cond_F = float(max_eig / max(min_eig, 1e-15))
+        rank_F = int(np.linalg.matrix_rank(F))
+
+        # Invert Fisher matrix for Cramer-Rao uncertainty bounds
+        cov_theta = np.linalg.pinv(F)
+        sigma_om_cr = float(np.sqrt(max(cov_theta[0, 0], 1e-12)))
+        sigma_s8_cr = float(np.sqrt(max(cov_theta[1, 1], 1e-12)))
+
+        identifiable = bool(rank_F == 2 and min_eig > 0.0 and cond_F < 1e4)
+
+        return {
+            "fisher_matrix": F,
+            "rank": rank_F,
+            "det": det_F,
+            "min_eigenvalue": min_eig,
+            "max_eigenvalue": max_eig,
+            "condition_number": cond_F,
+            "sigma_omega_m_cr": sigma_om_cr,
+            "sigma_sigma8_cr": sigma_s8_cr,
+            "identifiability_passed": identifiable,
+        }
+
+    def run_independent_parameter_recovery(
+        self,
+        obs_pk: np.ndarray,
+        cov_matrix: np.ndarray,
+        theta_true: Tuple[float, float],
+        initial_guess: Tuple[float, float],
+        inference_phases: np.ndarray,
+        max_iter: int = 15,
+        lr: float = 0.003,
+    ) -> Dict[str, Any]:
+        """
+        Executes gradient optimization against independent mock data with independent phases.
+        Reports true recovery error and compares against Cramer-Rao bounds.
+        """
+        inv_cov = np.linalg.pinv(cov_matrix)
+        Om_true, s8_true = theta_true
+        curr_Om, curr_s8 = initial_guess
+        eps = 1e-3
+        history = []
+
+        def eval_pk(om, s8):
+            pos, mom, masses = self.ic.create_initial_mesh_state(om, s8, inference_phases)
+            _, _, delta = self.sim.simulate_trajectory(
+                pos, mom, masses, a_init=self.ic.a_init, a_target=0.08, n_steps=5, Omega_m=om
+            )
+            _, pk = self.sim.compute_power_spectrum(delta)
+            return np.array(pk)
+
+        for it in range(max_iter):
+            pk_curr = eval_pk(curr_Om, curr_s8)
+            residual = pk_curr - obs_pk
+            chi2 = float(residual.T @ inv_cov @ residual)
+
+            err_om = abs(curr_Om - Om_true) / Om_true
+            err_s8 = abs(curr_s8 - s8_true) / s8_true
+
+            history.append({
+                "iter": it,
+                "Omega_m": curr_Om,
+                "sigma8": curr_s8,
+                "chi2": chi2,
+                "err_Om": err_om,
+                "err_s8": err_s8,
+            })
+
+            if chi2 < 1e-3:
+                break
+
+            # Parameter sensitivities
+            pk_om_plus = eval_pk(curr_Om + eps, curr_s8)
+            pk_om_minus = eval_pk(curr_Om - eps, curr_s8)
+            dpk_dom = (pk_om_plus - pk_om_minus) / (2.0 * eps)
+
+            pk_s8_plus = eval_pk(curr_Om, curr_s8 + eps)
+            pk_s8_minus = eval_pk(curr_Om, curr_s8 - eps)
+            dpk_ds8 = (pk_s8_plus - pk_s8_minus) / (2.0 * eps)
+
+            # Gradient of chi2 = 2 * J^T C^-1 (P_curr - P_obs)
+            grad_om = float(dpk_dom.T @ inv_cov @ residual)
+            grad_s8 = float(dpk_ds8.T @ inv_cov @ residual)
+
+            grad_norm = math.sqrt(grad_om ** 2 + grad_s8 ** 2) + 1e-10
+            curr_Om = float(np.clip(curr_Om - lr * (grad_om / grad_norm), 0.15, 0.60))
+            curr_s8 = float(np.clip(curr_s8 - lr * (grad_s8 / grad_norm), 0.40, 1.20))
+
+        final_err_om = abs(curr_Om - Om_true) / Om_true
+        final_err_s8 = abs(curr_s8 - s8_true) / s8_true
+
+        return {
+            "theta_true": theta_true,
+            "theta_recovered": (curr_Om, curr_s8),
+            "final_err_Omega_m": final_err_om,
+            "final_err_sigma8": final_err_s8,
+            "recovery_bias_acceptable": bool(final_err_om < 0.05 and final_err_s8 < 0.05),
+            "history": history,
+        }

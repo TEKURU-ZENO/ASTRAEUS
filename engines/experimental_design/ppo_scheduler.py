@@ -88,6 +88,37 @@ class RoundRobinScheduler(BaseScheduler):
         return env.n_targets
 
 
+class RandomScheduler(BaseScheduler):
+    """Uniform random action baseline."""
+
+    def __init__(self, n_actions: int = 5, seed: int = 42):
+        self.n_actions = n_actions
+        self.rng = np.random.RandomState(seed)
+
+    def select_action(self, env: TelescopeSchedulingEnv, obs: np.ndarray) -> int:
+        return int(self.rng.randint(0, self.n_actions))
+
+
+class GreedyEIGScheduler(BaseScheduler):
+    """Greedy scheduler selecting the visible target with highest instantaneous EIG."""
+
+    def select_action(self, env: TelescopeSchedulingEnv, obs: np.ndarray) -> int:
+        best_target = -1
+        highest_eig = -1.0
+
+        for idx, tgt in enumerate(env.targets):
+            airmass = env.calculate_airmass(tgt.ra_deg, tgt.dec_deg, env.lst_hours)
+            if airmass <= env.max_airmass:
+                eig = env.eig_calc.evaluate_target_eig(tgt, airmass, env.exposure_time_sec)
+                if eig > highest_eig:
+                    highest_eig = eig
+                    best_target = idx
+
+        if best_target != -1:
+            return best_target
+        return env.n_targets  # Idle
+
+
 class ConstrainedPPOScheduler:
     """
     Constrained Proximal Policy Optimization (PPO) agent with safety reward shaping
@@ -312,3 +343,105 @@ def evaluate_baseline(
         "mean_violations": float(np.mean(total_violations)),
         "mean_slew_time_sec": float(np.mean(total_slews)),
     }
+
+
+def run_statistical_scheduler_benchmark(
+    trained_ppo: ConstrainedPPOScheduler,
+    env: TelescopeSchedulingEnv,
+    num_test_episodes: int = 15,
+    seed_start: int = 2000,
+) -> Dict[str, Any]:
+    """
+    Executes a rigorous multi-seed statistical benchmark comparing the trained PPO policy
+    against four baseline policies (Random, Round-Robin, Greedy Airmass, Greedy EIG).
+    Computes mean EIG, standard error, percentage improvements, and bootstrap 95% confidence intervals.
+    """
+    n_targets = env.n_targets
+    baselines: Dict[str, BaseScheduler] = {
+        "Random": RandomScheduler(n_actions=n_targets + 1),
+        "RoundRobin": RoundRobinScheduler(n_targets=n_targets),
+        "GreedyAirmass": GreedyAirmassScheduler(),
+        "GreedyEIG": GreedyEIGScheduler(),
+    }
+
+    results: Dict[str, List[float]] = {name: [] for name in baselines}
+    results["TrainedPPO"] = []
+    violations: Dict[str, List[int]] = {name: [] for name in baselines}
+    violations["TrainedPPO"] = []
+
+    # Run paired evaluation on exact same seed configurations
+    for ep in range(num_test_episodes):
+        seed = seed_start + ep
+
+        # 1. Evaluate baselines
+        for b_name, b_sched in baselines.items():
+            obs, _ = env.reset(seed=seed)
+            ep_eig = 0.0
+            ep_viols = 0
+            done = False
+            while not done:
+                action = b_sched.select_action(env, obs)
+                obs, _, term, trunc, info = env.step(action)
+                ep_eig += info.get("eig", 0.0)
+                if info.get("constraint_violation", False):
+                    ep_viols += 1
+                done = term or trunc
+            results[b_name].append(ep_eig)
+            violations[b_name].append(ep_viols)
+
+        # 2. Evaluate Trained PPO
+        obs, _ = env.reset(seed=seed)
+        ep_eig = 0.0
+        ep_viols = 0
+        done = False
+        while not done:
+            action, _, _ = trained_ppo.select_action(obs, deterministic=True)
+            obs, _, term, trunc, info = env.step(action)
+            ep_eig += info.get("eig", 0.0)
+            if info.get("constraint_violation", False):
+                ep_viols += 1
+            done = term or trunc
+        results["TrainedPPO"].append(ep_eig)
+        violations["TrainedPPO"].append(ep_viols)
+
+    # Statistical summary
+    ppo_mean = float(np.mean(results["TrainedPPO"]))
+    ppo_std = float(np.std(results["TrainedPPO"]))
+    summary: Dict[str, Any] = {
+        "num_test_episodes": num_test_episodes,
+        "ppo_mean_eig": ppo_mean,
+        "ppo_std_eig": ppo_std,
+        "ppo_mean_violations": float(np.mean(violations["TrainedPPO"])),
+        "comparisons": {},
+    }
+
+    for b_name in baselines:
+        b_mean = float(np.mean(results[b_name]))
+        b_std = float(np.std(results[b_name]))
+        b_viols = float(np.mean(violations[b_name]))
+
+        # Percentage improvement
+        pct_gain = float((ppo_mean - b_mean) / max(b_mean, 1e-6) * 100.0)
+
+        # 1000-sample bootstrap for 95% confidence interval
+        rng = np.random.RandomState(42)
+        diffs = np.array(results["TrainedPPO"]) - np.array(results[b_name])
+        boot_gains = []
+        for _ in range(1000):
+            sample = rng.choice(diffs, size=len(diffs), replace=True)
+            boot_gain = np.mean(sample) / max(b_mean, 1e-6) * 100.0
+            boot_gains.append(boot_gain)
+
+        ci_lower = float(np.percentile(boot_gains, 2.5))
+        ci_upper = float(np.percentile(boot_gains, 97.5))
+
+        summary["comparisons"][b_name] = {
+            "baseline_mean_eig": b_mean,
+            "baseline_std_eig": b_std,
+            "baseline_mean_violations": b_viols,
+            "pct_improvement": pct_gain,
+            "ci_95": (ci_lower, ci_upper),
+            "statistically_superior": bool(ci_lower > 0.0),
+        }
+
+    return summary
