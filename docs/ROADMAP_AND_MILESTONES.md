@@ -194,13 +194,16 @@ Determine whether ASTRAEUS preserves astrophysical information, physical paramet
    - Constrained Proximal Policy Optimization (PPO) agent with safety Lagrangian multipliers.
 
 ### Sequential Workstreams & Progress:
-- **Workstream 1: Scientific Computing Foundation [COMPLETE]:**
+- **Workstream 1: Scientific Computing Foundation [COMPLETE & AUDIT-CERTIFIED]:**
   - Foundational specs authored: `PHASE6_RESEARCH_PROTOCOL.md`, `PHASE5_CONTINUATION_LEDGER.md`, `PHASE6_HARDWARE_AND_COMPUTE_FEASIBILITY.md`, `PHASE6_NUMERICAL_FOUNDATION_SPEC.md`.
   - Modules implemented: `engines/cosmology/constants.py`, `engines/cosmology/background.py`, `engines/cosmology/mesh.py`, `engines/cosmology/integrator.py`, `engines/cosmology/analytic_tests.py`.
   - Comprehensive unit & benchmark test suite implemented: `tests/phase6/test_phase6_ws1_cosmological_foundation.py` (15 tests passing, verifying expansion functions, distance reciprocity, EdS growth $D_1(a)=a$, CIC mass conservation, Poisson dipole antisymmetry, comoving momentum conservation to $10^{-11}$, symplectic time-reversibility to $10^{-8}$, Layzer-Irvine residuals, Kepler invariants, and Zel'dovich pancake convergence with $L_1 < 2.0\%$ and $L_\infty < 5.0\%$).
-  - Full repository regression validation: 98/98 tests passing across all packages with zero regressions.
-- **Workstream 2: Differentiable Cosmological Simulation (`pmwd` Integration) [SCHEDULED]:**
-  - Implement forward and adjoint sensitivity particle-mesh simulation in JAX; reverse-mode automatic differentiation through time integration.
+  - Independent Scientific Audit checks implemented: `tests/phase6/test_phase6_ws1_advanced_audit.py` (9 tests passing, verifying Fourier discrete Laplacian operator symmetry, pairwise anti-symmetry $F_1 + F_2 = 0$ to $< 10^{-11}$, exact KDK leapfrog symplecticity $\|J^T \Omega J - \Omega\| < 10^{-9}$, PM grid quasi-symplecticity bound $\mathcal{O}(\Delta x^2)$, Zel'dovich resolution study across $16^3, 32^3, 64^3$, Zel'dovich timestep monotonic convergence, and Layzer-Irvine step residual $\mathcal{O}(\Delta a)$ linear scaling).
+  - Full repository regression validation: 107/107 tests passing across all packages with zero regressions.
+- **Workstream 2: Differentiable Cosmological Simulation & Parameter Recovery [INITIALIZED — MILESTONE PROTOCOL FROZEN]:**
+  - Authorized milestone: `PHASE6_WS2_SCIENTIFIC_PROTOCOL_AND_JAX_PARITY`.
+  - Master scientific protocol authored: `docs/phase6/PHASE6_WS2_RESEARCH_PROTOCOL.md` (defining NumPy-to-differentiable framework parity, operator differentiability analysis, physical $(\Omega_m, \sigma_8)$ initial-condition parameterization with fixed Gaussian random phases $\xi_k$, finite-difference gradient methodology with step-size convergence and directional derivatives, quantitative gradient acceptance criteria [relative error $\le 0.1\%$, cosine similarity $\ge 0.9999$], local RTX 5050 8 GB VRAM memory scaling, and 3D matter power spectrum $P(k)$ parameter-recovery experiment design).
+  - Five decoupled sub-workstreams established: WS2.1 (Differentiable Numerical Port), WS2.2 (Differentiable Dynamics), WS2.3 (Gradient Verification), WS2.4 (Cosmological Parameter Recovery), WS2.5 (Independent Scientific Audit).
 - **Workstream 3: Neural Hydrodynamic Surrogate Modeling (PINO) [SCHEDULED]:**
   - Implement 3D FNO spectral convolution layers; CAMELS dataset loader; PDE residual physics loss.
 - **Workstream 4: Bayesian Experimental Design & Autonomous Scheduling [SCHEDULED]:**
