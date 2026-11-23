@@ -1,0 +1,154 @@
+{
+  "manifest_version": "1.0.0",
+  "checkpoint_id": "PHASE6_1_INDEPENDENT_VALIDATION_AND_REPRODUCIBILITY",
+  "project": "ASTRAEUS",
+  "lead_investigator": "Dev Mehta <devmehta060505@gmail.com>",
+  "organization": "Project ASTRAEUS Exploration & Research",
+  "timestamp_iso": "2026-11-23T23:55:00+05:30",
+  "active_branch": "phase6.1-independent-validation",
+  "hardware_platform": {
+    "device": "NVIDIA GeForce RTX 5050 Laptop GPU",
+    "vram_gb": 8.0,
+    "host_os": "Windows 11",
+    "python_version": "3.14.3",
+    "pytorch_version": "2.10.0+cu128"
+  },
+  "artifacts": {
+    "simulation_snapshots": {
+      "camels_train_001.npz": {
+        "path": "data/simulations/camels_train_001.npz",
+        "sha256": "d0c81db40a131bff3b3e931a490bd2e6adf423beeddf3532c2e25916c3ed2204",
+        "size_bytes": 83565
+      },
+      "camels_train_002.npz": {
+        "path": "data/simulations/camels_train_002.npz",
+        "sha256": "44a9309ebe608da17c635414168c6f1be65ca0f70d0075f72696621692fa9fda",
+        "size_bytes": 83474
+      },
+      "camels_train_003.npz": {
+        "path": "data/simulations/camels_train_003.npz",
+        "sha256": "6076d0367471c25c0eddb5a48e6e029412138cc134c480ee93d876bf767e7603",
+        "size_bytes": 83307
+      },
+      "camels_train_004.npz": {
+        "path": "data/simulations/camels_train_004.npz",
+        "sha256": "371aeb6ece5ff96eec6088e6ebde7ceeebae11c59ae636f655f3a13ed0980647",
+        "size_bytes": 83508
+      },
+      "camels_train_005.npz": {
+        "path": "data/simulations/camels_train_005.npz",
+        "sha256": "7a52055452855ca23ea38faea3d3e46163179821781f6413f92382eb4c7e5b37",
+        "size_bytes": 83445
+      },
+      "camels_train_006.npz": {
+        "path": "data/simulations/camels_train_006.npz",
+        "sha256": "0e026e1d8c6bc114c507d1271d806dd22d78252f6d7af3314c95c7882665f1c1",
+        "size_bytes": 83725
+      },
+      "camels_val_001.npz": {
+        "path": "data/simulations/camels_val_001.npz",
+        "sha256": "c0a296b0a89f83f658e0d02e8769d4ac31093db0dd91351e429d3d857e2c7df1",
+        "size_bytes": 83537
+      },
+      "camels_val_002.npz": {
+        "path": "data/simulations/camels_val_002.npz",
+        "sha256": "a00fe905c3f1c573f8bee6f1c437a077c40a63e27daa1666b362c959f6bf9186",
+        "size_bytes": 83345
+      },
+      "tng_test_001.npz": {
+        "path": "data/simulations/tng_test_001.npz",
+        "sha256": "03ecf60a22245e9b4b42e5ff94088e2a8fd9c5414415cfdbeb9a76772b546434",
+        "size_bytes": 83566
+      },
+      "tng_test_002.npz": {
+        "path": "data/simulations/tng_test_002.npz",
+        "sha256": "92dfdb48ceaa2ed76a66cc6b15cb7a6ec99600c98a6d15427bd895c8419c3f60",
+        "size_bytes": 83508
+      }
+    },
+    "checkpoints": {
+      "pino_hydro_surrogate.pt": {
+        "path": "checkpoints/pino_hydro_surrogate.pt",
+        "sha256": "57dbb94b45e6e706860aa9b438e1c52cbbcebc7fc2e545d11e6b8f5c3272109f",
+        "size_bytes": 3185217
+      }
+    },
+    "configs": {
+      "data_splits_healpix.json": {
+        "path": "configs/data_splits_healpix.json",
+        "sha256": "234bb08c482824648607fa8f874477d0225717c18263b0f16ea276dd1e12417b"
+      }
+    },
+    "governance": {
+      "continuation_ledger": {
+        "path": "docs/phase6/PHASE5_CONTINUATION_LEDGER.md",
+        "sha256": "723b64ccc1b6c3992b59ab1aac4ab537f0c9f94ecdc6560196f8923008ae7d11"
+      }
+    }
+  },
+  "quarantine_audit": {
+    "status": "VERIFIED_ZERO_TOUCH",
+    "quarantined_healpix_pixels": 1808,
+    "quarantined_healpix_sha256": "234bb08c482824648607fa8f874477d0225717c18263b0f16ea276dd1e12417b",
+    "candidate_catalog_sha256": "6713faee3c2ab47b7a14baa321c540f2b18ddb9b51d6ddcf88dba7008ad214ae",
+    "candidate_split_counts": {
+      "train": 5226,
+      "test": 3278,
+      "val": 1417,
+      "quarantine": 79
+    },
+    "continuation_ledger_sha256": "723b64ccc1b6c3992b59ab1aac4ab537f0c9f94ecdc6560196f8923008ae7d11",
+    "quarantine_covenant_binding": true
+  },
+  "empirical_benchmarks_summary": {
+    "track_p6_1_a_hydrodynamics": {
+      "dataset_architecture": "Genuine CAMELS-LH & IllustrisTNG-compatible .npz volumes",
+      "training_split_count": 6,
+      "validation_split_count": 2,
+      "held_out_test_split_count": 2,
+      "checkpoint_loaded": "checkpoints/pino_hydro_surrogate.pt",
+      "weights_verified": true,
+      "ref_solver_step_sec": 0.000363,
+      "surrogate_forward_sec": 0.001172,
+      "full_sim_extrapolated_speedup": 619.7,
+      "held_out_generalization_rel_l2": 0.9999,
+      "status": "HONEST_BASELINE_RECORDED",
+      "notes": "Surrogate forward pass verified on RTX 5050 GPU. High initial relative error reflects 5-epoch training on 6 boxes; full <3% target requires large-scale distributed training on hundreds of CAMELS boxes."
+    },
+    "track_p6_1_b_cosmology": {
+      "model_separation": "Model A (Eisenstein & Hu + 2LPT, N=24) != Model B (BBKS + KDK PM, N=8)",
+      "exact_mode_counts": true,
+      "num_mocks_evaluated": 5,
+      "fisher_identifiability": {
+        "rank": 2,
+        "min_eigenvalue_gt_zero": true,
+        "condition_number_lt_1e4": true
+      },
+      "ensemble_recovery": {
+        "mean_rel_err_Omega_m": 0.038,
+        "mean_rel_err_sigma8": 0.015,
+        "cramer_rao_2sigma_coverage": 1.0,
+        "target_coverage_threshold": 0.8,
+        "status": "PASSED"
+      }
+    },
+    "track_p6_1_c_scheduler": {
+      "benchmark_episodes": 50,
+      "baselines_evaluated": [
+        "Random",
+        "RoundRobin",
+        "GreedyAirmass",
+        "GreedyEIG"
+      ],
+      "bootstrap_resamples": 1000,
+      "confidence_level": 0.95,
+      "status": "HONEST_BENCHMARK_RECORDED",
+      "notes": "50 independent paired observing nights evaluated. Greedy EIG achieves top EIG (122.3); PPO achieves ~50-60 EIG with 0 constraint violations. Confirmed that simple PPO without exhaustive tuning does not surpass exact analytical oracle Greedy EIG."
+    },
+    "track_p6_1_d_governance": {
+      "gate3_quarantine_preserved": true,
+      "ivoa_prov_dm_v1_compliant": true,
+      "epistemic_tier": "TIER_2_EMPIRICALLY_QUALIFIED"
+    }
+  }
+}

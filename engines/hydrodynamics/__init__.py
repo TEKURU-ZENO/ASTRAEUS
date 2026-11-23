@@ -1,7 +1,7 @@
 """
 ASTRAEUS Hydrodynamics Engine (Phase 6 / Phase 6.1).
 Physics-Informed Neural Operator (PINO), 3D Fourier Neural Operator (FNO3D),
-CAMELS/IllustrisTNG data contracts, conservation loss, and surrogate training pipeline.
+CAMELS/IllustrisTNG data contracts, simulation loader, and surrogate training pipeline.
 
 Author: Dev Mehta
 Lead Investigator & Mission Director, Project ASTRAEUS
@@ -14,6 +14,11 @@ from engines.hydrodynamics.contracts import (
     HydroFieldMetadata,
     HydroFieldCube,
     generate_synthetic_hydro_cube,
+)
+from engines.hydrodynamics.simulation_loader import (
+    SimulationSnapshot,
+    generate_physical_hydro_snapshot,
+    populate_benchmark_dataset,
 )
 from engines.hydrodynamics.pino_model import (
     SpectralConv3d,
@@ -31,6 +36,7 @@ from engines.hydrodynamics.surrogate_benchmark import (
     HydroSurrogateBenchmark,
 )
 from engines.hydrodynamics.train_surrogate import (
+    GenuineSimulationDataset,
     DisjointCosmoHydroDataset,
     HydroSurrogateTrainer,
 )
@@ -41,6 +47,9 @@ __all__ = [
     "HydroFieldMetadata",
     "HydroFieldCube",
     "generate_synthetic_hydro_cube",
+    "SimulationSnapshot",
+    "generate_physical_hydro_snapshot",
+    "populate_benchmark_dataset",
     "SpectralConv3d",
     "FourierBlock3D",
     "PINO3DModel",
@@ -50,6 +59,7 @@ __all__ = [
     "periodic_poisson_solver_3d",
     "ReferenceHydroSolver3D",
     "HydroSurrogateBenchmark",
+    "GenuineSimulationDataset",
     "DisjointCosmoHydroDataset",
     "HydroSurrogateTrainer",
 ]
