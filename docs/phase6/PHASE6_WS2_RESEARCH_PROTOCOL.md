@@ -73,8 +73,8 @@ Each operator within the particle-mesh loop is analyzed for differentiability an
 1. **Cloud-in-Cell (CIC) Mass Deposition:**
    - The trilinear interpolation kernel is:
      $$W(\mathbf{x}_p - \mathbf{x}_{\mathbf{i}}) = \prod_{\alpha=1}^3 \max\left(0, 1 - \frac{|x_{p,\alpha} - x_{\mathbf{i},\alpha}|}{\Delta x}\right)$$
-   - **Smoothness:** $W$ is continuous everywhere ($C^0$) and piecewise linear. It is continuously differentiable ($C^1$) except on cell boundary planes $x_{p,\alpha} = x_{\mathbf{i},\alpha} \pm \Delta x$.
-   - **Subgradient Convention:** The boundary planes form a manifold of Lebesgue measure zero in $\mathbb{R}^{3N_p}$. Standard subgradient definitions (taking central or one-sided directional derivatives) are numerically stable and satisfy Clarke subdifferential bounds.
+   - **Smoothness:** $W$ is continuous everywhere ($C^0$) and piecewise linear. Its first spatial derivative $\nabla W$ is discontinuous across grid knots ($x_{p,\alpha} \in \mathbb{Z} \Delta x$). It is therefore globally $C^0$, not $C^1$.
+   - **Subgradient Convention:** At grid knots, reverse-mode automatic differentiation utilizes Clarke generalized subgradients. The framework convention evaluates one-sided directional derivatives from both sides ($\partial^+ / \partial^-$) across boundary planes. Differentiability is not presumed across knots; explicit directional boundary tests verify finite, non-divergent subgradients without numerical NaNs or runaway values.
    - **Boundary Tests:** Explicit test cases verify that particle trajectories crossing grid boundaries do not produce infinite or NaN gradients.
 2. **Discrete Green's Function 3D FFT Poisson Solver:**
    - In Fourier space, the Poisson solution is:
@@ -95,24 +95,38 @@ Each operator within the particle-mesh loop is analyzed for differentiability an
 > **Anti-Contamination Rule:** $\sigma_8$ and $\Omega_m$ must not be treated as arbitrary heuristic force multipliers. They enter through physical transfer functions, cosmological linear growth, and displacement fields.
 
 #### Physical Initial Condition Pipeline:
-1. **Fiducial Power Spectrum:**
-   $$P(k; \Omega_m, \sigma_8) = \sigma_8^2 \cdot \frac{P_{\mathrm{shape}}(k; \Omega_m, \Omega_b, h)}{\sigma_{8,\mathrm{fid}}^2}$$
-   where $P_{\mathrm{shape}}(k)$ is evaluated using the Eisenstein & Hu (1998) transfer function without BAO wiggles or the BBKS analytical approximation.
-2. **Fixed Gaussian Random Phases ($\xi_{\mathbf{k}}$):**
-   To avoid stochastic Monte Carlo variance contaminating gradient calculations, the Gaussian random field phases $\xi_{\mathbf{k}} \sim \mathcal{CN}(0, 1)$ are **permanently frozen**:
-   $$\delta_{\mathbf{k}}(a_{\mathrm{init}}; \theta) = D_1(a_{\mathrm{init}}; \Omega_m) \cdot \sqrt{P(k; \Omega_m, \sigma_8)} \cdot \xi_{\mathbf{k}}^{\mathrm{frozen}}$$
-3. **Zel'dovich Displacement Field (1LPT):**
+1. **Linear Matter Power Spectrum & Top-Hat Window Normalization:**
+   $\sigma_8$ characterizes the root-mean-square amplitude of linear matter fluctuations at $z=0$ smoothed by a spherical top-hat filter of radius $R_8 = 8\,h^{-1}\mathrm{Mpc}$:
+   $$\sigma_8^2 = \frac{1}{2\pi^2} \int_0^\infty k^2 P_{\mathrm{lin}}(k) W_{\mathrm{TH}}^2(k R_8)\,dk$$
+   where the Fourier transform of the spherical top-hat window is:
+   $$W_{\mathrm{TH}}(x) = \frac{3 (\sin x - x \cos x)}{x^3}$$
+   The initial power spectrum $P(k; \Omega_m, \sigma_8)$ must be explicitly calibrated by dividing by this integral evaluated on the unnormalized shape function $P_{\mathrm{shape}}(k; \Omega_m)$ before scaling by $\sigma_8^2$:
+   $$P_{\mathrm{lin}}(k; \Omega_m, \sigma_8) = \sigma_8^2 \cdot \frac{P_{\mathrm{shape}}(k; \Omega_m)}{\sigma_8^2[P_{\mathrm{shape}}]}$$
+2. **Cosmological Nuisance & Background Parameter Freeze:**
+   The shape parameter $\Gamma \approx \Omega_m h$ is an analytical approximation. To avoid unconstrained degrees of freedom during initial gradient verification, all background and nuisance parameters are formally frozen to Planck 2018 baseline values:
+   - Baryon density: $\Omega_b = 0.0490$
+   - Hubble parameter: $h = 0.6766$ ($H_0 = 67.66\,\mathrm{km/s/Mpc}$)
+   - Dark energy density: $\Omega_\Lambda = 1.0 - \Omega_m - \Omega_r$ (flatness enforced)
+   - Radiation density: $\Omega_r = 8.6 \times 10^{-5}$
+   - Equation of state: $w_0 = -1.0, w_a = 0.0$
+   - Primordial tilt: $n_s = 0.9665$
+   - Neutrino mass: $m_\nu = 0.0\,\mathrm{eV}$ (massless approximation)
+   This baseline guarantees that $\Omega_m$ acts specifically on expansion history, linear growth, and transfer function horizon scale.
+3. **Fixed Gaussian Random Phases ($\xi_{\mathbf{k}}^{\mathrm{frozen}}$):**
+   To eliminate stochastic Monte Carlo variance from contaminating gradient calculations, the Gaussian random field phases $\xi_{\mathbf{k}} \sim \mathcal{CN}(0, 1)$ are **permanently frozen**:
+   $$\delta_{\mathbf{k}}(a_{\mathrm{init}}; \theta) = D_1(a_{\mathrm{init}}; \Omega_m) \cdot \sqrt{P_{\mathrm{lin}}(k; \Omega_m, \sigma_8)} \cdot \xi_{\mathbf{k}}^{\mathrm{frozen}}$$
+4. **Zel'dovich Displacement Field (1LPT):**
    $$\mathbf{\Psi}(\mathbf{q}; \theta) = -i \sum_{\mathbf{k}} \frac{\mathbf{k}}{k^2} \delta_{\mathbf{k}}(a_{\mathrm{init}}; \theta) e^{i \mathbf{k} \cdot \mathbf{q}}$$
    $$\mathbf{x}_{\mathrm{init}}(\mathbf{q}; \theta) = \mathbf{q} + \mathbf{\Psi}(\mathbf{q}; \theta)$$
    $$\mathbf{p}_{\mathrm{init}}(\mathbf{q}; \theta) = m a_{\mathrm{init}}^2 H(a_{\mathrm{init}}; \Omega_m) f(a_{\mathrm{init}}; \Omega_m) \mathbf{\Psi}(\mathbf{q}; \theta)$$
-4. **Parameter Entry Points:**
-   - $\sigma_8$ enters linearly into $\sqrt{P(k)}$, hence $\mathbf{\Psi} \propto \sigma_8$.
-   - $\Omega_m$ alters:
-     - The transfer function shape parameter $\Gamma = \Omega_m h$.
-     - The linear growth factor $D_1(a_{\mathrm{init}}; \Omega_m)$.
-     - The linear growth rate $f(a_{\mathrm{init}}; \Omega_m) \approx \Omega_m(a_{\mathrm{init}})^{0.55}$.
-     - The background expansion $H(a; \Omega_m) = H_0 \sqrt{\Omega_m a^{-3} + \Omega_\Lambda}$.
-     - The comoving Poisson source factor $\frac{3}{2}\Omega_m H_0^2 a^{-1}$.
+5. **Physical Parameter Entry Points:**
+   - $\sigma_8$ enters linearly into amplitude: $\mathbf{\Psi} \propto \sigma_8$.
+   - $\Omega_m$ enters non-linearly into:
+     - Transfer function horizon scale $\Gamma = \Omega_m h$.
+     - Linear growth factor $D_1(a_{\mathrm{init}}; \Omega_m)$.
+     - Linear growth rate $f(a_{\mathrm{init}}; \Omega_m) \approx \Omega_m(a_{\mathrm{init}})^{0.55}$.
+     - Background expansion $H(a; \Omega_m) = H_0 \sqrt{\Omega_m a^{-3} + \Omega_\Lambda}$.
+     - Comoving Poisson source factor $\frac{3}{2}\Omega_m H_0^2 a^{-1}$.
 
 ---
 
@@ -148,41 +162,48 @@ A gradient implementation is certified as scientifically accurate if and only if
 
 ---
 
-### 3.6 Specification 6: Hardware & Memory Profiling Constraints
+### 3.6 Specification 6: Hardware & Empirical Memory Profiling Constraints
 
 In adherence to the [Hardware & Compute Feasibility Charter](file:///c:/Users/Dev%20Mehta/Desktop/ASTRAEUS/docs/phase6/PHASE6_HARDWARE_AND_COMPUTE_FEASIBILITY.md), all Workstream 2 benchmarks are executed within explicit hardware allocations:
 
 - **Workstation:** NVIDIA RTX 5050 Laptop GPU (8 GB VRAM, 23.8 GB host RAM).
-- **Reverse-Mode AD Memory Scaling:**
-  - Forward tape storage for $N_{\mathrm{steps}}$ steps requires holding grid density and particle states:
-    $$M_{\mathrm{tape}} \approx N_{\mathrm{steps}} \times \left(3 N_p \times 4\,\mathrm{bytes} + N_{\mathrm{grid}}^3 \times 4\,\mathrm{bytes}\right)$$
-  - For $N_{\mathrm{grid}} = 32^3$ ($N_p = 32^3 = 32,768$), $N_{\mathrm{steps}} = 20$:
-    $$M_{\mathrm{tape}} \approx 20 \times (393\,\mathrm{KB} + 131\,\mathrm{KB}) \approx 10.5\,\mathrm{MB} \ll 8\,\mathrm{GB}$$
-  - For $N_{\mathrm{grid}} = 64^3$ ($N_p = 64^3 = 262,144$), $N_{\mathrm{steps}} = 30$:
-    $$M_{\mathrm{tape}} \approx 30 \times (3.14\,\mathrm{MB} + 1.05\,\mathrm{MB}) \approx 126\,\mathrm{MB} \ll 8\,\mathrm{GB}$$
-  - For $N_{\mathrm{grid}} \ge 128^3$ ($N_p \ge 2.1 \times 10^6$), gradient checkpointing or Tier 2 Cloud GPUs (A100) are activated.
-- **Local Ceiling Rule:** Local prototyping is strictly capped at $N_{\mathrm{grid}} \le 128^3$.
+- **Empirical Memory Profiling Requirement:**
+  While simplified analytical tape scaling estimates $\mathcal{O}(N_{\mathrm{steps}} \times (N_p + N_{\mathrm{grid}}^3))$ provide a baseline lower bound, reverse-mode automatic differentiation retains substantially more memory due to:
+  - Framework intermediate operation buffers and temporary tensors.
+  - 3D FFT execution scratch workspaces.
+  - Scatter/gather indices and gradient accumulation buffers.
+  Therefore, all memory claims must be certified via **empirical peak allocated memory profiling** using runtime GPU trackers (`torch.cuda.max_memory_allocated()` or `jax.profiler`).
+- **Local Ceiling Rule:** Local prototyping is strictly capped at $N_{\mathrm{grid}} \le 128^3$. Grids producing peak memory exceeding 6.5 GB (80% of local VRAM) are automatically flagged for gradient rematerialization or escalated to Tier 2 Cloud GPU nodes.
 
 ---
 
-### 3.7 Specification 7: Cosmological Parameter-Recovery Experiment Design
+### 3.7 Specification 7: Cosmological Parameter-Recovery & Identifiability Design
 
-To validate end-to-end parameter inference, WS2 defines an autonomous parameter recovery experiment:
+To validate end-to-end parameter inference while addressing potential parameter degeneracies:
 
-1. **Synthetic Observation Generation:**
+1. **Parameter Identifiability & Fisher Information Gate:**
+   $\Omega_m$ and $\sigma_8$ exhibit known cosmological degeneracies along $S_8 = \sigma_8 \sqrt{\Omega_m / 0.3}$ over limited spatial scales. Prior to declaring successful parameter inference, the local Fisher information matrix:
+   $$F_{ij} = \sum_{b=1}^{N_b} \frac{\partial P(k_b)}{\partial \theta_i} \mathbf{C}_{bb'}^{-1} \frac{\partial P(k_{b'})}{\partial \theta_j}$$
+   must be numerically evaluated. Independent parameter recovery is conditional on demonstrating that $\operatorname{det}(F) > 0$ and the condition number $\kappa(F) < 10^3$, establishing that both parameters are locally identifiable on the simulated $k$-range.
+2. **Realistic Covariance Structure:**
+   The likelihood covariance $\mathbf{C}$ must account for:
+   - Finite simulation box volume $V = L^3$.
+   - Spherically averaged mode binning $\sigma_b^2 \propto 2 P^2(k_b) / N_{\mathrm{modes}}(k_b)$.
+   - Off-diagonal covariance induced by non-linear mode coupling and grid assignment window effects.
+3. **Synthetic Observation Generation:**
    Generate a reference 3D matter density field using ground-truth fiducial cosmological parameters:
    $$\theta^* = (\Omega_m^*, \sigma_8^*) = (0.3111, 0.8102)$$
    Compute the spherically averaged 3D matter power spectrum $P_{\mathrm{obs}}(k_b)$ across $N_b = 16$ radial Fourier bins $k_b \in [k_{\mathrm{min}}, k_{\mathrm{Nyquist}}]$.
-2. **Loss Function:**
-   Gaussian log-likelihood / standardized mean-squared error:
+4. **Loss Function:**
+   Standardized Gaussian log-likelihood / chi-squared:
    $$\mathcal{L}(\theta) = \frac{1}{2} \sum_{b=1}^{N_b} \frac{\left(P(k_b; \theta) - P_{\mathrm{obs}}(k_b)\right)^2}{\sigma_b^2}$$
-   where $\sigma_b^2 \propto 2 P^2(k_b) / N_{\mathrm{modes}}(k_b)$ accounts for cosmic variance.
-3. **Optimization Engine:**
+5. **Optimization Engine:**
    Gradient-based minimization via Adam ($\alpha = 0.01$) or L-BFGS, initialized from perturbed values:
    $$\theta^{(0)} = (\Omega_m^{(0)}, \sigma_8^{(0)}) = (0.2500, 0.7000)$$
-4. **Recovery Acceptance Threshold:**
-   Parameter recovery is certified successful if:
+6. **Recovery Acceptance Threshold (Conditional):**
+   Parameter recovery is certified successful if and only if:
    $$\frac{|\hat{\Omega}_m - \Omega_m^*|}{\Omega_m^*} \le 1.0\%, \quad \frac{|\hat{\sigma}_8 - \sigma_8^*|}{\sigma_8^*} \le 1.0\%$$
+   conditioned on passing the Fisher identifiability gate.
 
 ---
 
