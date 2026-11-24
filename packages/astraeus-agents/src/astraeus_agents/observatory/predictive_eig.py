@@ -105,17 +105,24 @@ class PredictiveEIGEngine:
             # Optical decays very fast due to heavy r-process line blanketing;
             # NIR stays bright longer (lanthanide curtaining shifts flux to 1-2 um)
             optical_decay = 0.95 * t
-            # Color term relative to 6000 A: redder wavelengths fade slower
+            # Color term relative to 6000 A: redder wavelengths fade slower and plateau in NIR
             wavelength_factor = (wl - 6000.0) / 10000.0
-            nir_compensation = -0.45 * wavelength_factor * t
-            return float(base_mag + optical_decay + nir_compensation)
+            nir_compensation = -1.3077 * wavelength_factor * t
+            # Extreme UV iron-peak/lanthanide line blanketing suppresses UV flux:
+            uv_suppression = 3.5 if wl < 3500.0 else 0.0
+            return float(base_mag + optical_decay + nir_compensation + uv_suppression)
 
         elif "TDE" in hyp or "TIDAL" in hyp:
             # Power law fallback L ~ t^(-5/3) ==> delta_m ~ 2.5 * (5/3) * log10(1 + t/15)
             fallback_decay = 4.167 * math.log10(1.0 + t / 15.0)
-            # TDE is extremely blue: UV flux is much brighter than optical
-            uv_optical_color = -1.2 * (3000.0 - wl) / 3000.0 if wl < 5000 else 0.0
-            return float(base_mag + fallback_decay + uv_optical_color)
+            # TDE is extremely blue: UV flux is much brighter than optical, but NIR has Rayleigh-Jeans deficit
+            if wl < 5000.0:
+                color_term = -1.2 * (3000.0 - wl) / 3000.0
+            elif wl > 7000.0:
+                color_term = +1.6 * (wl - 7000.0) / 10000.0
+            else:
+                color_term = 0.0
+            return float(base_mag + fallback_decay + color_term)
 
         elif "IA" in hyp or "SN_IA" in hyp:
             # Type Ia: Bazin-like profile around peak (t_peak ~ 18 days)
@@ -132,7 +139,9 @@ class PredictiveEIGEngine:
         elif "CCSN" in hyp or "SN_II" in hyp or "SN_CORE_COLLAPSE" in hyp:
             # Type II plateau / slow linear decay
             dm = 0.025 * t
-            return float(base_mag + dm)
+            # Normal core-collapse optical-NIR color:
+            color_corr = 0.8 * (wl - 6000.0) / 6000.0 if wl > 6000 else 0.0
+            return float(base_mag + dm + color_corr)
 
         elif "STAR" in hyp or "FLARE" in hyp:
             # Impulsive flare decays back to quiescence within 0.5 - 2 days
