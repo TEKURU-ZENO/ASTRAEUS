@@ -31,7 +31,7 @@ class HypothesisCriticismResult:
     degrees_of_freedom: int
     reduced_chi2: float
     goodness_of_fit_p_value: float          # Classical upper-tail chi2 survival p-value (chi2.sf)
-    bayesian_ppc_p_value: float             # Genuine Monte Carlo replicated posterior predictive p-value
+    bayesian_ppc_p_value: float             # Bayesian posterior predictive p-value (conditional or full)
     observed_discrepancy_stat: float        # Observed T(y_obs) = chi2
     replicated_discrepancy_mean: float      # Mean T(y_rep) across posterior replicates
     replicated_discrepancy_std: float       # Std of T(y_rep)
@@ -40,6 +40,9 @@ class HypothesisCriticismResult:
     is_statistically_consistent: bool
     evaluation_status: HypothesisEvaluationStatus
     criticism_summary: str
+    predictive_check_type: str = "conditional_plugin"  # "conditional_plugin" or "full_posterior_predictive"
+    conditional_ppc_p_value: float = 0.0               # Plug-in conditional check p(y_rep | theta_hat)
+    full_bayesian_ppc_p_value: Optional[float] = None  # Full Bayesian check integrating theta ~ p(theta | y)
 
 
 @dataclass
@@ -73,8 +76,9 @@ class PosteriorPredictiveChecker:
         random_seed: int = 42,
     ) -> np.ndarray:
         """
-        Draws replicated datasets y_rep^(s) ~ N(mu_pred, sigma_tot^2) under the candidate model.
-        Returns simulated discrepancy statistics T(y_rep^(s)) = sum (y_rep - mu)^2 / sigma_tot^2.
+        Draws conditional predictive replicates y_rep^(s) ~ N(mu_hat, sigma_tot^2)
+        fixing candidate model parameters at their point prediction (plug-in check).
+        Returns simulated discrepancy statistics T(y_rep^(s)) = sum (y_rep - mu_hat)^2 / sigma_tot^2.
         """
         rng = np.random.default_rng(random_seed)
         mu = np.array(predicted_magnitudes)
@@ -89,6 +93,51 @@ class PosteriorPredictiveChecker:
         return discrepancies_rep
 
     @classmethod
+    def simulate_full_posterior_predictive_replicates(
+        cls,
+        observed_magnitudes: List[float],
+        observed_uncertainties: List[float],
+        parameter_trajectory_samples: np.ndarray,
+        random_seed: int = 42,
+    ) -> Tuple[np.ndarray, np.ndarray, float]:
+        """
+        Executes a Full Bayesian Posterior Predictive Check integrating over parameter uncertainty:
+            p(y_rep | y) = int p(y_rep | theta) p(theta | y) d(theta)
+
+        Parameters:
+            observed_magnitudes: y_obs array of shape (N_obs,)
+            observed_uncertainties: sigma_obs array of shape (N_obs,)
+            parameter_trajectory_samples: mu(theta^(s)) array of shape (S, N_obs),
+                where each row s is the model prediction from posterior draw theta^(s) ~ p(theta | y).
+            random_seed: RNG seed for reproducibility.
+
+        Returns:
+            Tuple of:
+            - T_rep: Array of simulated discrepancies T(y_rep^(s), theta^(s)) of shape (S,)
+            - T_obs: Array of observed discrepancies T(y_obs, theta^(s)) of shape (S,)
+            - p_full_ppc: Fraction where T_rep >= T_obs across posterior draws.
+        """
+        rng = np.random.default_rng(random_seed)
+        y_obs = np.array(observed_magnitudes)
+        sig = np.array(observed_uncertainties)
+        mu_samples = np.array(parameter_trajectory_samples)
+        num_samples, n_obs = mu_samples.shape
+
+        if n_obs != len(y_obs) or n_obs != len(sig):
+            raise ValueError(f"Shape mismatch: mu_samples has {n_obs} points, observed has {len(y_obs)}")
+
+        # Draw y_rep^(s) ~ N(mu(theta^(s)), sigma^2)
+        noise = rng.normal(loc=0.0, scale=sig, size=(num_samples, n_obs))
+        y_rep = mu_samples + noise
+
+        # Calculate Gelman T(y, theta^(s)) = sum_i ((y_i - mu_i^(s)) / sigma_i)^2
+        t_rep = np.sum(((y_rep - mu_samples) / sig) ** 2, axis=1)
+        t_obs = np.sum(((y_obs - mu_samples) / sig) ** 2, axis=1)
+
+        p_full_ppc = float(np.mean(t_rep >= t_obs))
+        return t_rep, t_obs, p_full_ppc
+
+    @classmethod
     def evaluate_model_fit(
         cls,
         target_id: str,
@@ -97,10 +146,11 @@ class PosteriorPredictiveChecker:
         trigger_mjd: float = 60000.0,
         fitted_parameter_count: int = 0,
         base_mag: float = 18.0,
+        parameter_posterior_draws: Optional[Dict[str, np.ndarray]] = None,
     ) -> PosteriorPredictiveAssessment:
         """
-        Computes classical goodness-of-fit and genuine Monte Carlo Bayesian PPC
-        for all candidate hypotheses against active point detections.
+        Computes classical goodness-of-fit, conditional Monte Carlo Bayesian PPC,
+        and (if parameter_posterior_draws provided) full Bayesian PPC integrating parameter uncertainty.
         """
         detections = [o for o in accumulated_observations if o.is_detection()]
         n_obs = len(detections)
@@ -183,6 +233,22 @@ class PosteriorPredictiveChecker:
             mean_r = float(np.mean(np.abs(res_arr)))
             max_r = float(np.max(np.abs(res_arr)))
 
+            # Check if parameter posterior draws exist for full Bayesian PPC
+            full_p_val = None
+            check_type = "conditional_plugin"
+            cond_p_val = float(np.mean(discrepancies_rep >= chi2_stat))
+            if parameter_posterior_draws and h_name in parameter_posterior_draws:
+                y_meas_list = [obs.apparent_mag or 19.0 for obs in detections]
+                traj_draws = parameter_posterior_draws[h_name]
+                _, _, full_p_val_raw = cls.simulate_full_posterior_predictive_replicates(
+                    observed_magnitudes=y_meas_list,
+                    observed_uncertainties=tot_errs,
+                    parameter_trajectory_samples=traj_draws,
+                )
+                full_p_val = round(full_p_val_raw, 4)
+                check_type = "full_posterior_predictive"
+                p_ppc = full_p_val_raw  # Full Bayesian PPC integrating theta uncertainty
+
             # Consistency criteria: p_classical >= 0.01, p_ppc >= 0.01, red_chi2 < 3.5
             is_consistent = (p_classical >= 0.01) and (p_ppc >= 0.01) and (red_chi2 < 3.5)
             if is_consistent:
@@ -217,6 +283,9 @@ class PosteriorPredictiveChecker:
                 is_statistically_consistent=is_consistent,
                 evaluation_status=status,
                 criticism_summary=summary,
+                predictive_check_type=check_type,
+                conditional_ppc_p_value=round(cond_p_val, 4),
+                full_bayesian_ppc_p_value=full_p_val,
             )
 
         # Identify preferred model or unresolved state
