@@ -9,6 +9,7 @@ Date: November 24, 2026
 """
 
 import os
+import sys
 import math
 import time
 import json
@@ -1235,3 +1236,353 @@ def test_hmac_token_forgery_and_tamper_rejection():
     with pytest.raises(TokenValidationError) as exc_mismatch:
         dash.execute_dispatch(token=tampered_target_token, recommendation_id=diff.recommendation_id)
     assert "forgery detected" in str(exc_mismatch.value).lower() or "mismatch" in str(exc_mismatch.value).lower()
+
+
+# =============================================================================
+# 9. WS7.7.2 CRYPTOGRAPHIC GOVERNANCE, REPLAY DETERMINISM & EMPIRICAL VALIDATION
+# =============================================================================
+
+def test_ws7_7_2_missing_or_insufficient_hmac_secret_key_fails_closed():
+    """
+    WS7.7.2-A Critical 1:
+    Verifies that HumanApprovalGate fails closed:
+    1. If HMAC secret key is missing (neither provided nor in environment), raises KeyError.
+    2. If HMAC secret key has insufficient entropy (< 32 bytes), raises ValueError.
+    3. Strictly bars any hardcoded default fallback keys.
+    """
+    orig_env = os.environ.pop("ASTRAEUS_HMAC_SECRET_KEY", None)
+    try:
+        with pytest.raises(KeyError) as exc_missing:
+            HumanApprovalGate(hmac_secret_key=None)
+        assert "mandatory hmac secret key missing" in str(exc_missing.value).lower()
+        assert "hardcoded default keys are strictly prohibited" in str(exc_missing.value).lower()
+
+        with pytest.raises(ValueError) as exc_entropy:
+            HumanApprovalGate(hmac_secret_key=b"too_short_secret_key_16b!")
+        assert "entropy insufficient" in str(exc_entropy.value).lower()
+
+        valid_key = b"A" * 32
+        gate = HumanApprovalGate(hmac_secret_key=valid_key)
+        assert gate.hmac_secret_key == valid_key
+    finally:
+        if orig_env is not None:
+            os.environ["ASTRAEUS_HMAC_SECRET_KEY"] = orig_env
+
+
+def test_ws7_7_2_process_restart_full_restoration():
+    """
+    WS7.7.2-A Critical 2:
+    Verifies full process restart recovery:
+    In Session 1, a recommendation is submitted and approved, issuing an authorization token.
+    Both recommendation and token are persisted to SQLite.
+    In Session 2 (simulating fresh process reboot), a new Dashboard instance is initialized
+    with completely empty memory. It restores the recommendation from SQLite, validates the HMAC
+    token, and authorizes physical dispatch without KeyError.
+    """
+    test_key = b"ASTRAEUS_WS772_RESTART_SECRET_KEY_DEV_MEHTA_2026_ENTROPY"
+    with tempfile.TemporaryDirectory() as tmp_dir:
+        db_path = os.path.join(tmp_dir, "restart_governance.db")
+
+        # Session 1: Create recommendation and issue token
+        store_s1 = DurableScientificEventStore(db_path=db_path)
+        dash_s1 = HumanOperationsDashboardBackend(event_store=store_s1, hmac_secret_key=test_key)
+
+        obs = ScheduledObservation(
+            target_id="TGT_REBOOT_001",
+            facility_id="VLT",
+            instrument_id="X-shooter",
+            filter_id="UVB_VIS_NIR",
+            start_mjd=60100.5,
+            end_mjd=60100.52,
+            exposure_time_sec=1800.0,
+            slew_time_sec=60.0,
+            readout_time_sec=30.0,
+            airmass=1.2,
+            expected_eig_nats=0.825,
+            weather_score=0.95,
+        )
+        target = TargetState(
+            target_id="TGT_REBOOT_001",
+            ra_deg=115.0,
+            dec_deg=22.0,
+            trigger_mjd=60100.0,
+            base_magnitude=19.2,
+            hypothesis_posteriors={"KILONOVA": 0.70, "SN_IA": 0.30},
+        )
+
+        diff = dash_s1.submit_recommendation_for_review(obs, target, "Restart recovery test proposal")
+        rec_id = diff.recommendation_id
+        status, token = dash_s1.review_and_authorize(
+            recommendation_id=rec_id,
+            action=OperationalAction.APPROVE,
+            authorized_by="devmehta060505@gmail.com",
+            ttl_seconds=3600.0,
+        )
+        assert status == ApprovalStatus.AUTHORIZED_BY_INVESTIGATOR
+        assert token is not None
+
+        persisted_rec = store_s1.get_recommendation(rec_id)
+        assert persisted_rec is not None
+        assert persisted_rec["target_id"] == "TGT_REBOOT_001"
+        assert persisted_rec["approval_status"] == ApprovalStatus.AUTHORIZED_BY_INVESTIGATOR.value
+        store_s1.close()
+
+        # Session 2: Completely fresh process simulation (empty in-memory state)
+        store_s2 = DurableScientificEventStore(db_path=db_path)
+        try:
+            dash_s2 = HumanOperationsDashboardBackend(event_store=store_s2, hmac_secret_key=test_key)
+            assert len(dash_s2.proposals) == 0
+            assert len(dash_s2.gate._recommendations) == 0
+            assert len(dash_s2.gate._tokens) == 0
+
+            # Execute dispatch: restores both recommendation and token from SQLite!
+            res = dash_s2.execute_dispatch(token=token, recommendation_id=rec_id)
+            assert res["status"] == "DISPATCH_AUTHORIZED"
+            assert res["dispatch_status"] == "DISPATCHED_TO_FACILITY_QUEUE"
+            assert res["recommendation_id"] == rec_id
+
+            # Verify single-use policy survives across restart: second attempt rejected!
+            with pytest.raises(TokenValidationError) as exc_consumed:
+                dash_s2.execute_dispatch(token=token, recommendation_id=rec_id)
+            assert "already been consumed" in str(exc_consumed.value).lower()
+        finally:
+            store_s2.close()
+
+
+def test_ws7_7_2_exact_binary64_sub_10_to_12_precision_differentiation():
+    """
+    WS7.7.2-B Important 3:
+    Verifies that the canonical float serialization uses exact IEEE 754 binary64 float.hex():
+    1. Preserves differences down to hardware machine epsilon (~2.22e-16).
+    2. Sub-10^-12 differences produce completely distinct SHA-256 state hashes.
+    3. Eliminates decimal rounding collisions.
+    """
+    priors_base = {"KILONOVA": 0.5, "SUPERNOVA_IA": 0.5}
+    models = {"recalibrator": "v1.0"}
+    configs = {"recalibrator": "cfg_sha256_1111"}
+    evidence = ["hash_evidence_001"]
+
+    hash_base, _ = InvestigationCheckpoint.compute_state_hash(
+        target_id="TGT_IEEE754",
+        revision_index=1,
+        parent_state_hash=None,
+        evidence_hashes=evidence,
+        initial_priors=priors_base,
+        model_versions=models,
+        model_config_hashes=configs,
+        hypothesis_posteriors={"KILONOVA": 0.5, "SUPERNOVA_IA": 0.5},
+        entropy_nats=0.6931471805599453,
+    )
+
+    # Sub-10^-12 difference (1e-14)
+    hash_sub12, _ = InvestigationCheckpoint.compute_state_hash(
+        target_id="TGT_IEEE754",
+        revision_index=1,
+        parent_state_hash=None,
+        evidence_hashes=evidence,
+        initial_priors=priors_base,
+        model_versions=models,
+        model_config_hashes=configs,
+        hypothesis_posteriors={"KILONOVA": 0.5 + 1.0e-14, "SUPERNOVA_IA": 0.5 - 1.0e-14},
+        entropy_nats=0.6931471805599453,
+    )
+    assert hash_base != hash_sub12, "float.hex() failed to differentiate sub-10^-12 posterior delta!"
+
+    # Machine epsilon test (sys.float_info.epsilon)
+    eps = sys.float_info.epsilon
+    hash_eps, _ = InvestigationCheckpoint.compute_state_hash(
+        target_id="TGT_IEEE754",
+        revision_index=1,
+        parent_state_hash=None,
+        evidence_hashes=evidence,
+        initial_priors=priors_base,
+        model_versions=models,
+        model_config_hashes=configs,
+        hypothesis_posteriors={"KILONOVA": 0.5 + eps, "SUPERNOVA_IA": 0.5 - eps},
+        entropy_nats=0.6931471805599453,
+    )
+    assert hash_base != hash_eps, "float.hex() failed to differentiate machine epsilon delta!"
+
+
+def test_ws7_7_2_deterministic_replay_with_tied_observation_epochs():
+    """
+    WS7.7.2-B Important 3:
+    Verifies that when multiple observations occur at the exact same epoch_mjd,
+    the replay engine deterministically preserves the exact recorded assimilation sequence
+    and uses (epoch_mjd, observation_id) as an immutable tie-breaker.
+    """
+    store = DurableScientificEventStore(db_path=":memory:")
+    target_id = "TGT_TIED_EPOCHS"
+    inv_id = "INV_TIED_001"
+    priors = {"KILONOVA": 0.5, "SUPERNOVA_IA": 0.5}
+
+    obs_A = CalibratedObservation(
+        observation_id="obs_tied_A",
+        target_id=target_id,
+        target_ra_deg=180.0,
+        target_dec_deg=10.0,
+        facility_id="VLT",
+        instrument_id="FORS2",
+        filter_id="r_VLT",
+        epoch_mjd=60001.0,
+        exposure_time_sec=600.0,
+        raw_data_hash_sha256="raw_hash_tied_A",
+        measurement_type=MeasurementType.POINT_DETECTION,
+        apparent_mag=18.50,
+        apparent_mag_err=0.05,
+        calibration_status=CalibrationStatus.CALIBRATED_NOMINAL,
+    )
+    obs_B = CalibratedObservation(
+        observation_id="obs_tied_B",
+        target_id=target_id,
+        target_ra_deg=180.0,
+        target_dec_deg=10.0,
+        facility_id="VLT",
+        instrument_id="HAWK-I",
+        filter_id="J_VLT",
+        epoch_mjd=60001.0,
+        exposure_time_sec=600.0,
+        raw_data_hash_sha256="raw_hash_tied_B",
+        measurement_type=MeasurementType.POINT_DETECTION,
+        apparent_mag=18.20,
+        apparent_mag_err=0.06,
+        calibration_status=CalibrationStatus.CALIBRATED_NOMINAL,
+    )
+    store.store_observation(obs_A)
+    store.store_observation(obs_B)
+
+    # Assimilate A then B
+    up_A = BayesianRecalibrationEngine.recalibrate_posteriors(priors, obs_A, time_since_trigger_days=1.0)
+    up_AB = BayesianRecalibrationEngine.recalibrate_posteriors(up_A.updated_posteriors, obs_B, effective_wavelength_angstrom=12500.0, time_since_trigger_days=1.0)
+
+    chk_AB = store.store_investigation_checkpoint(
+        investigation_id=inv_id,
+        target_id=target_id,
+        revision_index=1,
+        timestamp_mjd=60001.0,
+        evidence_hashes=[obs_A.raw_data_hash_sha256, obs_B.raw_data_hash_sha256],
+        initial_priors=priors,
+        hypothesis_posteriors=up_AB.updated_posteriors,
+        entropy_nats=up_AB.posterior_entropy_nats,
+    )
+
+    replay_engine = DeterministicScientificReplayEngine(event_store=store)
+    res_AB = replay_engine.reconstruct_checkpoint(
+        investigation_id=inv_id,
+        target_revision=1,
+        initial_priors=priors,
+        effective_wavelengths={"r_VLT": 6000.0, "J_VLT": 12500.0},
+    )
+    assert res_AB.is_verified is True
+    assert res_AB.expected_state_hash == chk_AB.state_hash
+
+    # Reversed order B then A produces different state hash
+    up_B = BayesianRecalibrationEngine.recalibrate_posteriors(priors, obs_B, effective_wavelength_angstrom=12500.0, time_since_trigger_days=1.0)
+    up_BA = BayesianRecalibrationEngine.recalibrate_posteriors(up_B.updated_posteriors, obs_A, time_since_trigger_days=1.0)
+    hash_BA, _ = InvestigationCheckpoint.compute_state_hash(
+        target_id=target_id,
+        revision_index=1,
+        parent_state_hash=None,
+        evidence_hashes=[obs_B.raw_data_hash_sha256, obs_A.raw_data_hash_sha256],
+        initial_priors=priors,
+        model_versions={"bayesian_recalibration": "ws7.6-c", "kilonova": "v2.0"},
+        model_config_hashes={"bayesian_recalibration": "default_cfg_hash", "kilonova": "default_cfg_hash"},
+        hypothesis_posteriors=up_BA.updated_posteriors,
+        entropy_nats=up_BA.posterior_entropy_nats,
+    )
+    assert chk_AB.state_hash != hash_BA, "Order reversal of tied epoch observations must alter state digest!"
+    store.close()
+
+
+def test_ws7_7_2_multi_messenger_time_slides_and_spatial_scrambling():
+    """
+    WS7.7.2-C Important 4:
+    Verifies empirical false-alarm background rejection:
+    1. Time-slide analysis (shifting trigger times by +/- 10 to 100 days) yields zero false physical associations.
+    2. Spatial scrambling analysis (shifting coordinates by 15 to 270 deg) yields zero false physical associations.
+    3. Confirms significance is formally designated as MODEL_DEPENDENT_GAUSSIAN_EQUIVALENT.
+    """
+    gw_event = CorrelatedEventCandidate(
+        event_id="GW_PHYSICAL_01",
+        facility="GRACEDB",
+        messenger_type=MessengerType.GRAVITATIONAL_WAVE,
+        trigger_mjd=60200.500000,
+        ra_deg=100.0,
+        dec_deg=20.0,
+        localization_error_deg=0.5,
+        skymap_90_cr_area_deg2=25.0,
+        luminosity_distance_mpc=40.0,
+    )
+
+    grb_prompt = CorrelatedEventCandidate(
+        event_id="FERMI_PHYSICAL_01",
+        facility="FERMI_GBM",
+        messenger_type=MessengerType.GAMMA_RAY,
+        trigger_mjd=60200.500000 + (1.5 / 86400.0),
+        ra_deg=100.01,
+        dec_deg=20.01,
+        localization_error_deg=1.0,
+        classification_hint="SHORT_GRB",
+    )
+
+    # 1. Genuine physical association
+    assoc_genuine = CrossFacilityCorrelationEngine.evaluate_association(gw_event, grb_prompt)
+    assert assoc_genuine is not None
+    assert assoc_genuine.significance_type == "MODEL_DEPENDENT_GAUSSIAN_EQUIVALENT"
+    assert assoc_genuine.association_grade in (
+        AssociationGrade.HIGH_CONFIDENCE_PHYSICAL_ASSOCIATION,
+        AssociationGrade.STATISTICALLY_SIGNIFICANT_COINCIDENCE,
+    )
+
+    # 2. Time-slide background analysis (offsets of +/- 10d, 20d, 30d, 50d, 100d)
+    ts_res = CrossFacilityCorrelationEngine.perform_time_slide_analysis(gw_event, grb_prompt)
+    assert ts_res["total_slides"] == 10
+    assert ts_res["false_alarms"] == 0
+    assert ts_res["rejection_confirmed"] is True
+
+    # 3. Spatial scrambling analysis (RA shifts of 15 deg to 270 deg)
+    ss_res = CrossFacilityCorrelationEngine.perform_spatial_scrambling_analysis(gw_event, grb_prompt)
+    assert ss_res["total_scrambles"] == 10
+    assert ss_res["false_alarms"] == 0
+    assert ss_res["rejection_confirmed"] is True
+
+
+def test_ws7_7_2_dispatch_fails_without_durable_event_store():
+    """
+    WS7.7.2-A Critical 1:
+    Verifies that physical dispatch fails closed (AutonomousDispatchProhibitedError)
+    if the governance gate has no durable SQLite event store attached.
+    Volatile in-memory dispatch without durable single-use registration is strictly prohibited.
+    """
+    test_key = b"ASTRAEUS_DISPATCH_STORE_TEST_KEY_DEV_MEHTA_2026_SECURE"
+    gate = HumanApprovalGate(event_store=None, hmac_secret_key=test_key)
+
+    obs = ScheduledObservation(
+        target_id="TGT_NO_STORE",
+        facility_id="VLT",
+        instrument_id="X-shooter",
+        filter_id="UVB_VIS_NIR",
+        start_mjd=60100.5,
+        end_mjd=60100.52,
+        exposure_time_sec=1800.0,
+        slew_time_sec=60.0,
+        readout_time_sec=30.0,
+        airmass=1.2,
+        expected_eig_nats=0.825,
+        weather_score=0.95,
+    )
+    target = TargetState(
+        target_id="TGT_NO_STORE",
+        ra_deg=100.0,
+        dec_deg=20.0,
+        trigger_mjd=60100.0,
+        base_magnitude=19.0,
+        hypothesis_posteriors={"KILONOVA": 0.60, "SN_IA": 0.40},
+    )
+
+    rec = gate.create_recommendation(obs, target, "Test without store")
+    token = gate.issue_authorization_token(rec.recommendation_id, "devmehta060505@gmail.com")
+
+    with pytest.raises(AutonomousDispatchProhibitedError) as exc_store:
+        gate.dispatch_with_token(token, rec.recommendation_id)
+    assert "durable sqlite event store is mandatory" in str(exc_store.value).lower()

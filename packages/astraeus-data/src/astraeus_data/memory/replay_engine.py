@@ -110,13 +110,17 @@ class DeterministicScientificReplayEngine:
             current_posteriors = {k: uniform_p for k in h_keys}
             initial_prior_rec = dict(current_posteriors)
 
-        # 3. Retrieve observations by exact immutable evidence hashes
-        # Guarantees that historical evidence is never dropped even after later supersession!
+        # 3. Retrieve observations by exact immutable evidence hashes in recorded assimilation sequence
+        # Guarantees that historical evidence is never dropped even after later supersession,
+        # and observation assimilation order is strictly deterministic even with tied epochs!
         if target_chk.evidence_hashes:
-            replay_obs = self.event_store.get_observations_by_hashes(target_chk.evidence_hashes)
+            obs_list = self.event_store.get_observations_by_hashes(target_chk.evidence_hashes)
+            obs_by_hash = {getattr(o, "raw_data_hash_sha256", getattr(o, "payload_hash", "")): o for o in obs_list}
+            replay_obs = [obs_by_hash[h] for h in target_chk.evidence_hashes if h in obs_by_hash]
         else:
             all_obs = self.event_store.get_active_observations_for_target(target_id)
             replay_obs = [o for o in all_obs if o.epoch_mjd <= target_chk.timestamp_mjd]
+            replay_obs.sort(key=lambda o: (o.epoch_mjd, o.observation_id))
 
         # 4. Sequentially replay Bayesian updates
         reconstructed_evidence_hashes = []

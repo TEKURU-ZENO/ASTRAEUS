@@ -30,6 +30,7 @@ from astraeus_agents.observatory.human_approval_interface import (
     AutonomousDispatchProhibitedError,
 )
 from astraeus_agents.observatory.schedulers import ScheduledObservation, TargetState
+from astraeus_data.memory.event_store import DurableScientificEventStore
 from engines.quarantine_firewall import QuarantineFirewall
 
 
@@ -71,13 +72,15 @@ class HumanOperationsDashboardBackend:
         self,
         human_gate: Optional[HumanApprovalGate] = None,
         event_store: Optional[Any] = None,
+        hmac_secret_key: Optional[bytes] = None,
     ):
+        store = event_store or DurableScientificEventStore(db_path=":memory:")
         if human_gate is not None:
             self.gate = human_gate
-            if event_store is not None and getattr(self.gate, "_event_store", None) is None:
-                self.gate._event_store = event_store
+            if getattr(self.gate, "_event_store", None) is None:
+                self.gate._event_store = store
         else:
-            self.gate = HumanApprovalGate(event_store=event_store)
+            self.gate = HumanApprovalGate(event_store=store, hmac_secret_key=hmac_secret_key)
         self.proposals: Dict[str, ScheduledObservation] = {}
         self.proposals_meta: Dict[str, Dict[str, Any]] = {}
         self.action_history: List[Dict[str, Any]] = []

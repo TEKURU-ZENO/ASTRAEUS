@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import os
 import json
+import math
 import sqlite3
 import hashlib
 import threading
@@ -54,10 +55,24 @@ class InvestigationCheckpoint:
     canonical_state_json: str = ""
     created_at_utc: str = field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
 
+    @staticmethod
+    def canonical_float_hex(v: float) -> str:
+        """
+        Encodes binary64 float into exact hexadecimal scientific notation (IEEE 754 round-trip).
+        Unlike decimal representations (such as .12e), float.hex() preserves every single bit
+        of the 53-bit significand and exponent down to machine epsilon (~2.22e-16).
+        """
+        f_val = float(v)
+        if math.isnan(f_val):
+            return "nan"
+        if math.isinf(f_val):
+            return "inf" if f_val > 0 else "-inf"
+        return f_val.hex()
+
     @classmethod
     def compute_prior_hash(cls, priors: Dict[str, float]) -> str:
-        """Computes deterministic hash of prior distribution with full float precision."""
-        canonical_priors = {k: f"{priors[k]:.12e}" for k in sorted(priors.keys())}
+        """Computes deterministic hash of prior distribution with exact binary64 float.hex() precision."""
+        canonical_priors = {k: cls.canonical_float_hex(priors[k]) for k in sorted(priors.keys())}
         canonical_str = json.dumps(canonical_priors, sort_keys=True, separators=(",", ":"))
         return hashlib.sha256(canonical_str.encode("utf-8")).hexdigest()
 
@@ -76,26 +91,27 @@ class InvestigationCheckpoint:
         decision_metadata: Optional[Dict[str, Any]] = None,
     ) -> Tuple[str, str]:
         """
-        Computes canonical SHA-256 digest of the complete scientific state (v2 schema).
-        Uses explicit 12-digit scientific notation to eliminate floating point rounding ambiguity.
+        Computes canonical SHA-256 digest of the complete scientific state (v3 schema).
+        Uses exact IEEE 754 binary64 float.hex() encoding to eliminate all rounding ambiguity
+        down to hardware machine epsilon (~2.22e-16), and preserves ordered assimilation sequence.
         Returns: (state_hash, canonical_json_string).
         """
         prior_hash = cls.compute_prior_hash(initial_priors)
         canonical_dict = {
-            "schema_version": "astronomy.astraeus.state.v2",
+            "schema_version": "astronomy.astraeus.state.v3",
             "target_id": target_id,
             "revision_index": revision_index,
             "parent_state_hash": parent_state_hash or "ROOT",
-            "evidence_hashes": sorted(evidence_hashes),
-            "initial_priors": {k: f"{initial_priors[k]:.12e}" for k in sorted(initial_priors.keys())},
+            "evidence_hashes": list(evidence_hashes),
+            "initial_priors": {k: cls.canonical_float_hex(initial_priors[k]) for k in sorted(initial_priors.keys())},
             "prior_hash": prior_hash,
             "model_versions": {k: str(model_versions[k]) for k in sorted(model_versions.keys())},
             "model_config_hashes": {k: str(model_config_hashes.get(k, "")) for k in sorted(model_versions.keys())},
             "hypothesis_posteriors": {
-                k: f"{hypothesis_posteriors[k]:.12e}"
+                k: cls.canonical_float_hex(hypothesis_posteriors[k])
                 for k in sorted(hypothesis_posteriors.keys())
             },
-            "entropy_nats": f"{entropy_nats:.12e}",
+            "entropy_nats": cls.canonical_float_hex(entropy_nats),
             "decision_metadata": decision_metadata or {},
         }
         canonical_str = json.dumps(canonical_dict, sort_keys=True, separators=(",", ":"))
@@ -245,11 +261,38 @@ class DurableScientificEventStore:
                 );
             """)
 
+            # 6. Persistent Recommendations table (full process restart recovery)
+            conn.execute("""
+                CREATE TABLE IF NOT EXISTS recommendations (
+                    recommendation_id TEXT PRIMARY KEY,
+                    target_id TEXT NOT NULL,
+                    facility_id TEXT NOT NULL,
+                    instrument_id TEXT NOT NULL,
+                    filter_id TEXT NOT NULL,
+                    exposure_time_sec REAL NOT NULL,
+                    scheduled_mjd REAL NOT NULL,
+                    expected_eig_nats REAL NOT NULL,
+                    prior_entropy_nats REAL NOT NULL,
+                    expected_posterior_entropy_nats REAL NOT NULL,
+                    entropy_reduction_pct REAL NOT NULL,
+                    competing_hypotheses_json TEXT NOT NULL,
+                    scientific_justification TEXT NOT NULL,
+                    physical_constraints_json TEXT NOT NULL,
+                    approval_status TEXT NOT NULL,
+                    authorized_investigator TEXT,
+                    authorization_timestamp_utc REAL,
+                    rejection_reason TEXT,
+                    cryptographic_proposal_hash TEXT NOT NULL,
+                    created_at_utc REAL NOT NULL
+                );
+            """)
+
             # Indices for rapid querying
             conn.execute("CREATE INDEX IF NOT EXISTS idx_events_alert_id ON events(alert_id);")
             conn.execute("CREATE INDEX IF NOT EXISTS idx_events_healpix ON events(healpix_pixel);")
             conn.execute("CREATE INDEX IF NOT EXISTS idx_obs_target_active ON observations(target_id, is_active);")
             conn.execute("CREATE INDEX IF NOT EXISTS idx_obs_payload_hash ON observations(payload_hash);")
+            conn.execute("CREATE INDEX IF NOT EXISTS idx_recommendations_target ON recommendations(target_id);")
             conn.execute("CREATE INDEX IF NOT EXISTS idx_checkpoints_investigation ON investigation_checkpoints(investigation_id, revision_index);")
             conn.execute("CREATE INDEX IF NOT EXISTS idx_tokens_rec ON authorization_tokens(recommendation_id);")
 
@@ -615,13 +658,13 @@ class DurableScientificEventStore:
             return results
 
     def get_active_observations_for_target(self, target_id: str) -> List[CalibratedObservation]:
-        """Retrieves currently active observations for a target in chronological order."""
+        """Retrieves currently active observations for a target in deterministic chronological order."""
         with self._get_connection() as conn:
             cur = conn.execute(
                 """
                 SELECT payload_json FROM observations
                 WHERE target_id = ? AND is_active = 1
-                ORDER BY epoch_mjd ASC
+                ORDER BY epoch_mjd ASC, observation_id ASC
                 """,
                 (target_id,),
             )
@@ -631,6 +674,7 @@ class DurableScientificEventStore:
         """
         Retrieves observations by their exact immutable evidence hashes,
         regardless of whether they have been superseded in subsequent revisions.
+        Orders deterministically by epoch_mjd and observation_id.
         """
         if not evidence_hashes:
             return []
@@ -640,7 +684,7 @@ class DurableScientificEventStore:
                 f"""
                 SELECT payload_json FROM observations
                 WHERE payload_hash IN ({placeholders})
-                ORDER BY epoch_mjd ASC
+                ORDER BY epoch_mjd ASC, observation_id ASC
                 """,
                 evidence_hashes,
             )
@@ -758,6 +802,96 @@ class DurableScientificEventStore:
                 row = cur.fetchone()
                 return dict(row) if row else None
 
+    # =========================================================================
+    # 5. PERSISTENT RECOMMENDATION MANAGEMENT (PROCESS RESTART RECOVERY)
+    # =========================================================================
+
+    def store_recommendation(self, rec_dict: Dict[str, Any]) -> bool:
+        """Persists a human review recommendation proposal to SQLite."""
+        with self._lock:
+            conn = self._get_connection()
+            try:
+                conn.execute(
+                    """
+                    INSERT INTO recommendations (
+                        recommendation_id, target_id, facility_id, instrument_id,
+                        filter_id, exposure_time_sec, scheduled_mjd, expected_eig_nats,
+                        prior_entropy_nats, expected_posterior_entropy_nats,
+                        entropy_reduction_pct, competing_hypotheses_json,
+                        scientific_justification, physical_constraints_json,
+                        approval_status, authorized_investigator,
+                        authorization_timestamp_utc, rejection_reason,
+                        cryptographic_proposal_hash, created_at_utc
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    """,
+                    (
+                        rec_dict["recommendation_id"],
+                        rec_dict["target_id"],
+                        rec_dict["facility_id"],
+                        rec_dict["instrument_id"],
+                        rec_dict["filter_id"],
+                        rec_dict["exposure_time_sec"],
+                        rec_dict["scheduled_mjd"],
+                        rec_dict["expected_eig_nats"],
+                        rec_dict["prior_entropy_nats"],
+                        rec_dict["expected_posterior_entropy_nats"],
+                        rec_dict["entropy_reduction_pct"],
+                        json.dumps(rec_dict["competing_hypotheses"]),
+                        rec_dict["scientific_justification"],
+                        json.dumps(rec_dict["physical_constraints_audit"]),
+                        rec_dict["approval_status"] if isinstance(rec_dict["approval_status"], str) else rec_dict["approval_status"].value,
+                        rec_dict.get("authorized_investigator"),
+                        rec_dict.get("authorization_timestamp_utc"),
+                        rec_dict.get("rejection_reason"),
+                        rec_dict["cryptographic_proposal_hash"],
+                        rec_dict.get("created_at_utc", datetime.now(timezone.utc).timestamp()),
+                    ),
+                )
+                conn.commit()
+                return True
+            except sqlite3.IntegrityError:
+                conn.rollback()
+                return False
+
+    def update_recommendation_status(
+        self,
+        recommendation_id: str,
+        status: str,
+        investigator_email: Optional[str] = None,
+        rejection_reason: Optional[str] = None,
+        timestamp_utc: Optional[float] = None,
+    ) -> bool:
+        """Updates approval or rejection status of a recommendation in SQLite."""
+        with self._lock:
+            conn = self._get_connection()
+            now = timestamp_utc if timestamp_utc is not None else datetime.now(timezone.utc).timestamp()
+            cur = conn.execute(
+                """
+                UPDATE recommendations
+                SET approval_status = ?, authorized_investigator = ?,
+                    authorization_timestamp_utc = ?, rejection_reason = ?
+                WHERE recommendation_id = ?
+                """,
+                (status, investigator_email, now, rejection_reason, recommendation_id),
+            )
+            conn.commit()
+            return cur.rowcount > 0
+
+    def get_recommendation(self, recommendation_id: str) -> Optional[Dict[str, Any]]:
+        """Retrieves recommendation record from persistent SQLite registry."""
+        with self._lock:
+            conn = self._get_connection()
+            row = conn.execute(
+                "SELECT * FROM recommendations WHERE recommendation_id = ?",
+                (recommendation_id,),
+            ).fetchone()
+            if not row:
+                return None
+            d = dict(row)
+            d["competing_hypotheses"] = json.loads(d["competing_hypotheses_json"])
+            d["physical_constraints_audit"] = json.loads(d["physical_constraints_json"])
+            return d
+
     def get_quarantined_records(self) -> List[Dict[str, Any]]:
         """Returns records routed to dead-letter storage."""
         with self._get_connection() as conn:
@@ -773,6 +907,7 @@ class DurableScientificEventStore:
             total_obs = conn.execute("SELECT COUNT(*) FROM observations;").fetchone()[0]
             total_chk = conn.execute("SELECT COUNT(*) FROM investigation_checkpoints;").fetchone()[0]
             total_tokens = conn.execute("SELECT COUNT(*) FROM authorization_tokens;").fetchone()[0]
+            total_recs = conn.execute("SELECT COUNT(*) FROM recommendations;").fetchone()[0]
             total_quar = conn.execute("SELECT COUNT(*) FROM dead_letter_quarantine;").fetchone()[0]
 
             return {
@@ -783,6 +918,7 @@ class DurableScientificEventStore:
                 "total_observations": total_obs,
                 "total_checkpoints": total_chk,
                 "total_tokens": total_tokens,
+                "total_recommendations": total_recs,
                 "total_quarantined": total_quar,
             }
 

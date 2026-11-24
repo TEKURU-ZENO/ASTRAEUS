@@ -10,6 +10,7 @@ Date: November 24, 2026
 
 from __future__ import annotations
 
+import os
 import time
 import math
 import hashlib
@@ -59,7 +60,7 @@ class AuthorizationToken(BaseModel):
     is_consumed: bool = False
     dispatched_at_utc: Optional[float] = None
     token_signature_sha256: str
-    hmac_signature: Optional[str] = None
+    hmac_signature: str
 
     def is_expired(self, current_time_utc: Optional[float] = None) -> bool:
         now = current_time_utc if current_time_utc is not None else time.time()
@@ -95,8 +96,6 @@ class HumanApprovalGate:
     All telescope queue modifications must be explicitly signed by the Lead Investigator.
     """
 
-    DEFAULT_HMAC_KEY: bytes = b"ASTRAEUS_OBSERVATORY_SECRET_KEY_DEV_MEHTA_2026"
-
     def __init__(
         self,
         event_store: Optional[Any] = None,
@@ -105,7 +104,58 @@ class HumanApprovalGate:
         self._recommendations: Dict[str, ObservationRecommendation] = {}
         self._tokens: Dict[str, AuthorizationToken] = {}
         self._event_store = event_store
-        self.hmac_secret_key = hmac_secret_key or self.DEFAULT_HMAC_KEY
+
+        # Mandatory high-entropy secret key loading: no hardcoded default fallback
+        loaded_key = hmac_secret_key
+        if loaded_key is None:
+            env_key = os.environ.get("ASTRAEUS_HMAC_SECRET_KEY")
+            if env_key:
+                loaded_key = env_key.encode("utf-8")
+
+        if loaded_key is None:
+            raise KeyError(
+                "SECURITY COVENANT VIOLATION: Mandatory HMAC secret key missing. "
+                "Must provide 'hmac_secret_key' or set 'ASTRAEUS_HMAC_SECRET_KEY' in environment. "
+                "Hardcoded default keys are strictly prohibited."
+            )
+        if len(loaded_key) < 32:
+            raise ValueError(
+                "SECURITY COVENANT VIOLATION: HMAC secret key entropy insufficient. "
+                f"Key must be at least 32 bytes (got {len(loaded_key)} bytes)."
+            )
+        self.hmac_secret_key: bytes = loaded_key
+
+    def _get_or_restore_recommendation(self, recommendation_id: str) -> Optional[ObservationRecommendation]:
+        """Retrieves recommendation from memory or restores from persistent SQLite registry."""
+        if recommendation_id in self._recommendations:
+            return self._recommendations[recommendation_id]
+        if self._event_store is not None:
+            persisted = self._event_store.get_recommendation(recommendation_id)
+            if persisted:
+                rec = ObservationRecommendation(
+                    recommendation_id=persisted["recommendation_id"],
+                    target_id=persisted["target_id"],
+                    facility_id=persisted["facility_id"],
+                    instrument_id=persisted["instrument_id"],
+                    filter_id=persisted["filter_id"],
+                    exposure_time_sec=persisted["exposure_time_sec"],
+                    scheduled_mjd=persisted["scheduled_mjd"],
+                    expected_eig_nats=persisted["expected_eig_nats"],
+                    prior_entropy_nats=persisted["prior_entropy_nats"],
+                    expected_posterior_entropy_nats=persisted["expected_posterior_entropy_nats"],
+                    entropy_reduction_pct=persisted["entropy_reduction_pct"],
+                    competing_hypotheses=persisted["competing_hypotheses"],
+                    scientific_justification=persisted["scientific_justification"],
+                    physical_constraints_audit=persisted["physical_constraints_audit"],
+                    approval_status=ApprovalStatus(persisted["approval_status"]),
+                    authorized_investigator=persisted.get("authorized_investigator"),
+                    authorization_timestamp_utc=persisted.get("authorization_timestamp_utc"),
+                    rejection_reason=persisted.get("rejection_reason"),
+                    cryptographic_proposal_hash=persisted["cryptographic_proposal_hash"],
+                )
+                self._recommendations[recommendation_id] = rec
+                return rec
+        return None
 
     def _compute_hmac_signature(
         self,
@@ -175,6 +225,8 @@ class HumanApprovalGate:
             cryptographic_proposal_hash=prop_hash,
         )
         self._recommendations[rec_id] = rec
+        if self._event_store is not None:
+            self._event_store.store_recommendation(rec.model_dump())
         return rec
 
     def authorize_dispatch(
@@ -183,13 +235,20 @@ class HumanApprovalGate:
         investigator_email: str,
     ) -> ObservationRecommendation:
         """Authorizes dispatch with human investigator signature."""
-        rec = self._recommendations.get(recommendation_id)
+        rec = self._get_or_restore_recommendation(recommendation_id)
         if rec is None:
-            raise KeyError(f"Recommendation {recommendation_id} not found.")
+            raise KeyError(f"Recommendation {recommendation_id} not found in memory or persistent store.")
 
         rec.approval_status = ApprovalStatus.AUTHORIZED_BY_INVESTIGATOR
         rec.authorized_investigator = investigator_email
         rec.authorization_timestamp_utc = time.time()
+        if self._event_store is not None:
+            self._event_store.update_recommendation_status(
+                recommendation_id=recommendation_id,
+                status=ApprovalStatus.AUTHORIZED_BY_INVESTIGATOR.value,
+                investigator_email=investigator_email,
+                timestamp_utc=rec.authorization_timestamp_utc,
+            )
         return rec
 
     def reject_dispatch(
@@ -198,12 +257,18 @@ class HumanApprovalGate:
         reason: str,
     ) -> ObservationRecommendation:
         """Rejects dispatch recommendation with justification."""
-        rec = self._recommendations.get(recommendation_id)
+        rec = self._get_or_restore_recommendation(recommendation_id)
         if rec is None:
-            raise KeyError(f"Recommendation {recommendation_id} not found.")
+            raise KeyError(f"Recommendation {recommendation_id} not found in memory or persistent store.")
 
         rec.approval_status = ApprovalStatus.REJECTED_BY_INVESTIGATOR
         rec.rejection_reason = reason
+        if self._event_store is not None:
+            self._event_store.update_recommendation_status(
+                recommendation_id=recommendation_id,
+                status=ApprovalStatus.REJECTED_BY_INVESTIGATOR.value,
+                rejection_reason=reason,
+            )
         return rec
 
     def assert_authorized_for_dispatch(self, recommendation_id: str) -> None:
@@ -211,7 +276,7 @@ class HumanApprovalGate:
         Enforces execution gate: raises AutonomousDispatchProhibitedError
         if recommendation is not officially approved.
         """
-        rec = self._recommendations.get(recommendation_id)
+        rec = self._get_or_restore_recommendation(recommendation_id)
         if rec is None or rec.approval_status != ApprovalStatus.AUTHORIZED_BY_INVESTIGATOR:
             raise AutonomousDispatchProhibitedError(
                 f"GOVERNANCE GATE VIOLATION: Recommendation {recommendation_id} is in state "
@@ -225,9 +290,9 @@ class HumanApprovalGate:
         ttl_seconds: float = 3600.0,
     ) -> AuthorizationToken:
         """Issues an immutable, cryptographically bound, single-use authorization token."""
-        rec = self._recommendations.get(recommendation_id)
+        rec = self._get_or_restore_recommendation(recommendation_id)
         if rec is None:
-            raise KeyError(f"Recommendation {recommendation_id} not found.")
+            raise KeyError(f"Recommendation {recommendation_id} not found in memory or persistent store.")
 
         # Authorize the recommendation record
         self.authorize_dispatch(recommendation_id, investigator_email)
@@ -304,26 +369,38 @@ class HumanApprovalGate:
         """
         now = current_time_utc if current_time_utc is not None else time.time()
 
-        # 1. Verify cryptographic HMAC signature if present
-        if token.hmac_signature is not None:
-            expected_hmac = self._compute_hmac_signature(
-                token_id=token.token_id,
-                recommendation_id=token.recommendation_id,
-                target_id=token.target_id,
-                facility_id=token.facility_id,
-                instrument_id=token.instrument_id,
-                filter_id=token.filter_id,
-                exposure_time_sec=token.exposure_time_sec,
-                scheduled_mjd=token.scheduled_mjd,
-                proposal_hash=token.proposal_hash,
-                investigator_email=token.investigator_email,
-                created_at_utc=token.created_at_utc,
-                ttl_seconds=token.ttl_seconds,
+        # 0. Enforce mandatory event store
+        if self._event_store is None:
+            raise AutonomousDispatchProhibitedError(
+                "GOVERNANCE GATE VIOLATION: Durable SQLite event store is mandatory for physical dispatch. "
+                "Volatile in-memory dispatch without durable single-use registration is strictly prohibited."
             )
-            if not hmac.compare_digest(token.hmac_signature, expected_hmac):
-                raise TokenValidationError(
-                    f"CRYPTOGRAPHIC SIGNATURE FORGERY DETECTED: Token {token.token_id} HMAC signature is invalid."
-                )
+
+        # 1. Enforce mandatory cryptographic HMAC signature
+        if not token.hmac_signature:
+            raise TokenValidationError(
+                f"CRYPTOGRAPHIC SIGNATURE MISSING: Token {token.token_id} has no HMAC signature. "
+                "Mandatory cryptographic signature covenant enforced."
+            )
+
+        expected_hmac = self._compute_hmac_signature(
+            token_id=token.token_id,
+            recommendation_id=token.recommendation_id,
+            target_id=token.target_id,
+            facility_id=token.facility_id,
+            instrument_id=token.instrument_id,
+            filter_id=token.filter_id,
+            exposure_time_sec=token.exposure_time_sec,
+            scheduled_mjd=token.scheduled_mjd,
+            proposal_hash=token.proposal_hash,
+            investigator_email=token.investigator_email,
+            created_at_utc=token.created_at_utc,
+            ttl_seconds=token.ttl_seconds,
+        )
+        if not hmac.compare_digest(token.hmac_signature, expected_hmac):
+            raise TokenValidationError(
+                f"CRYPTOGRAPHIC SIGNATURE FORGERY DETECTED: Token {token.token_id} HMAC signature is invalid."
+            )
 
         # 2. Check recommendation match
         if token.recommendation_id != recommendation_id:
@@ -334,8 +411,8 @@ class HumanApprovalGate:
 
         # 3. Retrieve or verify stored token
         stored_token = self._tokens.get(token.token_id)
-        if stored_token is None and self._event_store is not None:
-            # Reconstruct from persistent SQLite store if available (e.g. across restart)
+        if stored_token is None:
+            # Reconstruct from persistent SQLite store (e.g. across restart)
             persisted = self._event_store.get_authorization_token(token.token_id)
             if persisted:
                 stored_token = AuthorizationToken(
@@ -361,33 +438,21 @@ class HumanApprovalGate:
         if stored_token is None:
             raise TokenValidationError(f"Unregistered authorization token: {token.token_id}")
 
-        rec = self._recommendations.get(recommendation_id)
+        rec = self._get_or_restore_recommendation(recommendation_id)
         if rec is None:
-            raise KeyError(f"Recommendation {recommendation_id} not found.")
+            raise KeyError(f"Recommendation {recommendation_id} not found in memory or persistent store.")
 
         if stored_token.target_id != rec.target_id or stored_token.facility_id != rec.facility_id:
             raise TokenValidationError("TOKEN PARAMETER MISMATCH: Target or facility diverges from proposal.")
 
-        # 4. Atomic single-use consumption
-        if self._event_store is not None:
-            success, reason = self._event_store.atomic_consume_token(token.token_id, current_time_utc=now)
-            if not success:
-                raise TokenValidationError(f"GOVERNANCE GATE VIOLATION: {reason}")
-            stored_token.is_consumed = True
-            stored_token.dispatched_at_utc = now
-            token.is_consumed = True
-            token.dispatched_at_utc = now
-        else:
-            if stored_token.is_consumed:
-                raise TokenValidationError(
-                    f"Token {token.token_id} has ALREADY BEEN CONSUMED. Single-use policy strictly enforced."
-                )
-            if stored_token.is_expired(now):
-                raise TokenValidationError(f"Token {token.token_id} has EXPIRED (TTL = {stored_token.ttl_seconds}s).")
-            stored_token.is_consumed = True
-            stored_token.dispatched_at_utc = now
-            token.is_consumed = True
-            token.dispatched_at_utc = now
+        # 4. Atomic single-use consumption in SQLite WAL store
+        success, reason = self._event_store.atomic_consume_token(token.token_id, current_time_utc=now)
+        if not success:
+            raise TokenValidationError(f"GOVERNANCE GATE VIOLATION: {reason}")
+        stored_token.is_consumed = True
+        stored_token.dispatched_at_utc = now
+        token.is_consumed = True
+        token.dispatched_at_utc = now
 
         return {
             "dispatch_status": "DISPATCHED_TO_FACILITY_QUEUE",

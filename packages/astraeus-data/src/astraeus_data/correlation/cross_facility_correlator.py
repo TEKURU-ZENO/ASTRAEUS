@@ -81,6 +81,7 @@ class MultiMessengerAssociation:
     log_bayes_factor_association: float
     suggested_transient_class: str
     association_grade: AssociationGrade = AssociationGrade.PRELIMINARY_CANDIDATE
+    significance_type: str = "MODEL_DEPENDENT_GAUSSIAN_EQUIVALENT"
     is_quarantined: bool = False
     quarantine_reason: Optional[str] = None
     audit_notes: str = ""
@@ -294,14 +295,113 @@ class CrossFacilityCorrelationEngine:
             log_bayes_factor_association=round(ln_bf, 2),
             suggested_transient_class=transient_class,
             association_grade=grade,
+            significance_type="MODEL_DEPENDENT_GAUSSIAN_EQUIVALENT",
             is_quarantined=False,
             audit_notes=(
                 f"Multi-messenger association evaluated [{grade.value}]. "
                 f"Sep: {sep_arcsec:.1f}\", dt: {delta_t_sec:.1f}s, "
-                f"Calibrated Significance: {sigma_equiv:.2f} sigma (ln BF: {ln_bf:.1f}, "
-                f"P_chance: {p_chance:.2e})."
+                f"Model-dependent Gaussian-equivalent Significance: {sigma_equiv:.2f} sigma (ln BF: {ln_bf:.1f}, "
+                f"P_chance: {p_chance:.2e}). Qualified as model-dependent pending real alert background scans."
             ),
         )
+
+    @classmethod
+    def perform_time_slide_analysis(
+        cls,
+        primary_event: CorrelatedEventCandidate,
+        candidate_event: CorrelatedEventCandidate,
+        time_slide_offsets_days: Optional[List[float]] = None,
+    ) -> Dict[str, Any]:
+        """
+        Performs time-slide false-alarm analysis by offsetting candidate trigger time
+        by artificial lags (e.g. +/- 10, 20, 30, 50, 100 days) to break physical simultaneity.
+        Verifies empirical background rejection under artificial time slides.
+        """
+        offsets = time_slide_offsets_days or [
+            -100.0, -50.0, -30.0, -20.0, -10.0, 10.0, 20.0, 30.0, 50.0, 100.0
+        ]
+        slide_results = []
+        false_alarms = 0
+        for dt_days in offsets:
+            slid_cand = CorrelatedEventCandidate(
+                event_id=f"{candidate_event.event_id}_slid_{dt_days:+.1f}d",
+                facility=candidate_event.facility,
+                messenger_type=candidate_event.messenger_type,
+                trigger_mjd=candidate_event.trigger_mjd + dt_days,
+                ra_deg=candidate_event.ra_deg,
+                dec_deg=candidate_event.dec_deg,
+                localization_error_deg=candidate_event.localization_error_deg,
+                skymap_90_cr_area_deg2=candidate_event.skymap_90_cr_area_deg2,
+                luminosity_distance_mpc=candidate_event.luminosity_distance_mpc,
+                distance_err_mpc=candidate_event.distance_err_mpc,
+                classification_hint=candidate_event.classification_hint,
+            )
+            assoc = cls.evaluate_association(primary_event, slid_cand)
+            is_fa = (assoc is not None and assoc.association_grade == AssociationGrade.HIGH_CONFIDENCE_PHYSICAL_ASSOCIATION)
+            if is_fa:
+                false_alarms += 1
+            slide_results.append({
+                "time_slide_days": dt_days,
+                "is_associated": assoc is not None,
+                "association_grade": assoc.association_grade.value if assoc else "REJECTED_BY_COINCIDENCE_WINDOW",
+            })
+
+        return {
+            "total_slides": len(offsets),
+            "false_alarms": false_alarms,
+            "false_alarm_rate": false_alarms / len(offsets),
+            "rejection_confirmed": (false_alarms == 0),
+            "slide_details": slide_results,
+        }
+
+    @classmethod
+    def perform_spatial_scrambling_analysis(
+        cls,
+        primary_event: CorrelatedEventCandidate,
+        candidate_event: CorrelatedEventCandidate,
+        ra_offsets_deg: Optional[List[float]] = None,
+    ) -> Dict[str, Any]:
+        """
+        Performs spatial scrambling false-alarm analysis by displacing candidate sky coordinates
+        outside the localization envelope to verify empirical background spatial rejection.
+        """
+        offsets = ra_offsets_deg or [
+            15.0, 30.0, 45.0, 60.0, 90.0, 120.0, 150.0, 180.0, 210.0, 270.0
+        ]
+        scramble_results = []
+        false_alarms = 0
+        for d_ra in offsets:
+            scrambled_ra = (candidate_event.ra_deg + d_ra) % 360.0
+            scrambled_cand = CorrelatedEventCandidate(
+                event_id=f"{candidate_event.event_id}_scrambled_{d_ra:+.1f}deg",
+                facility=candidate_event.facility,
+                messenger_type=candidate_event.messenger_type,
+                trigger_mjd=candidate_event.trigger_mjd,
+                ra_deg=scrambled_ra,
+                dec_deg=candidate_event.dec_deg,
+                localization_error_deg=candidate_event.localization_error_deg,
+                skymap_90_cr_area_deg2=candidate_event.skymap_90_cr_area_deg2,
+                luminosity_distance_mpc=candidate_event.luminosity_distance_mpc,
+                distance_err_mpc=candidate_event.distance_err_mpc,
+                classification_hint=candidate_event.classification_hint,
+            )
+            assoc = cls.evaluate_association(primary_event, scrambled_cand)
+            is_fa = (assoc is not None and assoc.association_grade == AssociationGrade.HIGH_CONFIDENCE_PHYSICAL_ASSOCIATION)
+            if is_fa:
+                false_alarms += 1
+            scramble_results.append({
+                "ra_offset_deg": d_ra,
+                "is_associated": assoc is not None,
+                "association_grade": assoc.association_grade.value if assoc else "REJECTED_BY_ANGULAR_SEPARATION",
+            })
+
+        return {
+            "total_scrambles": len(offsets),
+            "false_alarms": false_alarms,
+            "false_alarm_rate": false_alarms / len(offsets),
+            "rejection_confirmed": (false_alarms == 0),
+            "scramble_details": scramble_results,
+        }
 
     def correlate_stream(
         self,

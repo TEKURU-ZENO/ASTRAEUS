@@ -54,6 +54,7 @@ from astraeus_agents.observatory.human_approval_interface import (
     AuthorizationToken,
     TokenValidationError,
 )
+from astraeus_data.memory.event_store import DurableScientificEventStore
 from astraeus_agents.observatory.schedulers import (
     ScheduledObservation,
     TargetState,
@@ -467,7 +468,8 @@ def test_recommendation_bound_single_use_expiring_tokens():
     """
     Deliverable 8: Validates recommendation-bound, single-use, expiring authorization tokens.
     """
-    gate = HumanApprovalGate()
+    store = DurableScientificEventStore(db_path=":memory:")
+    gate = HumanApprovalGate(event_store=store)
 
     target = TargetState(
         target_id="tgt_gov",
