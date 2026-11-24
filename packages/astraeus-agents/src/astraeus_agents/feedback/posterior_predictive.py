@@ -28,8 +28,13 @@ class HypothesisCriticismResult:
     """Statistical model evaluation and diagnostics for a specific hypothesis."""
     hypothesis_name: str
     current_posterior: float
+    degrees_of_freedom: int
     reduced_chi2: float
-    goodness_of_fit_p_value: float
+    goodness_of_fit_p_value: float          # Classical upper-tail chi2 survival p-value (chi2.sf)
+    bayesian_ppc_p_value: float             # Genuine Monte Carlo replicated posterior predictive p-value
+    observed_discrepancy_stat: float        # Observed T(y_obs) = chi2
+    replicated_discrepancy_mean: float      # Mean T(y_rep) across posterior replicates
+    replicated_discrepancy_std: float       # Std of T(y_rep)
     mean_normalized_residual: float
     max_normalized_residual: float
     is_statistically_consistent: bool
@@ -46,16 +51,42 @@ class PosteriorPredictiveAssessment:
     all_models_misspecified: bool = False
     preferred_hypothesis: Optional[str] = None
     unresolved_alternatives_present: bool = False
+    model_discrepancy_detected: bool = False
     audit_verdict: str = ""
 
 
 class PosteriorPredictiveChecker:
     """
     Executes posterior predictive checks (PPC) and model criticism
-    across accumulated observations.
+    across accumulated observations using both classical goodness-of-fit
+    and genuine Monte Carlo replicated datasets.
     """
 
     MODEL_VARIANCE_MAG = 0.05
+
+    @classmethod
+    def simulate_posterior_predictive_replicates(
+        cls,
+        predicted_magnitudes: List[float],
+        total_uncertainties: List[float],
+        num_replicates: int = 500,
+        random_seed: int = 42,
+    ) -> np.ndarray:
+        """
+        Draws replicated datasets y_rep^(s) ~ N(mu_pred, sigma_tot^2) under the candidate model.
+        Returns simulated discrepancy statistics T(y_rep^(s)) = sum (y_rep - mu)^2 / sigma_tot^2.
+        """
+        rng = np.random.default_rng(random_seed)
+        mu = np.array(predicted_magnitudes)
+        sig = np.array(total_uncertainties)
+        n_obs = len(mu)
+
+        # Draw (num_replicates, n_obs)
+        y_rep = rng.normal(loc=mu, scale=sig, size=(num_replicates, n_obs))
+        # Standardized squared residuals for each replicate
+        residuals_rep = (y_rep - mu) / sig
+        discrepancies_rep = np.sum(residuals_rep ** 2, axis=1)
+        return discrepancies_rep
 
     @classmethod
     def evaluate_model_fit(
@@ -64,10 +95,12 @@ class PosteriorPredictiveChecker:
         hypothesis_posteriors: Dict[str, float],
         accumulated_observations: List[CalibratedObservation],
         trigger_mjd: float = 60000.0,
+        fitted_parameter_count: int = 0,
+        base_mag: float = 18.0,
     ) -> PosteriorPredictiveAssessment:
         """
-        Computes residual statistics, chi2, and p-values for all candidate hypotheses
-        against all active point detections and censored limits.
+        Computes classical goodness-of-fit and genuine Monte Carlo Bayesian PPC
+        for all candidate hypotheses against active point detections.
         """
         detections = [o for o in accumulated_observations if o.is_detection()]
         n_obs = len(detections)
@@ -81,9 +114,12 @@ class PosteriorPredictiveChecker:
 
         critiques: Dict[str, HypothesisCriticismResult] = {}
         all_misspecified = True
+        dof = max(1, n_obs - fitted_parameter_count)
 
         for h_name, post_prob in hypothesis_posteriors.items():
             residuals = []
+            preds = []
+            tot_errs = []
             
             for obs in detections:
                 t_days = max(0.01, obs.epoch_mjd - trigger_mjd)
@@ -110,48 +146,72 @@ class PosteriorPredictiveChecker:
                         regime = WavelengthRegime.RADIO
                         wl = 1.0e8
 
-                pred_m = PredictiveEIGEngine.predict_hypothesis_magnitude(
-                    hypothesis_name=h_name,
-                    regime=regime,
-                    effective_wavelength_angstrom=wl,
-                    time_since_trigger_days=t_days,
-                )
+                if h_name.upper() in ("UNMODELED_TRANSIENT", "OUT_OF_MODEL", "UNMODELED"):
+                    pred_m = 20.0  # unmodeled flat centroid
+                    tot_err = 3.0   # wide uncertainty
+                else:
+                    pred_m = PredictiveEIGEngine.predict_hypothesis_magnitude(
+                        hypothesis_name=h_name,
+                        regime=regime,
+                        effective_wavelength_angstrom=wl,
+                        time_since_trigger_days=t_days,
+                        base_mag=base_mag,
+                    )
+
                 r = (meas_m - pred_m) / max(1e-4, tot_err)
                 residuals.append(r)
+                preds.append(pred_m)
+                tot_errs.append(tot_err)
 
             res_arr = np.array(residuals)
             chi2_stat = float(np.sum(res_arr ** 2))
-            dof = max(1, n_obs)
             red_chi2 = float(chi2_stat / dof)
-            p_val = float(1.0 - chi2.cdf(chi2_stat, dof))
+            # Classical upper-tail survival function: p = P(chi2 >= chi2_obs)
+            p_classical = float(chi2.sf(chi2_stat, dof))
+
+            # Monte Carlo Bayesian PPC simulation
+            discrepancies_rep = cls.simulate_posterior_predictive_replicates(
+                predicted_magnitudes=preds,
+                total_uncertainties=tot_errs,
+                num_replicates=500,
+            )
+            # Bayesian PPC p-value: fraction of replicates with discrepancy >= observed
+            p_ppc = float(np.mean(discrepancies_rep >= chi2_stat))
+            rep_mean = float(np.mean(discrepancies_rep))
+            rep_std = float(np.std(discrepancies_rep))
 
             mean_r = float(np.mean(np.abs(res_arr)))
             max_r = float(np.max(np.abs(res_arr)))
 
-            # Model consistency threshold: p-value > 0.01 and reduced chi2 < 3.5
-            is_consistent = (p_val >= 0.01) and (red_chi2 < 3.5)
+            # Consistency criteria: p_classical >= 0.01, p_ppc >= 0.01, red_chi2 < 3.5
+            is_consistent = (p_classical >= 0.01) and (p_ppc >= 0.01) and (red_chi2 < 3.5)
             if is_consistent:
                 all_misspecified = False
 
             # Assign 4-tier taxonomy
             if not is_consistent:
                 status = HypothesisEvaluationStatus.MODEL_REJECTED_UNDER_ASSUMPTIONS
-                summary = f"Rejected under assumptions: red_chi2={red_chi2:.2f}, p={p_val:.4f} < 0.01 (max residual {max_r:.1f} sigma)."
+                summary = f"Rejected under assumptions: red_chi2={red_chi2:.2f}, p_sf={p_classical:.4f}, p_PPC={p_ppc:.4f} (max res {max_r:.1f} sigma)."
             elif post_prob >= 0.60:
                 status = HypothesisEvaluationStatus.STRONGER_EVIDENCE
-                summary = f"Supported by current observations: red_chi2={red_chi2:.2f}, p={p_val:.3f}, posterior={post_prob:.3f}."
+                summary = f"Supported by observations: red_chi2={red_chi2:.2f}, p_sf={p_classical:.3f}, p_PPC={p_ppc:.3f}, posterior={post_prob:.3f}."
             elif post_prob >= 0.20:
                 status = HypothesisEvaluationStatus.UNRESOLVED_ALTERNATIVE
-                summary = f"Plausible alternative model: red_chi2={red_chi2:.2f}, p={p_val:.3f}, posterior={post_prob:.3f}."
+                summary = f"Plausible alternative model: red_chi2={red_chi2:.2f}, p_sf={p_classical:.3f}, p_PPC={p_ppc:.3f}, posterior={post_prob:.3f}."
             else:
                 status = HypothesisEvaluationStatus.MODEL_REJECTED_UNDER_ASSUMPTIONS
-                summary = f"Statistical likelihood deficit: posterior={post_prob:.3f}."
+                summary = f"Likelihood deficit: posterior={post_prob:.3f} despite acceptable residual fit."
 
             critiques[h_name] = HypothesisCriticismResult(
                 hypothesis_name=h_name,
                 current_posterior=round(post_prob, 4),
+                degrees_of_freedom=dof,
                 reduced_chi2=round(red_chi2, 3),
-                goodness_of_fit_p_value=round(p_val, 4),
+                goodness_of_fit_p_value=round(p_classical, 4),
+                bayesian_ppc_p_value=round(p_ppc, 4),
+                observed_discrepancy_stat=round(chi2_stat, 3),
+                replicated_discrepancy_mean=round(rep_mean, 3),
+                replicated_discrepancy_std=round(rep_std, 3),
                 mean_normalized_residual=round(mean_r, 3),
                 max_normalized_residual=round(max_r, 3),
                 is_statistically_consistent=is_consistent,
@@ -177,5 +237,6 @@ class PosteriorPredictiveChecker:
             all_models_misspecified=all_misspecified,
             preferred_hypothesis=pref_hyp,
             unresolved_alternatives_present=unresolved,
+            model_discrepancy_detected=all_misspecified,
             audit_verdict=verdict,
         )

@@ -12,6 +12,7 @@ from astraeus_agents.feedback.observation_models import (
     MeasurementType,
     CalibrationStatus,
     CalibratedObservation,
+    CalibratedSpectrum,
 )
 from astraeus_agents.feedback.measurement_auditor import (
     MeasurementAuditResult,

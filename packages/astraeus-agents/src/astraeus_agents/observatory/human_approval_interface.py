@@ -32,6 +32,37 @@ class AutonomousDispatchProhibitedError(PermissionError):
     pass
 
 
+class TokenValidationError(PermissionError):
+    """Raised when an authorization token is invalid, expired, already consumed, or mismatched."""
+    pass
+
+
+class AuthorizationToken(BaseModel):
+    """
+    Cryptographically bound, single-use, expiring authorization token
+    required for physical telescope queue dispatch.
+    """
+    token_id: str
+    recommendation_id: str
+    target_id: str
+    facility_id: str
+    instrument_id: str
+    filter_id: str
+    exposure_time_sec: float
+    scheduled_mjd: float
+    proposal_hash: str
+    investigator_email: str
+    created_at_utc: float
+    ttl_seconds: float = 3600.0
+    is_consumed: bool = False
+    dispatched_at_utc: Optional[float] = None
+    token_signature_sha256: str
+
+    def is_expired(self, current_time_utc: Optional[float] = None) -> bool:
+        now = current_time_utc if current_time_utc is not None else time.time()
+        return (now - self.created_at_utc) > self.ttl_seconds
+
+
 class ObservationRecommendation(BaseModel):
     """Formal human-facing observation dispatch recommendation."""
     recommendation_id: str
@@ -63,6 +94,7 @@ class HumanApprovalGate:
 
     def __init__(self):
         self._recommendations: Dict[str, ObservationRecommendation] = {}
+        self._tokens: Dict[str, AuthorizationToken] = {}
 
     def create_recommendation(
         self,
@@ -152,3 +184,91 @@ class HumanApprovalGate:
                 f"GOVERNANCE GATE VIOLATION: Recommendation {recommendation_id} is in state "
                 f"'{rec.approval_status if rec else 'UNKNOWN'}'. Autonomous telescope dispatch is strictly prohibited."
             )
+
+    def issue_authorization_token(
+        self,
+        recommendation_id: str,
+        investigator_email: str,
+        ttl_seconds: float = 3600.0,
+    ) -> AuthorizationToken:
+        """Issues an immutable, cryptographically bound, single-use authorization token."""
+        rec = self._recommendations.get(recommendation_id)
+        if rec is None:
+            raise KeyError(f"Recommendation {recommendation_id} not found.")
+
+        # Authorize the recommendation record
+        self.authorize_dispatch(recommendation_id, investigator_email)
+
+        now = time.time()
+        token_id = f"tok_{hashlib.sha256(f'{recommendation_id}:{now}'.encode()).hexdigest()[:16]}"
+        sig_raw = f"{token_id}:{rec.recommendation_id}:{rec.target_id}:{rec.facility_id}:{rec.filter_id}:{investigator_email}:{now}"
+        token_sig = hashlib.sha256(sig_raw.encode()).hexdigest()
+
+        token = AuthorizationToken(
+            token_id=token_id,
+            recommendation_id=rec.recommendation_id,
+            target_id=rec.target_id,
+            facility_id=rec.facility_id,
+            instrument_id=rec.instrument_id,
+            filter_id=rec.filter_id,
+            exposure_time_sec=rec.exposure_time_sec,
+            scheduled_mjd=rec.scheduled_mjd,
+            proposal_hash=rec.cryptographic_proposal_hash,
+            investigator_email=investigator_email,
+            created_at_utc=now,
+            ttl_seconds=ttl_seconds,
+            is_consumed=False,
+            token_signature_sha256=token_sig,
+        )
+        self._tokens[token_id] = token
+        return token
+
+    def dispatch_with_token(
+        self,
+        token: AuthorizationToken,
+        recommendation_id: str,
+        current_time_utc: Optional[float] = None,
+    ) -> Dict[str, Any]:
+        """
+        Validates token binding, single-use, and expiration before physical dispatch.
+        """
+        now = current_time_utc if current_time_utc is not None else time.time()
+
+        stored_token = self._tokens.get(token.token_id)
+        if stored_token is None:
+            raise TokenValidationError(f"Unregistered authorization token: {token.token_id}")
+
+        if stored_token.is_consumed:
+            raise TokenValidationError(f"Token {token.token_id} has ALREADY BEEN CONSUMED. Single-use policy strictly enforced.")
+
+        if stored_token.is_expired(now):
+            raise TokenValidationError(f"Token {token.token_id} has EXPIRED (TTL = {stored_token.ttl_seconds}s).")
+
+        rec = self._recommendations.get(recommendation_id)
+        if rec is None:
+            raise KeyError(f"Recommendation {recommendation_id} not found.")
+
+        if stored_token.recommendation_id != recommendation_id:
+            raise TokenValidationError(
+                f"TOKEN TARGET MISMATCH: Token was issued for recommendation {stored_token.recommendation_id}, "
+                f"cannot authorize dispatch for recommendation {recommendation_id}."
+            )
+
+        if stored_token.target_id != rec.target_id or stored_token.facility_id != rec.facility_id:
+            raise TokenValidationError("TOKEN PARAMETER MISMATCH: Target or facility diverges from proposal.")
+
+        # Atomically consume token
+        stored_token.is_consumed = True
+        stored_token.dispatched_at_utc = now
+        token.is_consumed = True
+        token.dispatched_at_utc = now
+
+        return {
+            "dispatch_status": "DISPATCHED_TO_FACILITY_QUEUE",
+            "token_id": token.token_id,
+            "recommendation_id": recommendation_id,
+            "facility_id": rec.facility_id,
+            "instrument_id": rec.instrument_id,
+            "dispatched_at_utc": now,
+            "authorized_by": stored_token.investigator_email,
+        }

@@ -93,33 +93,142 @@ class BayesianRecalibrationEngine:
         limiting_mag_5sigma: float,
         predicted_mag: float,
         filter_regime: str = "OPTICAL",
+        sigma_limit_mag: float = 0.20,
     ) -> float:
         """
-        Computes censored survival probability log-likelihood for a non-detection.
+        Computes exact censored survival probability log-likelihood for a non-detection.
         
-        Physics:
-        A non-detection at limiting magnitude m_lim means the true source flux was
-        fainter than m_lim (i.e. true magnitude was GREATER than m_lim in magnitude units,
-        or flux was below F_lim).
+        Physics & Mathematical Formulation:
+        In astronomical magnitudes, fainter sources correspond to larger numbers (m_obs > m_lim).
+        Under hypothesis H, m_obs ~ N(mu_pred, sigma_tot^2).
         
-        P(source fainter than m_lim | H_i) = P(m_obs > m_lim | H_i) = Phi((mu_pred - m_lim) / sigma_tot)
-        (where larger magnitude = fainter flux).
+        The survival probability that a source is fainter than m_lim is:
+            P(m_obs > m_lim | H) = 1 - Phi((m_lim - mu_pred) / sigma_tot)
+                                 = Phi((mu_pred - m_lim) / sigma_tot)
         
-        If a model predicts a bright source (mu_pred << m_lim), Phi is tiny -> strongly penalized!
-        If a model predicts a faint/decayed source (mu_pred >> m_lim), Phi ~ 1.0 -> ln L ~ 0 -> rewarded!
+        Numerically stable log probability:
+            ln L = norm.logcdf((mu_pred - m_lim) / sigma_tot)
+                 = norm.logsf((m_lim - mu_pred) / sigma_tot)
+        
+        Behavior:
+        - Faint source (mu >> m_lim): z >> 0 => ln L -> 0.0 (consistent with non-detection).
+        - Bright source (mu << m_lim): z << 0 => ln L << 0 (penalized, as it should have been detected).
+        - At threshold (mu == m_lim): z = 0 => ln L = ln(0.5) = -0.6931 nats.
         """
-        # Nominal total photometric scatter at 5-sigma detection limit (~0.2 mag)
-        sigma_tot = math.sqrt(0.20**2 + cls.MODEL_PHYSICS_SIGMA_MAG**2)
+        sigma_tot = math.sqrt(sigma_limit_mag**2 + cls.MODEL_PHYSICS_SIGMA_MAG**2)
+        z = (predicted_mag - limiting_mag_5sigma) / max(1e-6, sigma_tot)
+        # Use norm.logcdf directly - fully stable across extreme negative tails without underflow
+        return float(norm.logcdf(z))
 
-        # In astronomical magnitudes, fainter = larger number:
-        # P(m > m_lim | mu_pred) = 1 - Phi((m_lim - mu_pred) / sigma_tot) = Phi((mu_pred - m_lim) / sigma_tot)
-        z = (predicted_mag - limiting_mag_5sigma) / sigma_tot
+    @classmethod
+    def evaluate_censored_flux_upper_limit_log_likelihood(
+        cls,
+        limiting_flux_njy: float,
+        predicted_flux_njy: float,
+        flux_uncertainty_njy: float,
+    ) -> float:
+        """
+        Computes exact censored survival probability log-likelihood for a non-detection in linear flux space.
+        In flux units, fainter sources correspond to smaller flux values (F_obs < F_lim).
+        Under hypothesis H, F_obs ~ N(F_pred, sigma_F^2).
+        
+        The probability that a source flux is below detection limit F_lim is:
+            P(F_obs < F_lim | H) = Phi((F_lim - F_pred) / sigma_F)
+            ln L = norm.logcdf((F_lim - F_pred) / sigma_F)
+        """
+        sigma_tot = max(1e-6, flux_uncertainty_njy)
+        z_flux = (limiting_flux_njy - predicted_flux_njy) / sigma_tot
+        return float(norm.logcdf(z_flux))
 
-        # Survival probability
-        prob = norm.cdf(z)
-        # Numerical protection: clamp between 1e-12 and 1.0
-        prob = max(1e-12, min(1.0, float(prob)))
-        return float(math.log(prob))
+    @classmethod
+    def evaluate_correlated_group_log_likelihood(
+        cls,
+        residuals: np.ndarray,
+        cov_matrix: np.ndarray,
+        regularization_epsilon: float = 1e-7,
+    ) -> float:
+        """
+        Evaluates exact N-dimensional multivariate Gaussian log-likelihood for an arbitrary
+        group of correlated observations sharing calibration references or systematic errors.
+        
+        Formula:
+            ln L = -0.5 * [ r^T Sigma^-1 r + ln|det(Sigma)| + N * ln(2*pi) ]
+            
+        Numerical stability:
+        - Regularizes near-singular matrices: Sigma_reg = Sigma + eps * I
+        - Employs Cholesky decomposition: Sigma_reg = L L^T
+        - Solves L v = r -> r^T Sigma^-1 r = v^T v
+        - Evaluates log determinant: ln|det| = 2 * sum(ln(diag(L)))
+        """
+        residuals = np.asarray(residuals, dtype=np.float64)
+        cov_matrix = np.asarray(cov_matrix, dtype=np.float64)
+        n = len(residuals)
+        
+        # Ensure symmetric
+        cov_matrix = 0.5 * (cov_matrix + cov_matrix.T)
+        cov_reg = cov_matrix + regularization_epsilon * np.eye(n)
+        
+        try:
+            L = np.linalg.cholesky(cov_reg)
+            v = np.linalg.solve(L, residuals)
+            quad_form = float(np.sum(v ** 2))
+            log_det = float(2.0 * np.sum(np.log(np.diag(L))))
+        except np.linalg.LinAlgError:
+            inv_cov = np.linalg.pinv(cov_reg)
+            quad_form = float(residuals.T @ inv_cov @ residuals)
+            sign, log_det = np.linalg.slogdet(cov_reg)
+            if sign <= 0:
+                log_det = float(n * math.log(regularization_epsilon))
+
+        ln_L = -0.5 * (quad_form + log_det + n * math.log(2.0 * math.pi))
+        return float(ln_L)
+
+    @classmethod
+    def calculate_exact_two_model_bayes_factor(
+        cls,
+        mu1: float,
+        mu2: float,
+        y: float,
+        sigma_tot: float,
+    ) -> Dict[str, float]:
+        """
+        Computes analytical conjugate Gaussian Bayes factor and intermediate terms:
+            ln BF_12 = [(y - mu2)^2 - (y - mu1)^2] / [2 * sigma_tot^2]
+        """
+        res1 = y - mu1
+        res2 = y - mu2
+        sq_res1 = res1 ** 2
+        sq_res2 = res2 ** 2
+        numerator = sq_res2 - sq_res1
+        denominator = 2.0 * (sigma_tot ** 2)
+        ln_bf = numerator / denominator
+        bf = math.exp(ln_bf) if ln_bf < 700.0 else float("inf")
+        if ln_bf > 50.0:
+            post_h1 = 1.0 - math.exp(-ln_bf)
+            post_h2 = math.exp(-ln_bf)
+        elif ln_bf < -50.0:
+            post_h1 = math.exp(ln_bf)
+            post_h2 = 1.0 - math.exp(ln_bf)
+        else:
+            post_h1 = 1.0 / (1.0 + math.exp(-ln_bf))
+            post_h2 = 1.0 - post_h1
+
+        return {
+            "mu1": mu1,
+            "mu2": mu2,
+            "y": y,
+            "sigma_tot": sigma_tot,
+            "res1": res1,
+            "res2": res2,
+            "sq_res1": sq_res1,
+            "sq_res2": sq_res2,
+            "numerator": numerator,
+            "denominator": denominator,
+            "ln_bayes_factor": ln_bf,
+            "bayes_factor": bf,
+            "posterior_h1": post_h1,
+            "posterior_h2": post_h2,
+        }
 
     @classmethod
     def evaluate_correlated_pair_log_likelihood(
@@ -159,11 +268,17 @@ class BayesianRecalibrationEngine:
         effective_wavelength_angstrom: float = 6000.0,
         regime: WavelengthRegime = WavelengthRegime.OPTICAL,
         time_since_trigger_days: float = 2.0,
+        base_mag: float = 18.0,
         extra_sys_sigma: float = 0.0,
     ) -> RecalibrationUpdateResult:
         """
         Updates hypothesis posteriors using Bayes' rule with exact likelihood evaluation:
             P(H_i | D, y) = P(y | H_i, D) * P(H_i | D) / sum P(y | H_j) P(H_j)
+            
+        Supports:
+        - Point detections (Gaussian likelihood)
+        - Censored non-detection upper limits (Survival probability)
+        - Unmodeled transient hypothesis (Epistemic guardrail against false discovery)
         """
         prior_h = cls.calculate_entropy(current_posteriors)
         h_keys = list(current_posteriors.keys())
@@ -171,18 +286,34 @@ class BayesianRecalibrationEngine:
         # 1. Evaluate predicted magnitude per hypothesis
         pred_mags: Dict[str, float] = {}
         for h in h_keys:
-            pred_mags[h] = PredictiveEIGEngine.predict_hypothesis_magnitude(
-                hypothesis_name=h,
-                regime=regime,
-                effective_wavelength_angstrom=effective_wavelength_angstrom,
-                time_since_trigger_days=time_since_trigger_days,
-            )
+            if h.upper() in ("UNMODELED_TRANSIENT", "OUT_OF_MODEL", "UNMODELED"):
+                pred_mags[h] = 20.0  # nominal center
+            else:
+                pred_mags[h] = PredictiveEIGEngine.predict_hypothesis_magnitude(
+                    hypothesis_name=h,
+                    regime=regime,
+                    effective_wavelength_angstrom=effective_wavelength_angstrom,
+                    time_since_trigger_days=time_since_trigger_days,
+                    base_mag=base_mag,
+                )
 
         # 2. Compute log likelihoods ln L(y | H_i)
         ln_likelihoods: Dict[str, float] = {}
         is_censored = observation.is_upper_limit()
 
         for h in h_keys:
+            if h.upper() in ("UNMODELED_TRANSIENT", "OUT_OF_MODEL", "UNMODELED"):
+                # Broad, uninformative likelihood absorbing unmodeled anomalies
+                if is_censored:
+                    lim_mag = observation.limiting_mag_5sigma or 21.0
+                    # Over broad [15.0, 25.0] prior range:
+                    p_surv = max(0.01, min(0.99, (25.0 - lim_mag) / 10.0))
+                    ln_likelihoods[h] = float(math.log(p_surv))
+                else:
+                    # Broad uniform density over 10 mag domain: ln(1/10) = -2.3026
+                    ln_likelihoods[h] = float(math.log(1.0 / 10.0))
+                continue
+
             pred_m = pred_mags[h]
             if is_censored:
                 # Censored upper limit likelihood

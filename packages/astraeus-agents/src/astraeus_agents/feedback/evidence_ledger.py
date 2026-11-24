@@ -154,6 +154,49 @@ class ObservationEvidenceLedger:
             if e.observation.target_id == target_id and e.applied_to_inference
         ]
 
+    def recompute_target_posteriors(
+        self,
+        target_id: str,
+        initial_prior: Dict[str, float],
+        trigger_mjd: float = 60000.0,
+        base_mag: float = 18.0,
+    ) -> Dict[str, float]:
+        """
+        Recomputes hypothesis posteriors from scratch using only currently active
+        (non-duplicate, un-superseded, audit-passed) observations in the ledger.
+        Guarantees exact rollback upon observation supersession without numerical drift.
+        """
+        from astraeus_agents.feedback.bayesian_recalibration import BayesianRecalibrationEngine
+        from astraeus_agents.observatory.facility_registry import WavelengthRegime
+
+        active_obs = self.get_active_observations_for_target(target_id)
+        current_post = dict(initial_prior)
+
+        for obs in active_obs:
+            t_days = max(0.01, obs.epoch_mjd - trigger_mjd)
+            fid = getattr(obs, "filter_id", "") or ""
+            fb = fid.lower()
+            regime = WavelengthRegime.OPTICAL
+            wl = 6000.0
+            if any(uv_key in fb for uv_key in ("uvw", "uvm", "fuv", "nuv", "uv")):
+                regime = WavelengthRegime.UV
+                wl = 2600.0
+            elif any(nir_key in fb for nir_key in ("nir", "spec", "j", "h", "k", "z", "y")):
+                regime = WavelengthRegime.NIR
+                wl = 12500.0
+
+            res = BayesianRecalibrationEngine.recalibrate_posteriors(
+                current_posteriors=current_post,
+                observation=obs,
+                effective_wavelength_angstrom=wl,
+                regime=regime,
+                time_since_trigger_days=t_days,
+                base_mag=base_mag,
+            )
+            current_post = res.updated_posteriors
+
+        return current_post
+
     def get_ledger_summary(self) -> Dict[str, Any]:
         """Returns summary counts of recorded observations."""
         total = len(self._entries)
