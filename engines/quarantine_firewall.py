@@ -49,6 +49,16 @@ class QuarantineFirewall:
             cls._HP = HEALPix(nside=32, order="nested", frame="icrs")
 
     @classmethod
+    def get_healpix(cls) -> HEALPix:
+        cls._initialize()
+        return cls._HP
+
+    @classmethod
+    def get_quarantined_pixels(cls) -> Set[int]:
+        cls._initialize()
+        return set(cls._QUARANTINED_PIXELS)
+
+    @classmethod
     def get_quarantined_pixel_count(cls) -> int:
         cls._initialize()
         return len(cls._QUARANTINED_PIXELS)
@@ -100,3 +110,12 @@ class QuarantineFirewall:
                 f"GATE 3 QUARANTINE VIOLATION: Direct file read of '{file_path}' blocked. "
                 f"Observational catalog contains sequestered Gate 3 test objects."
             )
+
+
+# Auto-initialize firewall if config exists
+if os.path.exists(QuarantineFirewall._CONFIG_PATH):
+    try:
+        QuarantineFirewall._initialize()
+    except Exception:
+        pass
+

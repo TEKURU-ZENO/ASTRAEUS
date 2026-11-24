@@ -79,7 +79,26 @@ from astraeus_data.corpus import (
     EvaluationTask,
 )
 
-__version__ = "0.2.0"
+from astraeus_data.ingestion.scientific_event_engine import (
+    ScientificEventIngestionEngine,
+    UnifiedScientificEvent,
+    EventIngestionResult,
+)
+from astraeus_data.triage.event_triage_engine import (
+    PriorityTier,
+    AnomalyClass,
+    HostGalaxyContext,
+    ReferenceStarContext,
+    PhotometricFeatures,
+    TriageDecision,
+    CatalogCrossMatcher,
+    PhotometricFeatureExtractor,
+    HeuristicAnomalyDetector,
+    PrioritizationQueue,
+    EventTriageEngine,
+)
+
+__version__ = "0.3.0"
 
 __all__ = [
     "ZtfAlertPacket",
@@ -134,4 +153,18 @@ __all__ = [
     "CorpusAuditReport",
     "FrozenEvaluationProtocol",
     "EvaluationTask",
+    "ScientificEventIngestionEngine",
+    "UnifiedScientificEvent",
+    "EventIngestionResult",
+    "PriorityTier",
+    "AnomalyClass",
+    "HostGalaxyContext",
+    "ReferenceStarContext",
+    "PhotometricFeatures",
+    "TriageDecision",
+    "CatalogCrossMatcher",
+    "PhotometricFeatureExtractor",
+    "HeuristicAnomalyDetector",
+    "PrioritizationQueue",
+    "EventTriageEngine",
 ]

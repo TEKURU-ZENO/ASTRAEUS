@@ -123,9 +123,12 @@ class ScientificEventIngestionEngine:
             phot_points.append({
                 "mjd": src.midPointTai,
                 "filter": src.filterName,
+                "filter_band": src.filterName,
                 "flux_njy": src.psfFlux,
                 "flux_err_njy": src.psfFluxErr,
+                "mag": src.apparent_magnitude_ab,
                 "mag_ab": src.apparent_magnitude_ab,
+                "magerr": src.magnitude_err,
                 "mag_err": src.magnitude_err,
                 "snr": src.snr,
             })
@@ -134,9 +137,12 @@ class ScientificEventIngestionEngine:
         phot_points.append({
             "mjd": packet.diaSource.midPointTai,
             "filter": packet.diaSource.filterName,
+            "filter_band": packet.diaSource.filterName,
             "flux_njy": packet.diaSource.psfFlux,
             "flux_err_njy": packet.diaSource.psfFluxErr,
+            "mag": packet.diaSource.apparent_magnitude_ab,
             "mag_ab": packet.diaSource.apparent_magnitude_ab,
+            "magerr": packet.diaSource.magnitude_err,
             "mag_err": packet.diaSource.magnitude_err,
             "snr": packet.diaSource.snr,
         })

@@ -30,7 +30,22 @@ from astraeus_agents.queue import (
     TamperDetectionError,
 )
 
-__version__ = "0.1.0"
+from astraeus_agents.reground import (
+    AgentPersona,
+    DebateStage,
+    PhysicalHypothesis,
+    DebateTurn,
+    SkepticVeto,
+    RegroundInvestigationReport,
+    ObservationalAstronomerAgent,
+    CosmologistAgent,
+    AstrophysicistAgent,
+    StatisticalAuditorAgent,
+    SkepticRedTeamAgent,
+    RegroundDebateProtocol,
+)
+
+__version__ = "0.2.0"
 
 __all__ = [
     "AgentRole",
@@ -56,4 +71,16 @@ __all__ = [
     "UnauthorizedQueueSubmissionError",
     "GateValidationMismatchError",
     "TamperDetectionError",
+    "AgentPersona",
+    "DebateStage",
+    "PhysicalHypothesis",
+    "DebateTurn",
+    "SkepticVeto",
+    "RegroundInvestigationReport",
+    "ObservationalAstronomerAgent",
+    "CosmologistAgent",
+    "AstrophysicistAgent",
+    "StatisticalAuditorAgent",
+    "SkepticRedTeamAgent",
+    "RegroundDebateProtocol",
 ]

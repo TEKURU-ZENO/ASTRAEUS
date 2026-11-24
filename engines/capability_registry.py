@@ -82,9 +82,24 @@ class ScientificCapabilityRegistry:
 
     @classmethod
     def get_engine(cls, engine_id: str) -> EngineDeclaration:
-        if engine_id not in cls._REGISTRY:
-            raise KeyError(f"Engine '{engine_id}' is not registered in the Scientific Capability Registry.")
-        return cls._REGISTRY[engine_id]
+        if engine_id in cls._REGISTRY:
+            return cls._REGISTRY[engine_id]
+        # Check aliases or partial match
+        aliases = {
+            "PINO3D_HYDRO_SURROGATE": "engines.hydrodynamics.pino3d",
+            "DIFFERENTIABLE_COSMOLOGY": "engines.cosmology.differentiable",
+            "PPO_SCHEDULER": "engines.experimental_design.ppo_scheduler",
+            "GREEDY_EIG_SCHEDULER": "engines.experimental_design.greedy_eig",
+            "SYMPLECTIC_PM_SOLVER": "engines.cosmology.pm_solver",
+        }
+        resolved = aliases.get(engine_id, engine_id)
+        if resolved in cls._REGISTRY:
+            return cls._REGISTRY[resolved]
+        raise KeyError(f"Engine '{engine_id}' is not registered in the Scientific Capability Registry.")
+
+    @classmethod
+    def get(cls, engine_id: str) -> EngineDeclaration:
+        return cls.get_engine(engine_id)
 
     @classmethod
     def list_all(cls) -> Dict[str, EngineDeclaration]:
