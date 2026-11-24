@@ -67,6 +67,10 @@ class PhysicalReasoningEngine:
         "K": (0, 0, 0, 1),
         "g/cm^3": (1, -3, 0, 0),
         "cm^2/g": (-1, 2, 0, 0),
+        "erg/s/cm^2": (1, 0, -3, 0),
+        "M_sun": (1, 0, 0, 0),
+        "arcsec": (0, 0, 0, 0),
+        "Hz": (0, 0, -1, 0),
         "dimensionless": (0, 0, 0, 0),
     }
 
@@ -78,16 +82,19 @@ class PhysicalReasoningEngine:
         """
         Verifies that LHS dimensions match the product of RHS dimensions.
         rhs_unit_terms: list of (unit_str, exponent).
+        Strictly fails closed on unknown or uncataloged units as INDETERMINATE_UNIT.
         """
         if lhs_unit not in self.DIMENSION_VECTORS:
-            return True, f"Unit '{lhs_unit}' uncataloged, assumed dimensionally sound."
+            return False, f"INDETERMINATE_UNIT: LHS unit '{lhs_unit}' is uncataloged; strictly failing closed."
+
+        for unit_str, _ in rhs_unit_terms:
+            if unit_str not in self.DIMENSION_VECTORS:
+                return False, f"INDETERMINATE_UNIT: RHS unit '{unit_str}' is uncataloged; strictly failing closed."
 
         lhs_dim = self.DIMENSION_VECTORS[lhs_unit]
         rhs_dim = [0, 0, 0, 0]
 
         for unit_str, power in rhs_unit_terms:
-            if unit_str not in self.DIMENSION_VECTORS:
-                continue
             u_dim = self.DIMENSION_VECTORS[unit_str]
             for idx in range(4):
                 rhs_dim[idx] += u_dim[idx] * power

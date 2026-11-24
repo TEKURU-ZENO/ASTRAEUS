@@ -58,13 +58,31 @@ class StructuredHypothesis(BaseModel):
     created_at_iso: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
 
     def compute_hash(self) -> str:
+        preds = [
+            {
+                "observable_name": p.observable_name,
+                "predicted_value": round(float(p.predicted_value), 6),
+                "uncertainty_range": [round(float(p.uncertainty_range[0]), 6), round(float(p.uncertainty_range[1]), 6)],
+                "epoch_days_from_trigger": round(float(p.epoch_days_from_trigger), 4),
+                "measurement_condition": p.measurement_condition.strip(),
+            }
+            for p in self.predictions
+        ]
+        preds = sorted(preds, key=lambda x: (x["observable_name"], x["epoch_days_from_trigger"]))
+
+        params = {}
+        for k, v in sorted(self.parameters.items()):
+            params[k] = [round(float(v[0]), 6), round(float(v[1]), 6), round(float(v[2]), 6), str(v[3])]
+
         payload = {
             "hypothesis_id": self.hypothesis_id,
             "phenomenon": self.phenomenon.strip(),
             "explanation": self.explanation.strip(),
             "assumptions": sorted(self.assumptions),
             "mathematical_formulation": self.mathematical_formulation.strip(),
-            "parameters": {k: list(v) for k, v in sorted(self.parameters.items())},
+            "parameters": params,
+            "predictions": preds,
+            "alternatives": sorted(self.alternatives),
             "falsification_conditions": sorted(self.falsification_conditions),
             "discriminating_experiment": self.discriminating_experiment.strip(),
             "lineage_parent_ids": sorted(self.lineage_parent_ids),
@@ -108,7 +126,7 @@ class HypothesisGenerationEngine:
                 "Electron scattering opacity kappa = 0.34 cm^2/g dominates pre-shock medium",
                 "Radiative shock breakout condition: tau_shock ~ c / v_shock",
             ],
-            mathematical_formulation="L_shock(t) = 0.5 * (4 * pi * rho_0 * v_shock^3 * t^2) / (1 + t / t_diff)",
+            mathematical_formulation="L_shock(t) = 0.5 * (4 * pi * rho_0 * v_shock^5 * t^2) / (1 + t / t_diff)",
             parameters={
                 "ejecta_velocity_c": (0.10, 0.03, 0.30, "c"),
                 "csm_mass_msun": (0.05, 0.001, 1.0, "M_sun"),
