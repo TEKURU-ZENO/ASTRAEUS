@@ -14,6 +14,7 @@ Date: November 24, 2026
 
 from __future__ import annotations
 
+import os
 import time
 import hashlib
 import json
@@ -28,6 +29,7 @@ from astraeus_agents.observatory.human_approval_interface import (
     AuthorizationToken,
     TokenValidationError,
     AutonomousDispatchProhibitedError,
+    ProductionConfigurationError,
 )
 from astraeus_agents.observatory.schedulers import ScheduledObservation, TargetState
 from astraeus_data.memory.event_store import DurableScientificEventStore
@@ -73,14 +75,44 @@ class HumanOperationsDashboardBackend:
         human_gate: Optional[HumanApprovalGate] = None,
         event_store: Optional[Any] = None,
         hmac_secret_key: Optional[bytes] = None,
+        require_persistent_db: bool = False,
+        allow_in_memory: Optional[bool] = None,
+        is_production: bool = False,
     ):
-        store = event_store or DurableScientificEventStore(db_path=":memory:")
+        prod_mode = is_production or (os.environ.get("ASTRAEUS_ENV") == "production")
+        must_persist = require_persistent_db or prod_mode
+
+        if event_store is not None:
+            store = event_store
+            if must_persist and getattr(store, "db_path", None) == ":memory:":
+                raise ProductionConfigurationError(
+                    "PRODUCTION CONFIGURATION ERROR: ':memory:' database path rejected in production mode. "
+                    "Explicitly configure a persistent on-disk event store."
+                )
+        else:
+            env_db_path = os.environ.get("ASTRAEUS_EVENT_STORE_PATH")
+            if env_db_path:
+                store = DurableScientificEventStore(db_path=env_db_path)
+            elif must_persist and not allow_in_memory:
+                raise ProductionConfigurationError(
+                    "PRODUCTION CONFIGURATION ERROR: Event store path must be explicitly configured. "
+                    "Implicit ':memory:' stores are prohibited for production dispatch. "
+                    "Set 'event_store' parameter or 'ASTRAEUS_EVENT_STORE_PATH' environment variable."
+                )
+            else:
+                store = DurableScientificEventStore(db_path=":memory:", allow_in_memory=True)
+
         if human_gate is not None:
             self.gate = human_gate
             if getattr(self.gate, "_event_store", None) is None:
                 self.gate._event_store = store
         else:
-            self.gate = HumanApprovalGate(event_store=store, hmac_secret_key=hmac_secret_key)
+            self.gate = HumanApprovalGate(
+                event_store=store,
+                hmac_secret_key=hmac_secret_key,
+                is_production=prod_mode,
+                require_persistent_db=must_persist,
+            )
         self.proposals: Dict[str, ScheduledObservation] = {}
         self.proposals_meta: Dict[str, Dict[str, Any]] = {}
         self.action_history: List[Dict[str, Any]] = []

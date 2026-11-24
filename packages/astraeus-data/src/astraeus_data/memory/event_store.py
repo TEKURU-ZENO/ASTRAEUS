@@ -125,7 +125,13 @@ class DurableScientificEventStore:
     Guarantees that every observation, event, and posterior revision is durable and reconstructable.
     """
 
-    def __init__(self, db_path: str = ":memory:", synchronous_mode: str = "NORMAL"):
+    def __init__(
+        self,
+        db_path: str = ":memory:",
+        synchronous_mode: str = "NORMAL",
+        allow_in_memory: bool = False,
+        require_persistent_db: bool = False,
+    ):
         """
         Initializes SQLite event store. Pass ':memory:' for transient in-memory tests,
         or a file path for persistent on-disk WAL storage.
@@ -133,6 +139,15 @@ class DurableScientificEventStore:
         """
         self.db_path = db_path
         self.synchronous_mode = synchronous_mode
+        self.allow_in_memory = allow_in_memory
+        self.require_persistent_db = require_persistent_db or (os.environ.get("ASTRAEUS_ENV") == "production")
+
+        if self.db_path == ":memory:":
+            if self.require_persistent_db and not self.allow_in_memory:
+                raise PermissionError(
+                    "PRODUCTION CONFIGURATION ERROR: ':memory:' database path rejected in production mode. "
+                    "Durable on-disk SQLite WAL path is strictly required."
+                )
         self._lock = threading.RLock()
         self._conn: Optional[sqlite3.Connection] = sqlite3.connect(self.db_path, check_same_thread=False)
         self._conn.row_factory = sqlite3.Row
@@ -588,7 +603,7 @@ class DurableScientificEventStore:
                     timestamp_mjd,
                     state_hash,
                     parent_state_hash,
-                    json.dumps(sorted(evidence_hashes)),
+                    json.dumps(list(evidence_hashes)),
                     json.dumps(priors),
                     prior_hash,
                     json.dumps(models),
@@ -609,7 +624,7 @@ class DurableScientificEventStore:
             timestamp_mjd=timestamp_mjd,
             state_hash=state_hash,
             parent_state_hash=parent_state_hash,
-            evidence_hashes=sorted(evidence_hashes),
+            evidence_hashes=list(evidence_hashes),
             initial_priors=priors,
             prior_hash=prior_hash,
             model_versions=models,
