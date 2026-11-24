@@ -444,7 +444,7 @@ class HeuristicAnomalyDetector:
         is_too_urgent = False
 
         # 1. Multi-Messenger Gravitational Wave Notice / Coincidence
-        if event.survey_origin == "LVK_GW" or event.is_too_promising or event.event_metadata.get("gw_coincidence"):
+        if event.survey_origin == "LVK_GW" or (event.event_metadata and event.event_metadata.get("gw_coincidence")):
             reasons.append("Multi-messenger gravitational-wave coincidence or LVK notice.")
             is_too_urgent = True
             return (AnomalyClass.MULTI_MESSENGER_GW_COUNTERPART, 98.0, is_too_urgent, "; ".join(reasons))
