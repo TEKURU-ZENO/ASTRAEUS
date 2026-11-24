@@ -13,6 +13,7 @@ import math
 import time
 import json
 import tempfile
+import concurrent.futures
 import pytest
 import numpy as np
 
@@ -30,6 +31,7 @@ from astraeus_data.correlation.cross_facility_correlator import (
     CorrelatedEventCandidate,
     MultiMessengerAssociation,
     MessengerType,
+    AssociationGrade,
 )
 from astraeus_agents.lineage.prov_dm import (
     IVOAProvenanceTracker,
@@ -405,33 +407,22 @@ def test_replay_engine_detects_tampered_evidence():
         observation=obs,
     )
 
+    chk = store.store_investigation_checkpoint(
+        investigation_id=inv_id,
+        target_id=target_id,
+        revision_index=1,
+        timestamp_mjd=60000.5,
+        evidence_hashes=[obs.raw_data_hash_sha256],
+        initial_priors=priors,
+        hypothesis_posteriors=up.updated_posteriors,
+        entropy_nats=up.posterior_entropy_nats,
+    )
+
     forged_hash = "forged_sha256_hash_1234567890abcdef"
     with store._get_connection() as conn:
         conn.execute(
-            """
-            INSERT INTO investigation_checkpoints (
-                checkpoint_id, investigation_id, target_id, revision_index,
-                timestamp_mjd, state_hash, parent_state_hash,
-                evidence_hashes_json, model_versions_json,
-                hypothesis_posteriors_json, entropy_nats,
-                decision_metadata_json, created_at_utc
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            """,
-            (
-                "chk_forged",
-                inv_id,
-                target_id,
-                1,
-                60000.5,
-                forged_hash,
-                None,
-                json.dumps([obs.raw_data_hash_sha256]),
-                json.dumps({"model": "v1"}),
-                json.dumps(up.updated_posteriors),
-                up.posterior_entropy_nats,
-                json.dumps({}),
-                "2026-11-24T12:00:00Z",
-            ),
+            "UPDATE investigation_checkpoints SET state_hash = ? WHERE checkpoint_id = ?",
+            (forged_hash, chk.checkpoint_id),
         )
 
     replay_engine = DeterministicScientificReplayEngine(event_store=store)
@@ -784,3 +775,463 @@ def test_gate3_quarantine_enforcement_across_ws7_7_subsystems():
     )
     assert status == ApprovalStatus.REJECTED_BY_INVESTIGATOR
     assert token is None
+
+
+# =============================================================================
+# 8. WS7.7.1 DURABILITY, REPLAY & GOVERNANCE HARDENING TESTS
+# =============================================================================
+
+def test_historical_replay_survives_observation_supersession():
+    """
+    WS7.7.1 Audit Finding 1:
+    Verifies that historical state replay remains strictly reproducible even after
+    an observation used in revision k is subsequently superseded in revision k+1.
+    Replay engine retrieves immutable raw evidence by hash rather than filtering current active view.
+    """
+    store = DurableScientificEventStore(db_path=":memory:")
+    target_id = "TGT_SUPERSEDE_TEST"
+    inv_id = "INV_SUPERSEDE_001"
+    priors = {"KILONOVA": 0.50, "SUPERNOVA_IA": 0.50}
+
+    # Revision 1: Initial quick-reduction observation (obs1)
+    obs1 = CalibratedObservation(
+        observation_id="obs_quick_1",
+        target_id=target_id,
+        target_ra_deg=180.0,
+        target_dec_deg=10.0,
+        facility_id="VLT",
+        instrument_id="FORS2",
+        filter_id="r_VLT",
+        epoch_mjd=60001.0,
+        exposure_time_sec=600.0,
+        raw_data_hash_sha256="raw_hash_quick_001",
+        measurement_type=MeasurementType.POINT_DETECTION,
+        apparent_mag=18.50,
+        apparent_mag_err=0.06,
+        calibration_status=CalibrationStatus.CALIBRATED_NOMINAL,
+    )
+    store.store_observation(obs1)
+
+    up1 = BayesianRecalibrationEngine.recalibrate_posteriors(
+        current_posteriors=priors,
+        observation=obs1,
+        time_since_trigger_days=1.0,
+    )
+
+    chk1 = store.store_investigation_checkpoint(
+        investigation_id=inv_id,
+        target_id=target_id,
+        revision_index=1,
+        timestamp_mjd=60001.0,
+        evidence_hashes=[obs1.raw_data_hash_sha256],
+        initial_priors=priors,
+        model_versions={"bayesian_recalibration": "ws7.6-c", "kilonova": "v2.0"},
+        hypothesis_posteriors=up1.updated_posteriors,
+        entropy_nats=up1.posterior_entropy_nats,
+        parent_state_hash=None,
+    )
+
+    # Revision 2: Improved deep pipeline re-reduction supersedes obs1
+    obs2 = CalibratedObservation(
+        observation_id="obs_deep_refined_2",
+        target_id=target_id,
+        target_ra_deg=180.0,
+        target_dec_deg=10.0,
+        facility_id="VLT",
+        instrument_id="FORS2",
+        filter_id="r_VLT",
+        epoch_mjd=60001.0,
+        exposure_time_sec=600.0,
+        raw_data_hash_sha256="raw_hash_deep_refined_002",
+        measurement_type=MeasurementType.POINT_DETECTION,
+        apparent_mag=18.42,
+        apparent_mag_err=0.03,
+        calibration_status=CalibrationStatus.CALIBRATED_NOMINAL,
+    )
+    ok_sup, sup_status = store.atomic_supersede_observation(
+        old_observation_id="obs_quick_1",
+        new_observation=obs2,
+        superseding_mjd=60001.5,
+    )
+    assert ok_sup is True
+    assert sup_status == "ATOMICALLY_SUPERSEDED"
+
+    # Verify that currently active query returns ONLY obs2
+    active_now = store.get_active_observations_for_target(target_id)
+    assert len(active_now) == 1
+    assert active_now[0].observation_id == "obs_deep_refined_2"
+
+    up2 = BayesianRecalibrationEngine.recalibrate_posteriors(
+        current_posteriors=priors,
+        observation=obs2,
+        time_since_trigger_days=1.0,
+    )
+
+    chk2 = store.store_investigation_checkpoint(
+        investigation_id=inv_id,
+        target_id=target_id,
+        revision_index=2,
+        timestamp_mjd=60001.5,
+        evidence_hashes=[obs2.raw_data_hash_sha256],
+        initial_priors=priors,
+        model_versions={"bayesian_recalibration": "ws7.6-c", "kilonova": "v2.0"},
+        hypothesis_posteriors=up2.updated_posteriors,
+        entropy_nats=up2.posterior_entropy_nats,
+        parent_state_hash=chk1.state_hash,
+    )
+
+    replay_engine = DeterministicScientificReplayEngine(event_store=store)
+
+    # CRITICAL TEST: Reconstructing revision 1 MUST still succeed by fetching obs1 via hash!
+    rev1_res = replay_engine.reconstruct_checkpoint(
+        investigation_id=inv_id,
+        target_revision=1,
+        initial_priors=priors,
+    )
+    assert rev1_res.is_verified is True
+    assert rev1_res.expected_state_hash == chk1.state_hash
+    assert rev1_res.reconstructed_state_hash == chk1.state_hash
+    assert rev1_res.max_posterior_absolute_error < 1e-5
+
+    # Reconstructing revision 2 matches chk2
+    rev2_res = replay_engine.reconstruct_checkpoint(
+        investigation_id=inv_id,
+        target_revision=2,
+        initial_priors=priors,
+    )
+    assert rev2_res.is_verified is True
+    assert rev2_res.expected_state_hash == chk2.state_hash
+    assert rev2_res.reconstructed_state_hash == chk2.state_hash
+
+    # Timeline audit must be fully reproducible
+    timeline = replay_engine.audit_entire_timeline(investigation_id=inv_id, initial_priors=priors)
+    assert timeline.is_fully_reproducible is True
+    assert timeline.total_revisions_verified == 2
+    store.close()
+
+
+def test_v2_canonical_state_hash_full_precision_and_config_sensitivity():
+    """
+    WS7.7.1 Audit Finding 2:
+    Verifies that the v2 state hash schema:
+    1. Uses 12-digit scientific notation precision to prevent rounding collisions.
+    2. Commits cryptographically to initial priors (prior_hash).
+    3. Commits to model config hashes and decision metadata.
+    """
+    priors_base = {"KILONOVA": 0.50, "SUPERNOVA_IA": 0.50}
+    models = {"recalibrator": "v1.0"}
+    configs = {"recalibrator": "cfg_sha256_1111"}
+    evidence = ["hash_evidence_001"]
+
+    # 1. Full precision sensitivity: difference of 1e-8 MUST produce different hashes
+    hash_a, _ = InvestigationCheckpoint.compute_state_hash(
+        target_id="TGT_HASH",
+        revision_index=1,
+        parent_state_hash=None,
+        evidence_hashes=evidence,
+        initial_priors=priors_base,
+        model_versions=models,
+        model_config_hashes=configs,
+        hypothesis_posteriors={"KILONOVA": 0.500000000000, "SUPERNOVA_IA": 0.500000000000},
+        entropy_nats=0.69314718056,
+    )
+
+    hash_b, _ = InvestigationCheckpoint.compute_state_hash(
+        target_id="TGT_HASH",
+        revision_index=1,
+        parent_state_hash=None,
+        evidence_hashes=evidence,
+        initial_priors=priors_base,
+        model_versions=models,
+        model_config_hashes=configs,
+        hypothesis_posteriors={"KILONOVA": 0.500000010000, "SUPERNOVA_IA": 0.499999990000},
+        entropy_nats=0.69314718056,
+    )
+    assert hash_a != hash_b, "v2 state hash failed to detect 1e-8 posterior difference!"
+
+    # 2. Prior hash sensitivity
+    priors_alt = {"KILONOVA": 0.60, "SUPERNOVA_IA": 0.40}
+    hash_prior_diff, _ = InvestigationCheckpoint.compute_state_hash(
+        target_id="TGT_HASH",
+        revision_index=1,
+        parent_state_hash=None,
+        evidence_hashes=evidence,
+        initial_priors=priors_alt,
+        model_versions=models,
+        model_config_hashes=configs,
+        hypothesis_posteriors={"KILONOVA": 0.500000000000, "SUPERNOVA_IA": 0.500000000000},
+        entropy_nats=0.69314718056,
+    )
+    assert hash_a != hash_prior_diff
+
+    # 3. Model config sensitivity
+    configs_alt = {"recalibrator": "cfg_sha256_2222"}
+    hash_cfg_diff, _ = InvestigationCheckpoint.compute_state_hash(
+        target_id="TGT_HASH",
+        revision_index=1,
+        parent_state_hash=None,
+        evidence_hashes=evidence,
+        initial_priors=priors_base,
+        model_versions=models,
+        model_config_hashes=configs_alt,
+        hypothesis_posteriors={"KILONOVA": 0.500000000000, "SUPERNOVA_IA": 0.500000000000},
+        entropy_nats=0.69314718056,
+    )
+    assert hash_a != hash_cfg_diff
+
+
+def test_concurrent_token_dispatch_atomic_single_use():
+    """
+    WS7.7.1 Audit Finding 4:
+    Verifies that persistent SQLite token registry prevents double-dispatch race conditions.
+    When 10 concurrent threads attempt to dispatch the same authorization token simultaneously,
+    exactly 1 thread succeeds and 9 threads are rejected with TokenValidationError.
+    """
+    with tempfile.TemporaryDirectory() as tmp_dir:
+        db_path = os.path.join(tmp_dir, "governance_tokens.db")
+        event_store = DurableScientificEventStore(db_path=db_path)
+        try:
+            dash = HumanOperationsDashboardBackend(event_store=event_store)
+
+            obs = ScheduledObservation(
+                target_id="TGT_RACE_TEST",
+                facility_id="VLT",
+                instrument_id="X-shooter",
+                filter_id="UVB_VIS_NIR",
+                start_mjd=60100.5,
+                end_mjd=60100.52,
+                exposure_time_sec=1800.0,
+                slew_time_sec=60.0,
+                readout_time_sec=30.0,
+                airmass=1.2,
+                expected_eig_nats=0.825,
+                weather_score=0.95,
+            )
+            target = TargetState(
+                target_id="TGT_RACE_TEST",
+                ra_deg=110.0,
+                dec_deg=25.0,
+                trigger_mjd=60100.0,
+                base_magnitude=19.0,
+                hypothesis_posteriors={"KILONOVA": 0.60, "SN_IA": 0.40},
+            )
+
+            diff = dash.submit_recommendation_for_review(obs, target, "Race condition test")
+            status, token = dash.review_and_authorize(
+                recommendation_id=diff.recommendation_id,
+                action=OperationalAction.APPROVE,
+                authorized_by="devmehta060505@gmail.com",
+                ttl_seconds=3600.0,
+            )
+            assert status == ApprovalStatus.AUTHORIZED_BY_INVESTIGATOR
+            assert token is not None
+            assert token.hmac_signature is not None
+
+            # Execute 10 concurrent dispatch attempts
+            success_count = 0
+            failure_count = 0
+            exceptions = []
+
+            def attempt_dispatch(worker_id: int):
+                try:
+                    # Each worker passes the token
+                    res = dash.execute_dispatch(token=token, recommendation_id=diff.recommendation_id)
+                    return True, res
+                except Exception as e:
+                    return False, str(e)
+
+            with concurrent.futures.ThreadPoolExecutor(max_workers=10) as executor:
+                futures = [executor.submit(attempt_dispatch, i) for i in range(10)]
+                for fut in concurrent.futures.as_completed(futures):
+                    ok, res = fut.result()
+                    if ok:
+                        success_count += 1
+                    else:
+                        failure_count += 1
+                        exceptions.append(res)
+
+            assert success_count == 1, f"Expected exactly 1 successful dispatch, got {success_count}"
+            assert failure_count == 9, f"Expected 9 failed dispatches, got {failure_count}"
+            for exc_msg in exceptions:
+                assert "already been consumed" in exc_msg.lower() or "single-use" in exc_msg.lower()
+
+            # Verify token in persistent store is consumed
+            persisted_token = event_store.get_authorization_token(token.token_id)
+            assert persisted_token is not None
+            assert persisted_token["is_consumed"] == 1
+        finally:
+            event_store.close()
+
+
+def test_calibrated_multi_messenger_significance_and_skymap_area():
+    """
+    WS7.7.1 Audit Finding 3:
+    Verifies that CrossFacilityCorrelationEngine:
+    1. Uses continuous Gaussian deviance (norm.isf(p_chance)).
+    2. Converts 2D skymap 90% credible region area to effective sigma.
+    3. Employs instrument-specific background rates.
+    4. Categorizes into distinct AssociationGrade levels.
+    """
+    engine = CrossFacilityCorrelationEngine()
+
+    # 1. Gravitational wave candidate with 90% credible area = 40 deg^2
+    gw_candidate = CorrelatedEventCandidate(
+        event_id="GW_O4_001",
+        facility="GRACEDB",
+        messenger_type=MessengerType.GRAVITATIONAL_WAVE,
+        trigger_mjd=60300.000000,
+        ra_deg=120.0,
+        dec_deg=15.0,
+        localization_error_deg=1.5,
+        skymap_90_cr_area_deg2=40.0,
+        luminosity_distance_mpc=45.0,
+    )
+    sigma_eff = engine.get_effective_sigma_deg(gw_candidate)
+    expected_sigma = math.sqrt(40.0 / (2.0 * math.pi * 2.302585))
+    assert abs(sigma_eff - expected_sigma) < 1e-4
+    assert 1.6 < sigma_eff < 1.7
+
+    # 2. Prompt GRB counterpart inside coincidence window (dt = 0.8s, d_theta = 0.05 deg)
+    grb_prompt = CorrelatedEventCandidate(
+        event_id="FERMI_GRB_001",
+        facility="FERMI_GBM",
+        messenger_type=MessengerType.GAMMA_RAY,
+        trigger_mjd=60300.000000 + (0.8 / 86400.0),
+        ra_deg=120.03,
+        dec_deg=15.04,
+        localization_error_deg=1.0,
+        classification_hint="SHORT_GRB",
+    )
+    assoc = engine.evaluate_association(gw_candidate, grb_prompt)
+    assert assoc is not None
+    assert assoc.association_significance_sigma >= 3.0
+    assert isinstance(assoc.association_significance_sigma, float)
+    assert assoc.association_grade in (
+        AssociationGrade.HIGH_CONFIDENCE_PHYSICAL_ASSOCIATION,
+        AssociationGrade.STATISTICALLY_SIGNIFICANT_COINCIDENCE,
+    )
+
+    # 3. Background rates test: Optical rate vs GW rate
+    p_opt = engine.calculate_calibrated_chance_probability(
+        search_radius_deg=0.5,
+        time_window_seconds=86400.0,
+        candidate_messenger=MessengerType.OPTICAL,
+    )
+    p_gw = engine.calculate_calibrated_chance_probability(
+        search_radius_deg=0.5,
+        time_window_seconds=86400.0,
+        candidate_messenger=MessengerType.GRAVITATIONAL_WAVE,
+    )
+    # Optical background transient rate is far higher than LVK GW alert rate
+    assert p_opt > p_gw
+
+
+def test_atomic_supersession_transaction_rollback_on_failure():
+    """
+    Verifies that atomic_supersede_observation preserves transactional integrity:
+    If superseding an invalid or nonexistent observation, the database transaction
+    rolls back completely and does not create orphan records.
+    """
+    store = DurableScientificEventStore(db_path=":memory:")
+
+    obs_initial = CalibratedObservation(
+        observation_id="obs_valid_orig",
+        target_id="TGT_TX_TEST",
+        target_ra_deg=180.0,
+        target_dec_deg=10.0,
+        facility_id="VLT",
+        instrument_id="FORS2",
+        filter_id="r_VLT",
+        epoch_mjd=60001.0,
+        exposure_time_sec=600.0,
+        raw_data_hash_sha256="raw_hash_valid_orig",
+        measurement_type=MeasurementType.POINT_DETECTION,
+        apparent_mag=19.00,
+        apparent_mag_err=0.05,
+        calibration_status=CalibrationStatus.CALIBRATED_NOMINAL,
+    )
+    store.store_observation(obs_initial)
+
+    # Attempt to supersede a non-existent observation ID
+    obs_new = CalibratedObservation(
+        observation_id="obs_new_orphan",
+        target_id="TGT_TX_TEST",
+        target_ra_deg=180.0,
+        target_dec_deg=10.0,
+        facility_id="VLT",
+        instrument_id="FORS2",
+        filter_id="r_VLT",
+        epoch_mjd=60001.5,
+        exposure_time_sec=600.0,
+        raw_data_hash_sha256="raw_hash_orphan",
+        measurement_type=MeasurementType.POINT_DETECTION,
+        apparent_mag=18.90,
+        apparent_mag_err=0.04,
+        calibration_status=CalibrationStatus.CALIBRATED_NOMINAL,
+    )
+    ok, status = store.atomic_supersede_observation(
+        old_observation_id="NON_EXISTENT_OBS_ID",
+        new_observation=obs_new,
+        superseding_mjd=60001.5,
+    )
+    assert ok is False
+    assert "not found" in status
+
+    # Verify original observation is still active and orphan was NOT inserted
+    active = store.get_active_observations_for_target("TGT_TX_TEST")
+    assert len(active) == 1
+    assert active[0].observation_id == "obs_valid_orig"
+    store.close()
+
+
+def test_hmac_token_forgery_and_tamper_rejection():
+    """
+    WS7.7.1 Audit Finding 4:
+    Verifies that forged or tampered authorization tokens are immediately rejected by HMAC verification.
+    """
+    dash = HumanOperationsDashboardBackend()
+    obs = ScheduledObservation(
+        target_id="TGT_FORGERY_TEST",
+        facility_id="VLT",
+        instrument_id="HAWK-I",
+        filter_id="Ks_VLT",
+        start_mjd=60100.5,
+        end_mjd=60100.52,
+        exposure_time_sec=1200.0,
+        slew_time_sec=40.0,
+        readout_time_sec=20.0,
+        airmass=1.15,
+        expected_eig_nats=0.75,
+        weather_score=0.92,
+    )
+    target = TargetState(
+        target_id="TGT_FORGERY_TEST",
+        ra_deg=150.0,
+        dec_deg=5.0,
+        trigger_mjd=60100.0,
+        base_magnitude=19.5,
+        hypothesis_posteriors={"KILONOVA": 0.50, "SN_IA": 0.50},
+    )
+
+    diff = dash.submit_recommendation_for_review(obs, target)
+    status, token = dash.review_and_authorize(
+        recommendation_id=diff.recommendation_id,
+        action=OperationalAction.APPROVE,
+        authorized_by="devmehta060505@gmail.com",
+    )
+    assert status == ApprovalStatus.AUTHORIZED_BY_INVESTIGATOR
+    assert token is not None
+
+    # Case 1: Tampered HMAC signature
+    tampered_sig_token = token.model_copy()
+    tampered_sig_token.hmac_signature = "bad_forged_hmac_signature_0000000000000000"
+    with pytest.raises(TokenValidationError) as exc_forged:
+        dash.execute_dispatch(token=tampered_sig_token, recommendation_id=diff.recommendation_id)
+    assert "forgery detected" in str(exc_forged.value).lower()
+
+    # Case 2: Tampered payload with original signature (e.g. attacker changing target or facility)
+    tampered_target_token = token.model_copy()
+    tampered_target_token.facility_id = "KECK"
+    with pytest.raises(TokenValidationError) as exc_mismatch:
+        dash.execute_dispatch(token=tampered_target_token, recommendation_id=diff.recommendation_id)
+    assert "forgery detected" in str(exc_mismatch.value).lower() or "mismatch" in str(exc_mismatch.value).lower()

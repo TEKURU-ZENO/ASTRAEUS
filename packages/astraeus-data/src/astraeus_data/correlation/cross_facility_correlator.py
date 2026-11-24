@@ -1,5 +1,5 @@
 """
-ASTRAEUS Cross-Facility Spatial-Temporal Correlation Engine (WS7.7).
+ASTRAEUS Cross-Facility Spatial-Temporal Correlation Engine (WS7.7.1 Hardened).
 Correlates streaming alerts across heterogeneous multi-messenger and multi-facility networks:
 - Optical/NIR: Vera C. Rubin Observatory (LSST), Zwicky Transient Facility (ZTF).
 - High-Energy: Swift/BAT, Fermi/GBM prompt gamma-ray burst triggers.
@@ -7,9 +7,11 @@ Correlates streaming alerts across heterogeneous multi-messenger and multi-facil
 - Neutrinos: IceCube Gold/Bronze neutrino candidate alerts.
 
 Features:
-- Rigorous Vincenty great-circle angular separation and error ellipse containment.
-- Dynamic temporal coincidence windowing (prompt multi-messenger [-10s, +60s], afterglow [0, 72h]).
-- Quantitative association false alarm rate (FAR) and chance coincidence probability estimation.
+- Rigorous Vincenty great-circle angular separation and instrument-specific error profiles.
+- Calibrated background transient rates per instrument (Optical, GRB, GW, Neutrino).
+- Exact continuous Gaussian equivalent significance (norm.isf) replacing discrete heuristics.
+- Support for 2D skymap 90% credible region area and non-Gaussian core-tail instruments.
+- Clear delineation between preliminary candidate, statistically significant, and high-confidence physical association.
 - Strict Gate 3 Quarantine Firewall enforcement routing quarantined alerts to dead-letter storage.
 
 Author: Dev Mehta <devmehta060505@gmail.com>
@@ -24,6 +26,7 @@ import hashlib
 from typing import Dict, Any, List, Optional, Tuple
 from dataclasses import dataclass, field
 from enum import Enum
+from scipy.stats import norm
 
 from astraeus_data.ingestion.scientific_event_engine import UnifiedScientificEvent
 from engines.quarantine_firewall import QuarantineFirewall
@@ -39,6 +42,12 @@ class MessengerType(str, Enum):
     RADIO = "RADIO"
 
 
+class AssociationGrade(str, Enum):
+    PRELIMINARY_CANDIDATE = "PRELIMINARY_CANDIDATE"
+    STATISTICALLY_SIGNIFICANT_COINCIDENCE = "STATISTICALLY_SIGNIFICANT_COINCIDENCE"
+    HIGH_CONFIDENCE_PHYSICAL_ASSOCIATION = "HIGH_CONFIDENCE_PHYSICAL_ASSOCIATION"
+
+
 @dataclass
 class CorrelatedEventCandidate:
     """Standardized event packet for cross-facility correlation."""
@@ -48,7 +57,9 @@ class CorrelatedEventCandidate:
     trigger_mjd: float
     ra_deg: float
     dec_deg: float
-    localization_error_deg: float       # 1-sigma positional uncertainty radius
+    localization_error_deg: float       # 1-sigma positional uncertainty radius (or core sigma)
+    skymap_90_cr_area_deg2: Optional[float] = None  # 90% credible region area for GW or broad alerts
+    tail_error_deg: Optional[float] = None          # Non-Gaussian tail sigma (e.g. Fermi/GBM)
     luminosity_distance_mpc: Optional[float] = None
     distance_err_mpc: Optional[float] = None
     snr: float = 10.0
@@ -69,6 +80,7 @@ class MultiMessengerAssociation:
     association_significance_sigma: float
     log_bayes_factor_association: float
     suggested_transient_class: str
+    association_grade: AssociationGrade = AssociationGrade.PRELIMINARY_CANDIDATE
     is_quarantined: bool = False
     quarantine_reason: Optional[str] = None
     audit_notes: str = ""
@@ -76,12 +88,28 @@ class MultiMessengerAssociation:
 
 class CrossFacilityCorrelationEngine:
     """
-    Coordinates real-time streaming alerts from space and ground facilities,
-    quantifying spatial-temporal associations with statistical rigor.
+    Coordinates streaming alerts from space and ground facilities,
+    quantifying spatial-temporal associations with calibrated background rates
+    and continuous Gaussian significance metrics.
     """
 
-    # Background transient density: ~0.05 transients / deg^2 / day in deep surveys
-    BACKGROUND_DENSITY_PER_DEG2_DAY = 0.05
+    ALL_SKY_AREA_DEG2 = 41252.96  # 4 * pi * (180 / pi)^2
+
+    # Calibrated background rates per facility regime
+    BACKGROUND_RATES = {
+        # Optical deep transients (~0.05 / deg^2 / day)
+        MessengerType.OPTICAL: 0.05 / 86400.0,
+        MessengerType.NIR: 0.02 / 86400.0,
+        # Fermi/GBM prompt GRB triggers (~240 / yr over all sky)
+        MessengerType.GAMMA_RAY: (240.0 / 365.25 / 86400.0) / ALL_SKY_AREA_DEG2,
+        # LVK Gravitational Wave candidates (~80 / yr over all sky in O4)
+        MessengerType.GRAVITATIONAL_WAVE: (80.0 / 365.25 / 86400.0) / ALL_SKY_AREA_DEG2,
+        # IceCube high-energy gold neutrino tracks (~15 / yr over all sky)
+        MessengerType.NEUTRINO: (15.0 / 365.25 / 86400.0) / ALL_SKY_AREA_DEG2,
+        # Space X-ray transients
+        MessengerType.XRAY: (100.0 / 365.25 / 86400.0) / ALL_SKY_AREA_DEG2,
+        MessengerType.RADIO: 0.001 / 86400.0,
+    }
 
     @classmethod
     def angular_separation_deg(cls, ra1_deg: float, dec1_deg: float, ra2_deg: float, dec2_deg: float) -> float:
@@ -101,21 +129,33 @@ class CrossFacilityCorrelationEngine:
         return math.degrees(math.atan2(numerator, denominator))
 
     @classmethod
-    def calculate_chance_coincidence_probability(
+    def get_effective_sigma_deg(cls, event: CorrelatedEventCandidate) -> float:
+        """
+        Computes effective 1-sigma positional uncertainty.
+        If a 90% credible region area is given (e.g. GW skymap), converts via:
+            sigma_eff = sqrt( Area_90 / (2 * pi * (-ln(0.10))) )
+        """
+        if event.skymap_90_cr_area_deg2 is not None and event.skymap_90_cr_area_deg2 > 0:
+            # 2 * pi * ln(10) ~= 14.4674
+            return math.sqrt(event.skymap_90_cr_area_deg2 / (2.0 * math.pi * 2.302585))
+        return max(0.0001, event.localization_error_deg)
+
+    @classmethod
+    def calculate_calibrated_chance_probability(
         cls,
         search_radius_deg: float,
         time_window_seconds: float,
-        background_rate_per_deg2_day: float = BACKGROUND_DENSITY_PER_DEG2_DAY,
+        candidate_messenger: MessengerType,
     ) -> float:
         """
-        Poisson chance coincidence probability in a spatial-temporal search window:
-            P_chance = 1 - exp(-lambda), where lambda = background_rate * Area * delta_t
+        Poisson chance coincidence probability evaluated against instrument-specific background rate:
+            P_chance = 1 - exp(-lambda), where lambda = Rate * Area * delta_t
         """
+        rate_per_deg2_sec = cls.BACKGROUND_RATES.get(candidate_messenger, 1.0e-10)
         area_deg2 = math.pi * (search_radius_deg ** 2)
-        time_window_days = abs(time_window_seconds) / 86400.0
-        expected_poisson_lambda = background_rate_per_deg2_day * area_deg2 * time_window_days
-        # For small lambda, P_chance ~= lambda
-        if expected_poisson_lambda < 1e-6:
+        expected_poisson_lambda = rate_per_deg2_sec * area_deg2 * max(1.0, abs(time_window_seconds))
+
+        if expected_poisson_lambda < 1e-15:
             return float(expected_poisson_lambda)
         return float(1.0 - math.exp(-expected_poisson_lambda))
 
@@ -128,8 +168,12 @@ class CrossFacilityCorrelationEngine:
         max_afterglow_window_sec: float = 259200.0,  # 3 days
     ) -> Optional[MultiMessengerAssociation]:
         """
-        Evaluates physical association between a primary event (e.g. GW or GRB)
-        and a follow-up or candidate counterpart event (e.g. optical afterglow or neutrino).
+        Evaluates physical association between primary event and candidate counterpart:
+        1. Checks Gate 3 Quarantine Firewall.
+        2. Applies instrument-specific spatial containment and temporal windowing.
+        3. Calculates continuous Gaussian significance using norm.isf(p_chance).
+        4. Calculates spatial and temporal likelihood ratios.
+        5. Assigns rigorous association grade.
         """
         # 1. Gate 3 Quarantine Firewall Check
         quar1 = QuarantineFirewall.is_quarantined_coordinate(primary_event.ra_deg, primary_event.dec_deg)
@@ -149,6 +193,7 @@ class CrossFacilityCorrelationEngine:
                 association_significance_sigma=0.0,
                 log_bayes_factor_association=-999.0,
                 suggested_transient_class="QUARANTINED_RESTRICTED",
+                association_grade=AssociationGrade.PRELIMINARY_CANDIDATE,
                 is_quarantined=True,
                 quarantine_reason=reason,
                 audit_notes="Association dropped by Gate 3 quarantine covenant.",
@@ -163,59 +208,67 @@ class CrossFacilityCorrelationEngine:
         )
         sep_arcsec = sep_deg * 3600.0
 
-        # Total combined localization uncertainty (3-sigma radius)
-        combined_sigma_deg = math.sqrt(
-            primary_event.localization_error_deg ** 2 + candidate_event.localization_error_deg ** 2
-        )
-        max_allowed_separation_deg = max(0.005, combined_sigma_deg * 3.0)
+        # Effective localization uncertainties
+        sigma1 = cls.get_effective_sigma_deg(primary_event)
+        sigma2 = cls.get_effective_sigma_deg(candidate_event)
+        combined_sigma_deg = math.sqrt(sigma1 ** 2 + sigma2 ** 2)
 
         # 3. Compute temporal delta
         delta_t_days = candidate_event.trigger_mjd - primary_event.trigger_mjd
         delta_t_sec = delta_t_days * 86400.0
 
-        # Determine if prompt or afterglow window applies
         is_prompt_pair = (
             {primary_event.messenger_type, candidate_event.messenger_type}
             <= {MessengerType.GRAVITATIONAL_WAVE, MessengerType.GAMMA_RAY, MessengerType.NEUTRINO}
         )
 
         if is_prompt_pair:
-            # Prompt multi-messenger window: typically [-10s, +60s]
             if not (-10.0 <= delta_t_sec <= max_prompt_window_sec):
                 return None
         else:
-            # Afterglow / counterpart window: [0s, 3 days]
             if not (-60.0 <= delta_t_sec <= max_afterglow_window_sec):
                 return None
 
-        # Check spatial containment
+        # Max allowed separation: 3.5-sigma combined radius
+        max_allowed_separation_deg = max(0.005, combined_sigma_deg * 3.5)
         if sep_deg > max_allowed_separation_deg:
             return None
 
-        # 4. Statistical significance & chance coincidence
-        p_chance = cls.calculate_chance_coincidence_probability(
-            search_radius_deg=max(sep_deg, 0.001),
+        # 4. Calibrated statistical significance
+        p_chance = cls.calculate_calibrated_chance_probability(
+            search_radius_deg=max(sep_deg, combined_sigma_deg),
             time_window_seconds=max(abs(delta_t_sec), 1.0),
+            candidate_messenger=candidate_event.messenger_type,
         )
 
-        # Log Bayes factor: ln( P(D | Assoc) / P(D | Chance) )
-        spatial_likelihood_ratio = (1.0 / (2.0 * math.pi * (combined_sigma_deg ** 2))) / (cls.BACKGROUND_DENSITY_PER_DEG2_DAY / 86400.0)
-        spatial_likelihood_ratio = max(1.0, spatial_likelihood_ratio)
-        ln_bf = math.log(spatial_likelihood_ratio) - 0.5 * ((sep_deg / combined_sigma_deg) ** 2)
+        # Continuous Gaussian equivalent significance: Z = norm.isf(p_chance)
+        # Cap between 0.0 and 8.5 sigma to preserve numerical stability
+        p_clamped = max(1e-16, min(0.5, p_chance))
+        sigma_equiv = float(norm.isf(p_clamped))
+        sigma_equiv = round(max(0.0, min(8.5, sigma_equiv)), 2)
 
-        # Convert p_chance to equivalent Gaussian sigma
-        if p_chance < 1e-15:
-            sigma_equiv = 8.0
-        elif p_chance < 1e-9:
-            sigma_equiv = 6.0
-        elif p_chance < 5.7e-7:
-            sigma_equiv = 5.0
-        elif p_chance < 0.0027:
-            sigma_equiv = 3.0
+        # Likelihood ratio: spatial * temporal
+        spatial_p_s = (1.0 / (2.0 * math.pi * (combined_sigma_deg ** 2))) * math.exp(-0.5 * ((sep_deg / combined_sigma_deg) ** 2))
+        spatial_p_b = 1.0 / cls.ALL_SKY_AREA_DEG2
+        ln_spatial_lr = math.log(max(1e-10, spatial_p_s / spatial_p_b))
+
+        tau_phys_sec = 2.0 if is_prompt_pair else 86400.0
+        temporal_p_s = (1.0 / tau_phys_sec) * math.exp(-abs(delta_t_sec) / tau_phys_sec)
+        temporal_window_sec = max_prompt_window_sec if is_prompt_pair else max_afterglow_window_sec
+        temporal_p_b = 1.0 / temporal_window_sec
+        ln_temporal_lr = math.log(max(1e-10, temporal_p_s / temporal_p_b))
+
+        ln_bf = float(ln_spatial_lr + ln_temporal_lr)
+
+        # 5. Determine association grade
+        if sigma_equiv >= 5.0 and ln_bf >= 10.0:
+            grade = AssociationGrade.HIGH_CONFIDENCE_PHYSICAL_ASSOCIATION
+        elif sigma_equiv >= 3.0 and ln_bf >= 3.0:
+            grade = AssociationGrade.STATISTICALLY_SIGNIFICANT_COINCIDENCE
         else:
-            sigma_equiv = 1.0
+            grade = AssociationGrade.PRELIMINARY_CANDIDATE
 
-        # 5. Suggested astrophysical classification
+        # 6. Suggested classification
         transient_class = "MULTI_MESSENGER_CANDIDATE"
         m_set = {primary_event.messenger_type, candidate_event.messenger_type}
         if MessengerType.GRAVITATIONAL_WAVE in m_set and MessengerType.GAMMA_RAY in m_set:
@@ -238,13 +291,15 @@ class CrossFacilityCorrelationEngine:
             temporal_delta_seconds=round(delta_t_sec, 2),
             chance_coincidence_probability=float(p_chance),
             association_significance_sigma=float(sigma_equiv),
-            log_bayes_factor_association=round(float(ln_bf), 2),
+            log_bayes_factor_association=round(ln_bf, 2),
             suggested_transient_class=transient_class,
+            association_grade=grade,
             is_quarantined=False,
             audit_notes=(
-                f"Multi-messenger association confirmed ({transient_class}). "
+                f"Multi-messenger association evaluated [{grade.value}]. "
                 f"Sep: {sep_arcsec:.1f}\", dt: {delta_t_sec:.1f}s, "
-                f"Significance: {sigma_equiv:.1f} sigma (ln BF: {ln_bf:.1f})."
+                f"Calibrated Significance: {sigma_equiv:.2f} sigma (ln BF: {ln_bf:.1f}, "
+                f"P_chance: {p_chance:.2e})."
             ),
         )
 
@@ -262,9 +317,7 @@ class CrossFacilityCorrelationEngine:
             if past_event.event_id == new_event.event_id:
                 continue
             if past_event.facility == new_event.facility:
-                continue  # Skip intra-facility pairing
-
-            # Test both (past -> new) and (new -> past)
+                continue
             assoc = self.evaluate_association(primary_event=past_event, candidate_event=new_event)
             if assoc is not None:
                 associations.append(assoc)

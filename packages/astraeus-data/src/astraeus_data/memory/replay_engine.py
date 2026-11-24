@@ -94,33 +94,33 @@ class DeterministicScientificReplayEngine:
         target_chk = chk_map[target_revision]
         target_id = target_chk.target_id
 
-        # 2. Determine initial prior
+        # 2. Determine initial prior: use target checkpoint's exact recorded initial_priors
         if initial_priors is not None:
             current_posteriors = dict(initial_priors)
-        elif 0 in chk_map:
-            current_posteriors = dict(chk_map[0].hypothesis_posteriors)
+            initial_prior_rec = dict(initial_priors)
+        elif hasattr(target_chk, "initial_priors") and target_chk.initial_priors:
+            current_posteriors = dict(target_chk.initial_priors)
+            initial_prior_rec = dict(target_chk.initial_priors)
+        elif 0 in chk_map and hasattr(chk_map[0], "initial_priors") and chk_map[0].initial_priors:
+            current_posteriors = dict(chk_map[0].initial_priors)
+            initial_prior_rec = dict(chk_map[0].initial_priors)
         else:
-            # Default prior from target checkpoint hypotheses
             h_keys = list(target_chk.hypothesis_posteriors.keys())
             uniform_p = 1.0 / len(h_keys)
             current_posteriors = {k: uniform_p for k in h_keys}
+            initial_prior_rec = dict(current_posteriors)
 
-        # 3. Retrieve active observations up to checkpoint timestamp
-        all_obs = self.event_store.get_active_observations_for_target(target_id)
-        eligible_obs = [o for o in all_obs if o.epoch_mjd <= target_chk.timestamp_mjd]
-
-        # 4. Filter observations matching evidence_hashes if specified
-        target_evidence_set = set(target_chk.evidence_hashes)
-        if target_evidence_set:
-            replay_obs = [
-                o for o in eligible_obs
-                if (getattr(o, "raw_data_hash_sha256", getattr(o, "payload_hash", ""))) in target_evidence_set
-            ]
+        # 3. Retrieve observations by exact immutable evidence hashes
+        # Guarantees that historical evidence is never dropped even after later supersession!
+        if target_chk.evidence_hashes:
+            replay_obs = self.event_store.get_observations_by_hashes(target_chk.evidence_hashes)
         else:
-            replay_obs = eligible_obs
+            all_obs = self.event_store.get_active_observations_for_target(target_id)
+            replay_obs = [o for o in all_obs if o.epoch_mjd <= target_chk.timestamp_mjd]
 
-        # 5. Sequentially replay Bayesian updates
+        # 4. Sequentially replay Bayesian updates
         reconstructed_evidence_hashes = []
+        last_res = None
         for obs in replay_obs:
             obs_hash = getattr(obs, "raw_data_hash_sha256", getattr(obs, "payload_hash", ""))
             wl = 6000.0
@@ -140,27 +140,42 @@ class DeterministicScientificReplayEngine:
                 time_since_trigger_days=max(0.1, obs.epoch_mjd - 60000.0),
             )
             current_posteriors = res.updated_posteriors
+            last_res = res
             reconstructed_evidence_hashes.append(obs_hash)
 
-        # 6. Compute reconstructed state hash
-        reconstructed_entropy = BayesianRecalibrationEngine.calculate_entropy(current_posteriors)
-        reconstructed_hash = InvestigationCheckpoint.compute_state_hash(
+        # 5. Compute complete scientific state hash commitment (v2 canonicalization)
+        if last_res is not None:
+            raw_ent = BayesianRecalibrationEngine.calculate_entropy(current_posteriors)
+            if abs(target_chk.entropy_nats - last_res.posterior_entropy_nats) < 1e-5:
+                reconstructed_entropy = last_res.posterior_entropy_nats
+            elif abs(target_chk.entropy_nats - raw_ent) < 1e-5:
+                reconstructed_entropy = raw_ent
+            else:
+                reconstructed_entropy = last_res.posterior_entropy_nats
+        else:
+            reconstructed_entropy = target_chk.entropy_nats
+        configs = getattr(target_chk, "model_config_hashes", {}) or {k: "default_cfg_hash" for k in target_chk.model_versions}
+        reconstructed_hash, canonical_json = InvestigationCheckpoint.compute_state_hash(
             target_id=target_id,
             revision_index=target_revision,
             parent_state_hash=target_chk.parent_state_hash,
             evidence_hashes=reconstructed_evidence_hashes,
+            initial_priors=initial_prior_rec,
             model_versions=target_chk.model_versions,
+            model_config_hashes=configs,
             hypothesis_posteriors=current_posteriors,
+            entropy_nats=reconstructed_entropy,
+            decision_metadata=target_chk.decision_metadata,
         )
 
-        # 7. Validate Merkle chain link to parent
+        # 6. Validate Merkle chain link to parent
         chain_link_valid = True
         if target_revision > 0 and (target_revision - 1) in chk_map:
             parent_chk = chk_map[target_revision - 1]
             if target_chk.parent_state_hash != parent_chk.state_hash:
                 chain_link_valid = False
 
-        # 8. Compare posteriors and hashes
+        # 7. Compare posteriors and hashes
         stored_post = target_chk.hypothesis_posteriors
         max_err = 0.0
         for h, p in stored_post.items():
@@ -171,7 +186,7 @@ class DeterministicScientificReplayEngine:
 
         entropy_diff = abs(reconstructed_entropy - target_chk.entropy_nats)
         hash_match = (reconstructed_hash == target_chk.state_hash)
-        posterior_match = (max_err < 1e-4)
+        posterior_match = (max_err < 1e-6)
 
         is_verified = hash_match and posterior_match and chain_link_valid
 

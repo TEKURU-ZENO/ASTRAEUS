@@ -67,8 +67,17 @@ class HumanOperationsDashboardBackend:
     and epistemic updates remain strictly governed by human investigators.
     """
 
-    def __init__(self, human_gate: Optional[HumanApprovalGate] = None):
-        self.gate = human_gate or HumanApprovalGate()
+    def __init__(
+        self,
+        human_gate: Optional[HumanApprovalGate] = None,
+        event_store: Optional[Any] = None,
+    ):
+        if human_gate is not None:
+            self.gate = human_gate
+            if event_store is not None and getattr(self.gate, "_event_store", None) is None:
+                self.gate._event_store = event_store
+        else:
+            self.gate = HumanApprovalGate(event_store=event_store)
         self.proposals: Dict[str, ScheduledObservation] = {}
         self.proposals_meta: Dict[str, Dict[str, Any]] = {}
         self.action_history: List[Dict[str, Any]] = []

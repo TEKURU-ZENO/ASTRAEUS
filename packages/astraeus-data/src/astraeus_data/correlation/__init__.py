@@ -1,5 +1,5 @@
 """
-ASTRAEUS Cross-Facility Correlation Package (WS7.7).
+ASTRAEUS Cross-Facility Correlation Package (WS7.7.1).
 """
 
 from astraeus_data.correlation.cross_facility_correlator import (
@@ -7,6 +7,7 @@ from astraeus_data.correlation.cross_facility_correlator import (
     CorrelatedEventCandidate,
     MultiMessengerAssociation,
     MessengerType,
+    AssociationGrade,
 )
 
 __all__ = [
@@ -14,4 +15,5 @@ __all__ = [
     "CorrelatedEventCandidate",
     "MultiMessengerAssociation",
     "MessengerType",
+    "AssociationGrade",
 ]

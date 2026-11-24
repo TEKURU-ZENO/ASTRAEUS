@@ -13,6 +13,8 @@ from __future__ import annotations
 import time
 import math
 import hashlib
+import hmac
+import secrets
 from enum import Enum
 from typing import Dict, Any, List, Optional
 from dataclasses import dataclass
@@ -57,6 +59,7 @@ class AuthorizationToken(BaseModel):
     is_consumed: bool = False
     dispatched_at_utc: Optional[float] = None
     token_signature_sha256: str
+    hmac_signature: Optional[str] = None
 
     def is_expired(self, current_time_utc: Optional[float] = None) -> bool:
         now = current_time_utc if current_time_utc is not None else time.time()
@@ -92,9 +95,39 @@ class HumanApprovalGate:
     All telescope queue modifications must be explicitly signed by the Lead Investigator.
     """
 
-    def __init__(self):
+    DEFAULT_HMAC_KEY: bytes = b"ASTRAEUS_OBSERVATORY_SECRET_KEY_DEV_MEHTA_2026"
+
+    def __init__(
+        self,
+        event_store: Optional[Any] = None,
+        hmac_secret_key: Optional[bytes] = None,
+    ):
         self._recommendations: Dict[str, ObservationRecommendation] = {}
         self._tokens: Dict[str, AuthorizationToken] = {}
+        self._event_store = event_store
+        self.hmac_secret_key = hmac_secret_key or self.DEFAULT_HMAC_KEY
+
+    def _compute_hmac_signature(
+        self,
+        token_id: str,
+        recommendation_id: str,
+        target_id: str,
+        facility_id: str,
+        instrument_id: str,
+        filter_id: str,
+        exposure_time_sec: float,
+        scheduled_mjd: float,
+        proposal_hash: str,
+        investigator_email: str,
+        created_at_utc: float,
+        ttl_seconds: float,
+    ) -> str:
+        canonical_str = (
+            f"{token_id}:{recommendation_id}:{target_id}:{facility_id}:{instrument_id}:{filter_id}:"
+            f"{exposure_time_sec:.4f}:{scheduled_mjd:.6f}:{proposal_hash}:{investigator_email}:"
+            f"{created_at_utc:.4f}:{ttl_seconds:.1f}"
+        )
+        return hmac.new(self.hmac_secret_key, canonical_str.encode("utf-8"), hashlib.sha256).hexdigest()
 
     def create_recommendation(
         self,
@@ -204,6 +237,21 @@ class HumanApprovalGate:
         sig_raw = f"{token_id}:{rec.recommendation_id}:{rec.target_id}:{rec.facility_id}:{rec.filter_id}:{investigator_email}:{now}"
         token_sig = hashlib.sha256(sig_raw.encode()).hexdigest()
 
+        hmac_sig = self._compute_hmac_signature(
+            token_id=token_id,
+            recommendation_id=rec.recommendation_id,
+            target_id=rec.target_id,
+            facility_id=rec.facility_id,
+            instrument_id=rec.instrument_id,
+            filter_id=rec.filter_id,
+            exposure_time_sec=rec.exposure_time_sec,
+            scheduled_mjd=rec.scheduled_mjd,
+            proposal_hash=rec.cryptographic_proposal_hash,
+            investigator_email=investigator_email,
+            created_at_utc=now,
+            ttl_seconds=ttl_seconds,
+        )
+
         token = AuthorizationToken(
             token_id=token_id,
             recommendation_id=rec.recommendation_id,
@@ -219,8 +267,29 @@ class HumanApprovalGate:
             ttl_seconds=ttl_seconds,
             is_consumed=False,
             token_signature_sha256=token_sig,
+            hmac_signature=hmac_sig,
         )
         self._tokens[token_id] = token
+
+        # Persist to durable SQLite event store if available
+        if self._event_store is not None:
+            token_dict = {
+                "token_id": token.token_id,
+                "recommendation_id": token.recommendation_id,
+                "target_id": token.target_id,
+                "facility_id": token.facility_id,
+                "instrument_id": token.instrument_id,
+                "filter_id": token.filter_id,
+                "exposure_time_sec": token.exposure_time_sec,
+                "scheduled_mjd": token.scheduled_mjd,
+                "proposal_hash": token.proposal_hash,
+                "investigator_email": token.investigator_email,
+                "created_at_utc": token.created_at_utc,
+                "ttl_seconds": token.ttl_seconds,
+                "hmac_signature": hmac_sig,
+            }
+            self._event_store.store_authorization_token(token_dict)
+
         return token
 
     def dispatch_with_token(
@@ -230,38 +299,95 @@ class HumanApprovalGate:
         current_time_utc: Optional[float] = None,
     ) -> Dict[str, Any]:
         """
-        Validates token binding, single-use, and expiration before physical dispatch.
+        Validates token binding, cryptographic HMAC signature, single-use,
+        and expiration before physical dispatch.
         """
         now = current_time_utc if current_time_utc is not None else time.time()
 
+        # 1. Verify cryptographic HMAC signature if present
+        if token.hmac_signature is not None:
+            expected_hmac = self._compute_hmac_signature(
+                token_id=token.token_id,
+                recommendation_id=token.recommendation_id,
+                target_id=token.target_id,
+                facility_id=token.facility_id,
+                instrument_id=token.instrument_id,
+                filter_id=token.filter_id,
+                exposure_time_sec=token.exposure_time_sec,
+                scheduled_mjd=token.scheduled_mjd,
+                proposal_hash=token.proposal_hash,
+                investigator_email=token.investigator_email,
+                created_at_utc=token.created_at_utc,
+                ttl_seconds=token.ttl_seconds,
+            )
+            if not hmac.compare_digest(token.hmac_signature, expected_hmac):
+                raise TokenValidationError(
+                    f"CRYPTOGRAPHIC SIGNATURE FORGERY DETECTED: Token {token.token_id} HMAC signature is invalid."
+                )
+
+        # 2. Check recommendation match
+        if token.recommendation_id != recommendation_id:
+            raise TokenValidationError(
+                f"TOKEN TARGET MISMATCH: Token was issued for recommendation {token.recommendation_id}, "
+                f"cannot authorize dispatch for recommendation {recommendation_id}."
+            )
+
+        # 3. Retrieve or verify stored token
         stored_token = self._tokens.get(token.token_id)
+        if stored_token is None and self._event_store is not None:
+            # Reconstruct from persistent SQLite store if available (e.g. across restart)
+            persisted = self._event_store.get_authorization_token(token.token_id)
+            if persisted:
+                stored_token = AuthorizationToken(
+                    token_id=persisted["token_id"],
+                    recommendation_id=persisted["recommendation_id"],
+                    target_id=persisted["target_id"],
+                    facility_id=persisted["facility_id"],
+                    instrument_id=persisted["instrument_id"],
+                    filter_id=persisted["filter_id"],
+                    exposure_time_sec=persisted["exposure_time_sec"],
+                    scheduled_mjd=persisted["scheduled_mjd"],
+                    proposal_hash=persisted["proposal_hash"],
+                    investigator_email=persisted["investigator_email"],
+                    created_at_utc=persisted["created_at_utc"],
+                    ttl_seconds=persisted["ttl_seconds"],
+                    is_consumed=bool(persisted["is_consumed"]),
+                    dispatched_at_utc=persisted.get("consumed_at_utc"),
+                    token_signature_sha256="",
+                    hmac_signature=persisted["hmac_signature"],
+                )
+                self._tokens[token.token_id] = stored_token
+
         if stored_token is None:
             raise TokenValidationError(f"Unregistered authorization token: {token.token_id}")
-
-        if stored_token.is_consumed:
-            raise TokenValidationError(f"Token {token.token_id} has ALREADY BEEN CONSUMED. Single-use policy strictly enforced.")
-
-        if stored_token.is_expired(now):
-            raise TokenValidationError(f"Token {token.token_id} has EXPIRED (TTL = {stored_token.ttl_seconds}s).")
 
         rec = self._recommendations.get(recommendation_id)
         if rec is None:
             raise KeyError(f"Recommendation {recommendation_id} not found.")
 
-        if stored_token.recommendation_id != recommendation_id:
-            raise TokenValidationError(
-                f"TOKEN TARGET MISMATCH: Token was issued for recommendation {stored_token.recommendation_id}, "
-                f"cannot authorize dispatch for recommendation {recommendation_id}."
-            )
-
         if stored_token.target_id != rec.target_id or stored_token.facility_id != rec.facility_id:
             raise TokenValidationError("TOKEN PARAMETER MISMATCH: Target or facility diverges from proposal.")
 
-        # Atomically consume token
-        stored_token.is_consumed = True
-        stored_token.dispatched_at_utc = now
-        token.is_consumed = True
-        token.dispatched_at_utc = now
+        # 4. Atomic single-use consumption
+        if self._event_store is not None:
+            success, reason = self._event_store.atomic_consume_token(token.token_id, current_time_utc=now)
+            if not success:
+                raise TokenValidationError(f"GOVERNANCE GATE VIOLATION: {reason}")
+            stored_token.is_consumed = True
+            stored_token.dispatched_at_utc = now
+            token.is_consumed = True
+            token.dispatched_at_utc = now
+        else:
+            if stored_token.is_consumed:
+                raise TokenValidationError(
+                    f"Token {token.token_id} has ALREADY BEEN CONSUMED. Single-use policy strictly enforced."
+                )
+            if stored_token.is_expired(now):
+                raise TokenValidationError(f"Token {token.token_id} has EXPIRED (TTL = {stored_token.ttl_seconds}s).")
+            stored_token.is_consumed = True
+            stored_token.dispatched_at_utc = now
+            token.is_consumed = True
+            token.dispatched_at_utc = now
 
         return {
             "dispatch_status": "DISPATCHED_TO_FACILITY_QUEUE",
