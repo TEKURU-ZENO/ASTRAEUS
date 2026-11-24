@@ -38,6 +38,7 @@ from astraeus_agents.reground.protocol import RegroundDebateProtocol
 from astraeus_agents.reground.models import (
     RegroundInvestigationReport,
     ChallengeStatus,
+    HypothesisEvaluationStatus,
     AgentPersona,
     DebateStage,
 )
@@ -260,16 +261,19 @@ def test_autonomous_transient_investigation_closed_loop_scenario(tmp_path):
         claiming_validated_discovery=False
     )
 
-    # Check updated Bayesian posteriors
+    # Check updated Bayesian posteriors under 4-tier taxonomy
     assert closed_loop_report.leading_hypothesis is not None
     assert closed_loop_report.leading_hypothesis.hypothesis_id == "H1_KILONOVA"
     assert closed_loop_report.leading_hypothesis.posterior_prob > 0.90
+    assert closed_loop_report.leading_hypothesis.evaluation_status == HypothesisEvaluationStatus.STRONGER_EVIDENCE
 
-    # Competing hypotheses should be marked as falsified
-    falsified_hypotheses = [h for h in closed_loop_report.hypotheses if h.is_falsified]
-    assert len(falsified_hypotheses) >= 1
-    falsified_ids = {h.hypothesis_id for h in falsified_hypotheses}
-    assert "H2_FAST_CCSN" in falsified_ids or "H3_TDE_AGN" in falsified_ids
+    # Check 4-tier evaluation on competing models
+    h2 = next(h for h in closed_loop_report.hypotheses if h.hypothesis_id == "H2_FAST_CCSN")
+    assert h2.evaluation_status == HypothesisEvaluationStatus.MODEL_REJECTED_UNDER_ASSUMPTIONS
+
+    h3 = next(h for h in closed_loop_report.hypotheses if h.hypothesis_id == "H3_TDE_AGN")
+    assert h3.evaluation_status == HypothesisEvaluationStatus.PHYSICALLY_FALSIFIED
+    assert h3.is_falsified is True
 
     # Skeptic challenge resolved
     resolved_veto = closed_loop_report.skeptic_challenges[0]

@@ -18,6 +18,11 @@ from astraeus_models.physics.shock_cooling import (
     fit_shock_cooling,
     ShockCoolingFitResult,
 )
+from astraeus_models.physics.kilonova import (
+    kilonova_lightcurve_function,
+    fit_kilonova,
+    KilonovaFitResult,
+)
 from astraeus_models.physics.engine import PhysicalModelEngine, PhysicsFitResult
 
 __all__ = [
@@ -34,6 +39,9 @@ __all__ = [
     "shock_cooling_photometric_flux",
     "fit_shock_cooling",
     "ShockCoolingFitResult",
+    "kilonova_lightcurve_function",
+    "fit_kilonova",
+    "KilonovaFitResult",
     "PhysicalModelEngine",
     "PhysicsFitResult",
 ]

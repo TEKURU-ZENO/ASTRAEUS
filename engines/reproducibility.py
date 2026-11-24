@@ -20,6 +20,8 @@ import hashlib
 from datetime import datetime, timezone
 from dataclasses import dataclass, field, asdict
 from typing import Dict, List, Optional, Any
+import subprocess
+import sys
 
 
 @dataclass
@@ -36,11 +38,39 @@ class InvestigationProvenanceRecord:
     tool_invocations: List[Dict[str, Any]] = field(default_factory=list)
     hypotheses: List[Dict[str, Any]] = field(default_factory=list)
     observations_ingested: List[Dict[str, Any]] = field(default_factory=list)
+    git_commit_sha: Optional[str] = None
+    git_branch: Optional[str] = None
+    environment_dependencies: Dict[str, str] = field(default_factory=dict)
+    uncertainty_assumptions: Dict[str, Any] = field(default_factory=dict)
     quarantine_firewall_verified: bool = True
     created_at_utc: str = field(
         default_factory=lambda: datetime.now(timezone.utc).isoformat()
     )
     sealed_digest: Optional[str] = None
+
+    def capture_runtime_environment(self) -> None:
+        """Captures Git commit hash, active branch, and library versions."""
+        try:
+            res = subprocess.run(["git", "rev-parse", "HEAD"], capture_output=True, text=True, check=True)
+            self.git_commit_sha = res.stdout.strip()
+        except Exception:
+            self.git_commit_sha = "unknown_git_env"
+
+        try:
+            res = subprocess.run(["git", "rev-parse", "--abbrev-ref", "HEAD"], capture_output=True, text=True, check=True)
+            self.git_branch = res.stdout.strip()
+        except Exception:
+            self.git_branch = "unknown_branch"
+
+        # Capture library versions
+        deps = {"python": sys.version.split()[0]}
+        for mod in ("numpy", "scipy", "astropy", "pydantic", "fast_array_utils"):
+            try:
+                m = __import__(mod)
+                deps[mod] = getattr(m, "__version__", "installed")
+            except ImportError:
+                pass
+        self.environment_dependencies = deps
 
     def record_tool_call(self, tool_name: str, arguments: Dict[str, Any], output_summary: str) -> None:
         self.tool_invocations.append({

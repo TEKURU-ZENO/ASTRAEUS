@@ -1,0 +1,148 @@
+"""
+ASTRAEUS Kilonova Villar/Metzger Morphological Parameterization Fitter.
+Part of Phase 7 Scientific Foundation.
+
+Author: Dev Mehta <devmehta060505@gmail.com>
+Lead Investigator & Mission Director, Project ASTRAEUS
+Date: November 24, 2026
+
+Fits the fast-evolving radioactive r-process kilonova lightcurve profile:
+f(t) = F_0 * [exp(-(t - t0) / tau_fall) / (1 + exp(-(t - t0) / tau_rise))] + B
+characterized by rapid heating (tau_rise ~ 0.2 - 2.0 d) and rapid lanthanide cooling (tau_fall ~ 0.5 - 6.0 d).
+"""
+
+from typing import Dict, Any, Tuple, Optional, List
+import numpy as np
+from scipy.optimize import curve_fit
+from pydantic import BaseModel, Field
+
+from astraeus_models.physics.fit_status import FitStatus
+
+
+class KilonovaFitResult(BaseModel):
+    status: FitStatus
+    ejecta_mass_estimate_msun: Optional[float] = None
+    best_fit_params: Dict[str, float] = Field(default_factory=dict)
+    param_uncertainties: Dict[str, float] = Field(default_factory=dict)
+    reduced_chi2: float = 0.0
+    bic: float = 0.0
+    log_likelihood: float = -999.0
+    residuals: List[float] = Field(default_factory=list)
+    applicability_justification: str = ""
+
+
+def kilonova_lightcurve_function(
+    t: np.ndarray,
+    t0: float,
+    f0: float,
+    b: float,
+    tau_rise: float,
+    tau_fall: float
+) -> np.ndarray:
+    """Fast-evolving kilonova lightcurve profile."""
+    rise_term = np.clip(-(t - t0) / max(tau_rise, 1e-3), -40.0, 40.0)
+    fall_term = np.clip(-(t - t0) / max(tau_fall, 1e-3), -40.0, 40.0)
+    return f0 * (np.exp(fall_term) / (1.0 + np.exp(rise_term))) + b
+
+
+def fit_kilonova(
+    times_mjd: np.ndarray,
+    fluxes: np.ndarray,
+    flux_errors: np.ndarray,
+    is_applicable: bool = True,
+    justification: str = ""
+) -> KilonovaFitResult:
+    """
+    Fits the kilonova profile to photometric flux data using bounded non-linear least squares.
+    """
+    if not is_applicable:
+        return KilonovaFitResult(
+            status=FitStatus.MODEL_NOT_APPLICABLE,
+            applicability_justification=justification,
+        )
+
+    n = len(times_mjd)
+    if n < 4:
+        return KilonovaFitResult(
+            status=FitStatus.INSUFFICIENT_OBSERVATIONS,
+            applicability_justification=f"Epochs {n} < 4 for kilonova fitting",
+        )
+
+    t_peak_idx = int(np.argmax(fluxes))
+    t0_init = float(times_mjd[t_peak_idx])
+    min_flux = float(np.min(fluxes))
+    max_flux = float(np.max(fluxes))
+    f0_init = float(max(max_flux - min_flux, 1e-2))
+
+    b_min = float(min(-10.0, min_flux - 0.5 * f0_init))
+    b_max = float(max(100.0, max_flux * 1.5))
+    b_init = float(np.clip(min_flux, b_min + 1e-2, b_max - 1e-2))
+
+    # Kilonova characteristic timescales: rapid rise (0.5d) and fast fall (2.0d)
+    tau_rise_init = 0.5
+    tau_fall_init = 2.0
+
+    p0 = [t0_init, f0_init, b_init, tau_rise_init, tau_fall_init]
+    bounds = (
+        [times_mjd[0] - 10.0, 0.0, b_min, 0.05, 0.2],
+        [times_mjd[-1] + 10.0, f0_init * 20.0 + 1000.0, b_max, 5.0, 15.0],
+    )
+
+    try:
+        popt, pcov = curve_fit(
+            kilonova_lightcurve_function,
+            times_mjd,
+            fluxes,
+            p0=p0,
+            sigma=np.clip(flux_errors, 1e-4, None),
+            absolute_sigma=True,
+            bounds=bounds,
+            maxfev=2000,
+        )
+
+        perr = np.sqrt(np.diag(pcov))
+        param_names = ["t0", "f0", "b", "tau_rise", "tau_fall"]
+        params_dict = {k: float(v) for k, v in zip(param_names, popt)}
+        err_dict = {k: float(v) for k, v in zip(param_names, perr)}
+
+        # Evaluate chi-square and Gaussian log-likelihood
+        f_pred = kilonova_lightcurve_function(times_mjd, *popt)
+        sigmas = np.clip(flux_errors, 1e-4, None)
+        residuals = (fluxes - f_pred) / sigmas
+        chi2 = float(np.sum(residuals ** 2))
+        k_free = 5
+        dof = max(n - k_free, 1)
+        chi2_red = float(chi2 / dof)
+
+        # Log-likelihood: ln L = -0.5 * sum [ (y - f)^2 / sigma^2 + ln(2*pi*sigma^2) ]
+        log_like = float(-0.5 * (chi2 + np.sum(np.log(2.0 * np.pi * (sigmas ** 2)))))
+        # True BIC = k * ln(n) - 2 * ln(L)
+        bic = float(k_free * np.log(n) - 2.0 * log_like)
+
+        # Ejecta mass heuristic from Metzger (2019): M_ej ~ 0.05 * (tau_fall / 2.5 d)^2
+        m_ej = float(np.clip(0.04 * ((params_dict["tau_fall"] / 2.0) ** 1.5), 0.005, 0.15))
+
+        if np.any(np.isnan(perr)) or np.any(np.isinf(perr)):
+            status = FitStatus.NON_IDENTIFIABLE_PARAMETERS
+        elif chi2_red > 10.0:
+            status = FitStatus.FIT_POOR_QUALITY
+        else:
+            status = FitStatus.FIT_SUCCESS
+
+        return KilonovaFitResult(
+            status=status,
+            ejecta_mass_estimate_msun=m_ej,
+            best_fit_params=params_dict,
+            param_uncertainties=err_dict,
+            reduced_chi2=chi2_red,
+            bic=bic,
+            log_likelihood=log_like,
+            residuals=residuals.tolist(),
+            applicability_justification="Kilonova rapid-cooling profile converged.",
+        )
+
+    except Exception as e:
+        return KilonovaFitResult(
+            status=FitStatus.OPTIMIZATION_FAILED,
+            applicability_justification=f"Kilonova optimizer failed: {str(e)}",
+        )

@@ -37,6 +37,24 @@ class ChallengeStatus(str, Enum):
     VETO_DISQUALIFIED = "VETO_DISQUALIFIED"
 
 
+class HypothesisEvaluationStatus(str, Enum):
+    """
+    Principled 4-tier scientific evaluation taxonomy for transient hypotheses.
+    Distinguishes statistical likelihood deficits from physical contradiction.
+    """
+    STRONGER_EVIDENCE = "STRONGER_EVIDENCE"
+    # Observation increases relative posterior probability and reduces parameter variance.
+
+    MODEL_REJECTED_UNDER_ASSUMPTIONS = "MODEL_REJECTED_UNDER_ASSUMPTIONS"
+    # Parameterized model disfavored by delta BIC > 10, but broader progenitor class may survive.
+
+    PHYSICALLY_FALSIFIED = "PHYSICALLY_FALSIFIED"
+    # Progenitor hypothesis physically ruled out by fundamental conservation laws or definitive data.
+
+    UNRESOLVED_ALTERNATIVE = "UNRESOLVED_ALTERNATIVE"
+    # Competing alternative hypothesis remains plausible within observational noise and degeneracies.
+
+
 class PhysicalHypothesis(BaseModel):
     """Structured physical hypothesis with Bayesian probabilities and falsification boundaries."""
     hypothesis_id: str
@@ -46,8 +64,13 @@ class PhysicalHypothesis(BaseModel):
     posterior_prob: float
     log_likelihood: float = -999.0
     bic: float = 999.0
+    degrees_of_freedom_k: int = 4
+    reduced_chi2: Optional[float] = None
     physical_parameters: Dict[str, Any] = Field(default_factory=dict)
+    param_uncertainties: Dict[str, float] = Field(default_factory=dict)
     falsification_criteria: List[str] = Field(default_factory=list)
+    untested_falsification_criteria: List[str] = Field(default_factory=list)
+    evaluation_status: HypothesisEvaluationStatus = HypothesisEvaluationStatus.UNRESOLVED_ALTERNATIVE
     is_falsified: bool = False
     is_leading: bool = False
     epistemic_qualifications: List[str] = Field(default_factory=list)

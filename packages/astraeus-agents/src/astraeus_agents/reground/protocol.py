@@ -27,6 +27,7 @@ from astraeus_agents.reground.models import (
     DebateTurn,
     SkepticVeto,
     ChallengeStatus,
+    HypothesisEvaluationStatus,
     RegroundInvestigationReport,
 )
 from astraeus_agents.reground.agents import (
@@ -91,7 +92,14 @@ class RegroundDebateProtocol:
             checkpoint_hashes={"phase6_foundation": "5c8435c754b2b2b1"},
             dataset_hashes={"raw_event_hash": event.raw_payload_hash},
             quarantine_firewall_verified=True,
+            uncertainty_assumptions={
+                "dust_model": "SFD98_Schlafly11_recalibrated",
+                "extinction_rv": 3.1,
+                "photometric_systematics_floor": 0.02,
+                "cosmology": {"h0": 70.0, "omega_m": 0.3},
+            }
         )
+        provenance.capture_runtime_environment()
 
         debate_turns: List[DebateTurn] = []
 
@@ -211,27 +219,31 @@ class RegroundDebateProtocol:
         # -------------------------------------------------------------
         # Stage 7: Expected Information Gain (EIG) Follow-Up Planning (WS7.5)
         # -------------------------------------------------------------
-        # Calculate EIG across optical and NIR bands: u, g, r, i, z, y
-        # Kilonova cools rapidly: z-band and i-band provide maximum discriminant power against CCSN
+        # Calculate predictive-distribution EIG across optical and NIR bands: u, g, r, i, z, y
+        # EIG(f) = E_{y_f} [ KL( P(H|D, y_f) || P(H|D) ) ]
         filters = ["u", "g", "r", "i", "z", "y"]
         eig_scores = {}
-        # Competing hypothesis H1 vs H2
         alt_h = next((h for h in updated_hypotheses if not h.is_leading), updated_hypotheses[1])
-        for filt in filters:
-            # Separation in predicted color: KN is red (faint in u, bright in z), SN is blue/white
-            if filt in ("z", "y"):
-                color_diff = 1.4  # mag difference between KN and SN models
-            elif filt in ("i",):
-                color_diff = 1.0
-            elif filt in ("r",):
-                color_diff = 0.5
-            else:
-                color_diff = 0.2
 
-            sigma_obs = 0.1  # typical follow-up photometric uncertainty
+        # Physical predictive distribution offsets between Kilonova (lanthanide cooling) and stripped CCSN
+        # KN predicts red/NIR flux enhancement; CCSN predicts bluer continuum
+        predictive_color_offsets = {
+            "u": 0.25,   # heavily suppressed in KN due to UV line blanketing
+            "g": 0.35,   # rapid g-band fading
+            "r": 0.60,   # moderate r-band contrast
+            "i": 1.05,   # prominent NIR transition contrast
+            "z": 1.45,   # maximal contrast: lanthanide opacity window
+            "y": 1.30,   # strong NIR excess
+        }
+
+        for filt in filters:
+            color_diff = predictive_color_offsets.get(filt, 0.5)
+            # Instrument filter throughput and photometric noise floor
+            sigma_obs = math.sqrt((0.05) ** 2 + (0.02) ** 2)  # 0.05 mag SNR + 0.02 mag calib floor
+            # KL divergence between predictive distributions: KL = (Delta mu)^2 / (2 * sigma^2)
             kl_div = (color_diff ** 2) / (2.0 * (sigma_obs ** 2))
             eig = leading_h.posterior_prob * alt_h.posterior_prob * kl_div
-            eig_scores[filt] = float(eig)
+            eig_scores[filt] = float(round(eig, 3))
 
         best_filter = max(eig_scores.items(), key=lambda x: x[1])[0]
         max_eig = eig_scores[best_filter]
@@ -342,17 +354,27 @@ class RegroundDebateProtocol:
             new_h = PhysicalHypothesis(**h.model_dump())
             if new_h.hypothesis_id == "H1_KILONOVA":
                 if has_red_detection:
-                    new_h.log_likelihood += 15.0  # Confirmed red flux
-                    new_h.falsification_criteria.append("Follow-up observation fulfilled: Red NIR excess confirmed.")
+                    new_h.log_likelihood += 14.0  # Confirmed red flux matching Villar model
+                    new_h.evaluation_status = HypothesisEvaluationStatus.STRONGER_EVIDENCE
+                    new_h.falsification_criteria.append("Follow-up observation fulfilled: Red optical-to-NIR excess confirmed.")
             elif new_h.hypothesis_id == "H2_FAST_CCSN":
                 if has_red_detection:
-                    new_h.log_likelihood -= 25.0  # SN model predicted much bluer colors
-                    new_h.is_falsified = True
-                    new_h.falsification_criteria.append("FALSIFIED: Color evolution d(g-z) > 1.5 incompatible with standard CCSN.")
+                    new_h.log_likelihood -= 24.0  # SN model predicted much bluer colors
+                    new_h.evaluation_status = HypothesisEvaluationStatus.MODEL_REJECTED_UNDER_ASSUMPTIONS
+                    new_h.is_falsified = False   # Model rejected under standard assumptions, not physically impossible
+                    new_h.falsification_criteria.append("MODEL_REJECTED: Color evolution d(g-z) > 1.5 incompatible with standard stripped CCSN diffusion assumptions.")
             elif new_h.hypothesis_id == "H3_TDE_AGN":
                 new_h.log_likelihood -= 30.0
-                new_h.is_falsified = True
-                new_h.falsification_criteria.append("FALSIFIED: Rapid lightcurve decay ruled out persistent AGN/TDE fallback.")
+                # If offset is non-nuclear (> 2 kpc), TDE is physically impossible
+                offset_kpc = triage.host_context.physical_offset_kpc or 0.0
+                if offset_kpc > 2.0:
+                    new_h.evaluation_status = HypothesisEvaluationStatus.PHYSICALLY_FALSIFIED
+                    new_h.is_falsified = True
+                    new_h.falsification_criteria.append(f"PHYSICALLY_FALSIFIED: Projected galactic offset {offset_kpc:.1f} kpc > 2.0 kpc physically rules out SMBH tidal disruption.")
+                else:
+                    new_h.evaluation_status = HypothesisEvaluationStatus.MODEL_REJECTED_UNDER_ASSUMPTIONS
+                    new_h.is_falsified = False
+                    new_h.falsification_criteria.append("MODEL_REJECTED: Fast optical decay rules out standard viscous accretion disk fallback.")
             updated_hypotheses.append(new_h)
 
         # 3. Statistical Auditor updates posteriors
@@ -409,7 +431,8 @@ class RegroundDebateProtocol:
         conclusion = (
             f"Closed-loop follow-up completed for '{event.event_id}'. "
             f"Leading hypothesis '{leading_h.name}' reinforced to posterior probability P = {leading_h.posterior_prob:.4f}. "
-            f"Competing hypotheses {', '.join(h.hypothesis_id for h in updated_hypotheses if h.is_falsified)} falsified. "
+            f"Evaluated competing hypotheses under 4-tier taxonomy: "
+            f"{[(h.hypothesis_id, h.evaluation_status.value) for h in updated_hypotheses if not h.is_leading]}. "
             f"Provenance sealed with digest {sealed_digest[:16]}..."
         )
 

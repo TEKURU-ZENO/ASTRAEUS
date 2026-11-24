@@ -19,6 +19,7 @@ class BazinFitResult(BaseModel):
     param_uncertainties: Dict[str, float] = Field(default_factory=dict)
     reduced_chi2: float = 0.0
     bic: float = 0.0
+    log_likelihood: float = -999.0
     residuals: List[float] = Field(default_factory=list)
     applicability_justification: str = ""
 
@@ -98,11 +99,17 @@ def fit_bazin(
 
         # Evaluate model fit and chi-square
         f_pred = bazin_function(times_mjd, *popt)
-        residuals = (fluxes - f_pred) / np.clip(flux_errors, 1e-4, None)
+        sigmas = np.clip(flux_errors, 1e-4, None)
+        residuals = (fluxes - f_pred) / sigmas
         chi2 = float(np.sum(residuals ** 2))
-        dof = max(n - 5, 1)
+        k_free = 5
+        dof = max(n - k_free, 1)
         chi2_red = float(chi2 / dof)
-        bic = float(chi2 + 5 * np.log(n))
+
+        # Standard Gaussian log-likelihood
+        log_like = float(-0.5 * (chi2 + np.sum(np.log(2.0 * np.pi * (sigmas ** 2)))))
+        # True BIC = k * ln(n) - 2 * ln(L)
+        bic = float(k_free * np.log(n) - 2.0 * log_like)
 
         # Check for unphysical or poor fit
         if np.any(np.isnan(perr)) or np.any(np.isinf(perr)):
@@ -118,6 +125,7 @@ def fit_bazin(
             param_uncertainties=err_dict,
             reduced_chi2=chi2_red,
             bic=bic,
+            log_likelihood=log_like,
             residuals=residuals.tolist(),
             applicability_justification="Bazin transient morphology fit converged.",
         )

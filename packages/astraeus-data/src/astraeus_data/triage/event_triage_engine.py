@@ -46,17 +46,29 @@ class AnomalyClass(str, Enum):
     UNCLASSIFIED_ANOMALY = "UNCLASSIFIED_ANOMALY"                   # High-significance unusual lightcurve
 
 
+class HostAssociationStatus(str, Enum):
+    CONFIRMED_HOST = "CONFIRMED_HOST"
+    PROBABLE_HOST = "PROBABLE_HOST"
+    AMBIGUOUS_HOST = "AMBIGUOUS_HOST"
+    UNKNOWN_HOST_DISTANCE = "UNKNOWN_HOST_DISTANCE"
+
+
 class HostGalaxyContext(BaseModel):
     """Contextual host galaxy association from NED/GLADE+."""
     matched: bool = False
+    status: HostAssociationStatus = HostAssociationStatus.UNKNOWN_HOST_DISTANCE
     galaxy_name: Optional[str] = None
     catalog_origin: Optional[str] = None
     redshift_z: Optional[float] = None
+    redshift_z_err: Optional[float] = None
+    distance_modulus_mu: Optional[float] = None
+    distance_modulus_err: Optional[float] = None
     angular_separation_arcsec: float = 999.0
     physical_offset_kpc: Optional[float] = None
     chance_coincidence_prob: float = 1.0
     stellar_mass_log_msun: Optional[float] = None
     star_formation_rate_msun_yr: Optional[float] = None
+    redshift_prior_distribution: Optional[Dict[str, Any]] = None
 
 
 class ReferenceStarContext(BaseModel):
@@ -195,23 +207,51 @@ class CatalogCrossMatcher:
                 best_match = host
 
         if best_match is None:
-            return HostGalaxyContext(matched=False, chance_coincidence_prob=1.0)
+            return HostGalaxyContext(
+                matched=False,
+                status=HostAssociationStatus.UNKNOWN_HOST_DISTANCE,
+                chance_coincidence_prob=1.0,
+                redshift_prior_distribution={
+                    "prior_type": "lognormal",
+                    "mu_ln_z": -2.5,
+                    "sigma_ln_z": 1.0,
+                    "z_nominal_range": [0.01, 1.2],
+                    "prior_description": "Hostless extragalactic prior based on deep survey luminosity function",
+                }
+            )
 
-        z = best_match["redshift_z"]
+        z = float(best_match["redshift_z"])
+        z_err = float(best_match.get("redshift_z_err", 0.0001))
         d_A_kpc = angular_diameter_distance_kpc(z)
         theta_rad = math.radians(min_sep / 3600.0)
         phys_offset_kpc = d_A_kpc * theta_rad
 
         # Sutherland & Saunders chance coincidence estimate
-        # Assuming local galaxy surface density ~ 1e-4 galaxies per sq arcsec for m < 20
         n_density = 1.0e-4
         chance_prob = 1.0 - math.exp(-math.pi * n_density * (min_sep ** 2))
 
+        # Cosmological distance modulus
+        d_L_mpc = (d_A_kpc / 1000.0) * ((1.0 + z) ** 2)
+        mu = float(5.0 * math.log10(max(d_L_mpc, 1e-4) * 1e6 / 10.0))
+        mu_err = float((5.0 / math.log(10.0)) * (z_err / max(z, 1e-4)))
+
+        # Status classification
+        if chance_prob < 0.05 and min_sep <= 20.0:
+            status = HostAssociationStatus.CONFIRMED_HOST
+        elif chance_prob < 0.20:
+            status = HostAssociationStatus.PROBABLE_HOST
+        else:
+            status = HostAssociationStatus.AMBIGUOUS_HOST
+
         return HostGalaxyContext(
             matched=True,
+            status=status,
             galaxy_name=best_match["name"],
             catalog_origin=best_match.get("catalog", "GLADE+"),
             redshift_z=z,
+            redshift_z_err=z_err,
+            distance_modulus_mu=round(mu, 3),
+            distance_modulus_err=round(mu_err, 4),
             angular_separation_arcsec=min_sep,
             physical_offset_kpc=phys_offset_kpc,
             chance_coincidence_prob=chance_prob,

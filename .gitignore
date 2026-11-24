@@ -74,6 +74,8 @@ checkpoints/
 *.sqlite3
 *.zip
 *.lock
+*.log
+data/quarantine/*.log
 
 # Node / Web UI
 node_modules/
