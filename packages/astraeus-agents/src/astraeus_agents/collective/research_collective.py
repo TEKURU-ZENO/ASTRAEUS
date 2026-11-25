@@ -148,7 +148,6 @@ class ScientificResearchCollective:
         comp_veto = False
         comp_reason = None
         # Check condition number / parameter degeneracies
-        fisher_cond = empirical_evidence.get("fisher_condition_number", 1.0)
         ill_cond_params = []
         for p_name, p_vals in hypothesis.parameters.items():
             if isinstance(p_vals, (tuple, list)) and len(p_vals) >= 3:
@@ -156,9 +155,16 @@ class ScientificResearchCollective:
                 if p_min >= p_max or not math.isfinite(p_nom):
                     ill_cond_params.append(p_name)
 
-        if ill_cond_params or fisher_cond > 1e6:
+        if "fisher_condition_number" in empirical_evidence:
+            fisher_cond = float(empirical_evidence["fisher_condition_number"])
+            if ill_cond_params or fisher_cond > 1e6:
+                comp_veto = True
+                comp_reason = f"Numerical instability: degenerate parameter bounds {ill_cond_params} or ill-conditioned Fisher matrix (cond={fisher_cond:.1e})."
+        else:
+            # Missing conditioning evidence cannot default to 1.0; fail closed as INDETERMINATE
             comp_veto = True
-            comp_reason = f"Numerical instability: degenerate parameter bounds {ill_cond_params} or ill-conditioned Fisher matrix (cond={fisher_cond:.1e})."
+            comp_reason = "INDETERMINATE_NUMERICAL_CONDITIONING: Fisher matrix condition number not provided in empirical evidence."
+            fisher_cond = float("nan")
 
         critiques.append(AgentCritique(
             agent_role=AgentRole.COMPUTATIONAL_SCIENTIST,
@@ -177,57 +183,73 @@ class ScientificResearchCollective:
         # 3. Observational Astronomer (Dr. H. Leavitt)
         # Evaluates photometric passbands, cadence coverage, and instrumental limits.
         # ----------------------------------------------------------------------
-        obs_points = empirical_evidence.get("observations", [])
-        pred_names = {p.observable_name for p in hypothesis.predictions}
+        obs_points = empirical_evidence.get("observations")
+        obs_veto = False
+        obs_reason = None
         covered_obs = 0
-        if isinstance(obs_points, list):
+
+        if obs_points is None or (isinstance(obs_points, list) and len(obs_points) == 0):
+            obs_veto = True
+            obs_reason = "INDETERMINATE_OBSERVATIONAL_DATA: No empirical photometric or spectroscopic observations provided in investigation record."
+        else:
             for obs in obs_points:
                 obs_name = obs.get("observable_name") if isinstance(obs, dict) else getattr(obs, "filter_id", "")
-                if any(p in str(obs_name) for p in ["g", "r", "i", "z", "Ks", "mag", "flux"]):
+                if any(p in str(obs_name) for p in ["g", "r", "i", "z", "Ks", "mag", "flux", "spec"]):
                     covered_obs += 1
+            if covered_obs == 0:
+                obs_veto = True
+                obs_reason = "Insufficient empirical passband coverage: zero photometric points match model observables."
 
-        is_obs_adequate = (covered_obs > 0 or len(obs_points) > 0 or len(pred_names) > 0)
         critiques.append(AgentCritique(
             agent_role=AgentRole.OBSERVATIONAL_ASTRONOMER,
             agent_name="Dr. H. Leavitt",
             assessment=(
                 f"Observational predictions align with standard telescope passbands. Ingested {covered_obs} empirical photometric points."
-                if is_obs_adequate
-                else "Insufficient empirical passband coverage to constrain model lightcurve."
+                if not obs_veto
+                else f"OBSERVATIONAL VETO: {obs_reason}"
             ),
-            confidence_score=0.92 if is_obs_adequate else 0.55,
+            confidence_score=0.92 if not obs_veto else 0.30,
+            has_blocking_veto=obs_veto,
+            veto_reason=obs_reason,
         ))
 
         # ----------------------------------------------------------------------
         # 4. Statistician (Dr. H. Jeffreys)
         # Computes actual goodness-of-fit, Delta-BIC, Bayes Factor, and posterior credible intervals.
+        # Fails closed as INDETERMINATE when statistical evidence is missing.
         # ----------------------------------------------------------------------
         stat_veto = False
         stat_reason = None
-        bf_vs_null = float(empirical_evidence.get("bayes_factor_vs_null", 15.0))
-        delta_bic = float(empirical_evidence.get("delta_bic", 7.5))
+        bf_vs_null = None
+        delta_bic = None
 
-        # Derive chi2 residuals if raw observations and predictions provided and delta_bic not explicitly set
-        if "delta_bic" not in empirical_evidence and isinstance(obs_points, list) and len(obs_points) > 0:
+        if "delta_bic" in empirical_evidence:
+            delta_bic = float(empirical_evidence["delta_bic"])
+        elif isinstance(obs_points, list) and len(obs_points) > 0:
             res_sum = 0.0
             n_pts = 0
             for obs in obs_points:
                 if isinstance(obs, dict) and "value" in obs and "uncertainty" in obs:
                     val = float(obs["value"])
                     unc = max(0.01, float(obs["uncertainty"]))
-                    # Match against prediction
                     oname = obs.get("observable_name", "")
                     matching_preds = [p for p in hypothesis.predictions if p.observable_name == oname]
                     pred_val = matching_preds[0].predicted_value if matching_preds else val
                     res_sum += ((val - pred_val) / unc) ** 2
                     n_pts += 1
             if n_pts > 0:
-                # Null model residual (assuming null is off by 3 sigma)
                 null_res = res_sum + 9.0 * n_pts
                 delta_bic = null_res - res_sum - (len(hypothesis.parameters) - 1) * math.log(max(1, n_pts))
-                bf_vs_null = math.exp(min(100.0, max(-100.0, 0.5 * delta_bic)))
 
-        if bf_vs_null < 1.0 or delta_bic < 0.0:
+        if "bayes_factor_vs_null" in empirical_evidence:
+            bf_vs_null = float(empirical_evidence["bayes_factor_vs_null"])
+        elif delta_bic is not None:
+            bf_vs_null = math.exp(min(100.0, max(-100.0, 0.5 * delta_bic)))
+
+        if bf_vs_null is None or delta_bic is None:
+            stat_veto = True
+            stat_reason = "INDETERMINATE_STATISTICAL_EVIDENCE: Neither Bayes factor vs null nor computable Delta-BIC provided in empirical record."
+        elif bf_vs_null < 1.0 or delta_bic < 0.0:
             stat_veto = True
             stat_reason = f"Statistical rejection: Bayes factor vs null ({bf_vs_null:.2f}) or Delta-BIC ({delta_bic:.1f}) indicates lack of evidentiary support."
 
@@ -247,53 +269,90 @@ class ScientificResearchCollective:
         # ----------------------------------------------------------------------
         # 5. Literature Researcher (Dr. S. Chandrasekhar)
         # Evaluates novelty, historical precedence, and bibliographic consistency.
+        # Fails closed if bibliographic registry is absent or collision detected.
         # ----------------------------------------------------------------------
-        prior_claims = empirical_evidence.get("prior_claims", [])
-        has_collision = any(hypothesis.phenomenon.lower() in str(c).lower() and "duplicate" in str(c).lower() for c in prior_claims)
+        lit_veto = False
+        lit_reason = None
+
+        if "prior_claims" not in empirical_evidence and "bibliographic_catalog" not in empirical_evidence:
+            lit_veto = True
+            lit_reason = "INDETERMINATE_BIBLIOGRAPHIC_REGISTRY: No literature registry or prior claims provided for claim-level precedent audit."
+        else:
+            prior_claims = empirical_evidence.get("prior_claims", []) or empirical_evidence.get("bibliographic_catalog", [])
+            cand_tokens = set(hypothesis.phenomenon.lower().replace("-", " ").split() +
+                              hypothesis.mathematical_formulation.lower().replace("=", " ").replace("*", " ").split())
+            for c in prior_claims:
+                c_text = str(c).lower()
+                if "duplicate" in c_text:
+                    lit_veto = True
+                    lit_reason = f"Bibliographic collision: duplicate mechanism acknowledged in prior claim '{c_text[:60]}'."
+                    break
+                c_tokens = set(c_text.replace(":", " ").replace(",", " ").replace("-", " ").split())
+                overlap = len(cand_tokens.intersection(c_tokens)) / max(1, len(cand_tokens))
+                if overlap > 0.65 and "precedent_cited" not in c_text and not any(a.startswith("Extends") or a.startswith("Refines") for a in hypothesis.assumptions):
+                    lit_veto = True
+                    lit_reason = f"Bibliographic collision: high conceptual overlap ({overlap:.0%}) with prior claim '{c_text[:50]}' without documented parameter advancement."
+                    break
+
         critiques.append(AgentCritique(
             agent_role=AgentRole.LITERATURE_RESEARCHER,
             agent_name="Dr. S. Chandrasekhar",
             assessment=(
-                f"Novelty verified against ADS bibliographic knowledge fabric. Mechanism distinct from prior cataloged claims for {hypothesis.phenomenon[:40]}."
-                if not has_collision
-                else "Bibliographic collision: identical mechanism previously cataloged without parameter advancement."
+                f"Novelty verified against bibliographic knowledge fabric. Mechanism distinct from prior cataloged claims for {hypothesis.phenomenon[:40]}."
+                if not lit_veto
+                else f"LITERATURE VETO: {lit_reason}"
             ),
-            confidence_score=0.95 if not has_collision else 0.50,
-            has_blocking_veto=has_collision,
-            veto_reason="Unacknowledged bibliographic collision" if has_collision else None,
+            confidence_score=0.95 if not lit_veto else 0.30,
+            has_blocking_veto=lit_veto,
+            veto_reason=lit_reason,
         ))
 
         # ----------------------------------------------------------------------
         # 6. Experimental Designer (Dr. R. Fisher)
         # Evaluates Expected Model Discrimination (EMD) and Value of Information (VoI).
+        # Fails closed as INDETERMINATE if discrimination cannot be derived.
         # ----------------------------------------------------------------------
-        emd_nats = empirical_evidence.get("emd_nats", 3.4)
-        alt_preds = empirical_evidence.get("alternative_predictions", {})
-        if alt_preds and hypothesis.predictions:
-            # Dynamically compute discrimination
-            diffs = []
-            for p in hypothesis.predictions:
-                if p.observable_name in alt_preds:
-                    diffs.append(abs(p.predicted_value - alt_preds[p.observable_name]) / max(0.1, p.uncertainty_range[1] - p.uncertainty_range[0]))
-            if diffs:
-                emd_nats = float(np.mean(diffs))
+        exp_veto = False
+        exp_reason = None
+        emd_nats = None
 
-        is_discriminating = emd_nats >= 1.0
+        if "emd_nats" in empirical_evidence:
+            emd_nats = float(empirical_evidence["emd_nats"])
+        else:
+            alt_preds = empirical_evidence.get("alternative_predictions", {})
+            if alt_preds and hypothesis.predictions:
+                diffs = []
+                for p in hypothesis.predictions:
+                    if p.observable_name in alt_preds:
+                        diffs.append(abs(p.predicted_value - alt_preds[p.observable_name]) / max(0.1, p.uncertainty_range[1] - p.uncertainty_range[0]))
+                if diffs:
+                    emd_nats = float(np.mean(diffs))
+
+        if emd_nats is None:
+            exp_veto = True
+            exp_reason = "INDETERMINATE_MODEL_DISCRIMINATION: Expected model discrimination (EMD) unavailable in investigation record."
+        elif emd_nats < 1.0:
+            exp_veto = True
+            exp_reason = f"Low model discrimination (EMD = {emd_nats:.2f} nats < 1.0). Observations cannot definitively separate candidate from alternatives."
+
         critiques.append(AgentCritique(
             agent_role=AgentRole.EXPERIMENTAL_DESIGNER,
             agent_name="Dr. R. Fisher",
             assessment=(
                 f"Discriminating observation achieves Expected Model Discrimination EMD = {emd_nats:.2f} nats via {hypothesis.discriminating_experiment[:50]}."
-                if is_discriminating
-                else f"Low model discrimination (EMD = {emd_nats:.2f} nats). Observations cannot definitively separate candidate from alternatives."
+                if not exp_veto
+                else f"EXPERIMENTAL DESIGN VETO: {exp_reason}"
             ),
-            confidence_score=0.91 if is_discriminating else 0.50,
+            confidence_score=0.91 if not exp_veto else 0.35,
+            has_blocking_veto=exp_veto,
+            veto_reason=exp_reason,
         ))
 
         # ----------------------------------------------------------------------
         # 7. Independent Skeptic (Dr. K. Popper)
         # Evidence-dependent adversarial critique: tests alternative explanations,
         # likelihood ratios, and falsification criteria against empirical evidence.
+        # Fails closed if alternative hypotheses are absent from record.
         # ----------------------------------------------------------------------
         skeptic_veto = False
         skeptic_reason = None
@@ -309,26 +368,32 @@ class ScientificResearchCollective:
             skeptic_remediation = "Acquire second-epoch NIR spectroscopy to test line blanketing directly."
 
         # B. Evidence-driven alternative model evaluation
-        alt_likelihoods = empirical_evidence.get("alternative_likelihoods", {})
+        alt_likelihoods = empirical_evidence.get("alternative_likelihoods")
         competing_plausible = empirical_evidence.get("competing_explanation_plausible", False)
         falsification_triggered = empirical_evidence.get("falsification_triggered", False)
 
-        if competing_plausible or falsification_triggered:
-            skeptic_veto = True
-            skeptic_reason = (
-                "CRITICAL SKEPTIC VETO: Empirical evidence triggers falsification condition or supports competing alternative mechanism with comparable likelihood."
-            )
-            skeptic_remediation = "Refine candidate hypothesis parameter bounds or acquire higher-resolution follow-up data."
-        elif alt_likelihoods:
-            for alt_name, alt_bic in alt_likelihoods.items():
-                if abs(alt_bic - delta_bic) <= 2.0:
-                    skeptic_veto = True
-                    skeptic_reason = (
-                        f"CRITICAL SKEPTIC VETO: Alternative hypothesis '{alt_name}' has comparable likelihood (Delta-BIC = {abs(alt_bic - delta_bic):.1f} <= 2.0). "
-                        "Evidence is statistically ambiguous."
-                    )
-                    skeptic_remediation = f"Execute discriminating experiment to decisively falsify {alt_name}."
-                    break
+        if not adversarial_skeptic_mode:
+            if alt_likelihoods is None and not competing_plausible and not falsification_triggered:
+                skeptic_veto = True
+                skeptic_reason = "CRITICAL SKEPTIC VETO (INDETERMINATE): Alternative hypotheses and comparative likelihoods not provided in evidence record."
+                skeptic_remediation = "Evaluate candidate model against at least one competing physical alternative (e.g. shock cooling, magnetar, or CSM interaction)."
+            elif competing_plausible or falsification_triggered:
+                skeptic_veto = True
+                skeptic_reason = (
+                    "CRITICAL SKEPTIC VETO: Empirical evidence triggers falsification condition or supports competing alternative mechanism with comparable likelihood."
+                )
+                skeptic_remediation = "Refine candidate hypothesis parameter bounds or acquire higher-resolution follow-up data."
+            elif alt_likelihoods:
+                cand_bic = delta_bic if delta_bic is not None else 0.0
+                for alt_name, alt_bic in alt_likelihoods.items():
+                    if abs(alt_bic - cand_bic) <= 2.0:
+                        skeptic_veto = True
+                        skeptic_reason = (
+                            f"CRITICAL SKEPTIC VETO: Alternative hypothesis '{alt_name}' has comparable likelihood (Delta-BIC = {abs(alt_bic - cand_bic):.1f} <= 2.0). "
+                            "Evidence is statistically ambiguous."
+                        )
+                        skeptic_remediation = f"Execute discriminating experiment to decisively falsify {alt_name}."
+                        break
 
         critiques.append(AgentCritique(
             agent_role=AgentRole.INDEPENDENT_SKEPTIC,
@@ -376,11 +441,12 @@ class ScientificResearchCollective:
         # ----------------------------------------------------------------------
         vetoing_agents = [c for c in critiques if c.has_blocking_veto]
         any_veto = len(vetoing_agents) > 0
-        verdict = (
-            "REJECTED_OR_BLOCKED_BY_PEER_REVIEW"
-            if any_veto
-            else "ENDORSED_FOR_SCIENTIFIC_PUBLICATION"
-        )
+        has_indeterminate = any("INDETERMINATE" in str(c.veto_reason) or "INDETERMINATE" in str(c.assessment) for c in critiques)
+
+        if any_veto:
+            verdict = "REJECTED_INDETERMINATE_EVIDENCE" if has_indeterminate else "REJECTED_OR_BLOCKED_BY_PEER_REVIEW"
+        else:
+            verdict = "ENDORSED_FOR_SCIENTIFIC_PUBLICATION"
         pi_assessment = (
             f"Deliberation concluded. Verdict: {verdict}. "
             f"{'Blocking veto raised by ' + str([v.agent_role.value for v in vetoing_agents]) + '. Remediation required before publication.' if any_veto else 'All 9 specialist agents in evidence-grounded consensus.'}"

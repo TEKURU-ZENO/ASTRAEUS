@@ -34,16 +34,40 @@ class ReplicationStatusOutcome(str, Enum):
     FAILED_PROVENANCE_MISMATCH = "FAILED_PROVENANCE_MISMATCH"
 
 
+class SolverConvergenceReport(BaseModel):
+    """Numerical convergence analysis of RK4 ODE solver across refined time-steps."""
+    time_steps_sec: List[float]
+    terminal_energies_erg: List[float]
+    relative_step_discrepancies: List[float]
+    is_converged: bool
+    empirical_order_of_accuracy: float
+    max_relative_discretization_error: float
+
+
+class EnergyBudgetReport(BaseModel):
+    """Energy conservation audit verifying dE_th/dt balance."""
+    total_nuclear_energy_input_erg: float
+    total_radiated_energy_erg: float
+    total_expansion_work_pdv_erg: float
+    remaining_thermal_energy_erg: float
+    relative_conservation_error: float
+    is_energy_conserved: bool
+
+
 class ReplicationAuditReport(BaseModel):
     """Formal audit report produced by the Scientific Replication Network."""
     investigation_id: str
     target_claim_id: str
     replication_status: ReplicationStatusOutcome
+    audit_category: str = "INTERNAL_DETERMINISTIC_REPLAY"
     max_relative_discrepancy: float
     discrepancy_table: Dict[str, float]
     provenance_hash_verified: bool
     is_fully_replicated: bool
     is_independent_numerical_solver: bool = False
+    is_independent_scientific_replication: bool = False
+    convergence_report: Optional[SolverConvergenceReport] = None
+    energy_budget_report: Optional[EnergyBudgetReport] = None
     auditor_signature: str
     timestamp_iso: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
 
@@ -55,6 +79,157 @@ class IndependentNumericalKilonovaSolver:
     without sharing code, approximations, or formulations with ComputationalExperimentEngine:
     dE_th/dt = Q_dot_nuc(t) - E_th/t - E_th / (t_diff + t_lc)
     """
+
+    C_LIGHT = 2.99792458e10       # cm / s
+    M_SUN = 1.98847e33            # g
+    SIGMA_SB = 5.670374e-5        # erg / (cm^2 s K^4)
+    DAY_SEC = 86400.0             # s
+
+    def run_convergence_study(
+        self,
+        ejecta_mass_msun: float = 0.04,
+        expansion_velocity_c: float = 0.18,
+        lanthanide_mass_fraction: float = 0.01,
+        time_steps_sec: Optional[List[float]] = None,
+    ) -> SolverConvergenceReport:
+        """
+        Executes a numerical convergence study across refined time-steps (e.g. 3600s, 1800s, 900s, 450s).
+        Verifies asymptotic error convergence and bounds discretization error.
+        """
+        steps = time_steps_sec or [3600.0, 1800.0, 900.0, 450.0]
+        terminal_energies: List[float] = []
+
+        m_g = ejecta_mass_msun * self.M_SUN
+        v_cm_s = expansion_velocity_c * self.C_LIGHT
+        kappa = 0.5 + 9.5 * min(1.0, max(0.0, lanthanide_mass_fraction / 0.02))
+
+        t_start = 0.05 * self.DAY_SEC
+        t_max = 3.0 * self.DAY_SEC
+
+        for dt in steps:
+            t = t_start
+            e_th = m_g * 4.0e10 * (0.05 ** -0.3) * t_start * 0.1
+
+            def q_dot_nuc(t_sec: float) -> float:
+                return m_g * 4.0e10 * ((t_sec / self.DAY_SEC) ** -1.30)
+
+            def t_diff_sec(t_sec: float) -> float:
+                r = max(1e10, v_cm_s * t_sec)
+                return (3.0 * kappa * m_g) / (4.0 * math.pi * self.C_LIGHT * r)
+
+            def deriv(t_sec: float, e_val: float) -> float:
+                p_pdv = e_val / max(1.0, t_sec)
+                t_d = t_diff_sec(t_sec)
+                t_lc = (v_cm_s * t_sec) / self.C_LIGHT
+                p_rad = e_val / max(1.0, t_d + t_lc)
+                return q_dot_nuc(t_sec) - p_pdv - p_rad
+
+            while t < t_max:
+                k1 = deriv(t, e_th)
+                k2 = deriv(t + 0.5 * dt, e_th + 0.5 * dt * k1)
+                k3 = deriv(t + 0.5 * dt, e_th + 0.5 * dt * k2)
+                k4 = deriv(t + dt, e_th + dt * k3)
+                e_th = max(0.0, e_th + (dt / 6.0) * (k1 + 2 * k2 + 2 * k3 + k4))
+                t += dt
+
+            terminal_energies.append(e_th)
+
+        # Discrepancies between successive step refinements
+        discrepancies: List[float] = []
+        for i in range(len(terminal_energies) - 1):
+            e1, e2 = terminal_energies[i], terminal_energies[i + 1]
+            discrepancies.append(abs(e1 - e2) / max(1e-10, abs(e2)))
+
+        max_discretization_err = float(discrepancies[-1]) if discrepancies else 0.0
+        # Check empirical convergence ratio: e1-e2 / e2-e3
+        if len(discrepancies) >= 2 and discrepancies[-1] > 0:
+            order_approx = math.log2(max(1.0, discrepancies[-2] / max(1e-12, discrepancies[-1])))
+        else:
+            order_approx = 4.0
+
+        is_converged = max_discretization_err < 1e-3  # strictly converged < 0.1%
+
+        return SolverConvergenceReport(
+            time_steps_sec=steps,
+            terminal_energies_erg=terminal_energies,
+            relative_step_discrepancies=[round(d, 6) for d in discrepancies],
+            is_converged=is_converged,
+            empirical_order_of_accuracy=round(order_approx, 2),
+            max_relative_discretization_error=round(max_discretization_err, 6),
+        )
+
+    def verify_energy_conservation(
+        self,
+        ejecta_mass_msun: float = 0.04,
+        expansion_velocity_c: float = 0.18,
+        lanthanide_mass_fraction: float = 0.01,
+        dt: float = 900.0,
+    ) -> EnergyBudgetReport:
+        """
+        Verifies total physical energy budget:
+        E_in = E_rad + E_pdv + E_th(t_final)
+        """
+        m_g = ejecta_mass_msun * self.M_SUN
+        v_cm_s = expansion_velocity_c * self.C_LIGHT
+        kappa = 0.5 + 9.5 * min(1.0, max(0.0, lanthanide_mass_fraction / 0.02))
+
+        t_start = 0.05 * self.DAY_SEC
+        t_max = 4.0 * self.DAY_SEC
+        t = t_start
+        e_th = m_g * 4.0e10 * (0.05 ** -0.3) * t_start * 0.1
+
+        def q_dot_nuc(t_sec: float) -> float:
+            return m_g * 4.0e10 * ((t_sec / self.DAY_SEC) ** -1.30)
+
+        def t_diff_sec(t_sec: float) -> float:
+            r = max(1e10, v_cm_s * t_sec)
+            return (3.0 * kappa * m_g) / (4.0 * math.pi * self.C_LIGHT * r)
+
+        def deriv(t_sec: float, e_val: float) -> float:
+            p_pdv = e_val / max(1.0, t_sec)
+            t_d = t_diff_sec(t_sec)
+            t_lc = (v_cm_s * t_sec) / self.C_LIGHT
+            p_rad = e_val / max(1.0, t_d + t_lc)
+            return q_dot_nuc(t_sec) - p_pdv - p_rad
+
+        tot_in = 0.0
+        tot_rad = 0.0
+        tot_pdv = 0.0
+
+        while t < t_max:
+            p_pdv0 = e_th / max(1.0, t)
+            p_rad0 = e_th / max(1.0, t_diff_sec(t) + (v_cm_s * t) / self.C_LIGHT)
+            q0 = q_dot_nuc(t)
+
+            k1 = deriv(t, e_th)
+            k2 = deriv(t + 0.5 * dt, e_th + 0.5 * dt * k1)
+            k3 = deriv(t + 0.5 * dt, e_th + 0.5 * dt * k2)
+            k4 = deriv(t + dt, e_th + dt * k3)
+            e_th_next = max(0.0, e_th + (dt / 6.0) * (k1 + 2 * k2 + 2 * k3 + k4))
+
+            p_pdv1 = e_th_next / max(1.0, t + dt)
+            p_rad1 = e_th_next / max(1.0, t_diff_sec(t + dt) + (v_cm_s * (t + dt)) / self.C_LIGHT)
+            q1 = q_dot_nuc(t + dt)
+
+            # Trapezoidal quadrature of energy flows
+            tot_in += 0.5 * (q0 + q1) * dt
+            tot_rad += 0.5 * (p_rad0 + p_rad1) * dt
+            tot_pdv += 0.5 * (p_pdv0 + p_pdv1) * dt
+
+            e_th = e_th_next
+            t += dt
+
+        rel_error = abs(tot_in - (tot_rad + tot_pdv + e_th)) / max(1.0, tot_in)
+        is_conserved = rel_error < 0.005  # within 0.5%
+
+        return EnergyBudgetReport(
+            total_nuclear_energy_input_erg=round(tot_in, 2),
+            total_radiated_energy_erg=round(tot_rad, 2),
+            total_expansion_work_pdv_erg=round(tot_pdv, 2),
+            remaining_thermal_energy_erg=round(e_th, 2),
+            relative_conservation_error=round(rel_error, 6),
+            is_energy_conserved=is_conserved,
+        )
 
     C_LIGHT = 2.99792458e10       # cm / s
     M_SUN = 1.98847e33            # g
@@ -181,15 +356,20 @@ class ScientificReplicationNetwork:
                 investigation_id=investigation_id,
                 target_claim_id=target_claim_id,
                 replication_status=ReplicationStatusOutcome.FAILED_PROVENANCE_MISMATCH,
+                audit_category="INDEPENDENT_SCIENTIFIC_REPLICATION" if use_independent_numerical_solver else "INTERNAL_DETERMINISTIC_REPLAY",
                 max_relative_discrepancy=1.0,
                 discrepancy_table={"evidence_hash": 1.0},
                 provenance_hash_verified=False,
                 is_fully_replicated=False,
                 is_independent_numerical_solver=use_independent_numerical_solver,
+                is_independent_scientific_replication=use_independent_numerical_solver,
                 auditor_signature="REPLICATION_NETWORK_VETO_PROVENANCE_MISMATCH",
             )
 
         # 2. Execution path
+        convergence_rep = None
+        energy_rep = None
+
         if use_independent_numerical_solver:
             # Independent RK4 ODE numerical integration
             replayed_map = self.independent_solver.solve_trajectory(
@@ -198,6 +378,17 @@ class ScientificReplicationNetwork:
                 lanthanide_mass_fraction=input_parameters.get("lanthanide_mass_fraction", 0.01),
                 epochs_days=[1.0, 3.0],
                 filter_wavelengths={"g": 4770.0, "Ks": 21500.0},
+            )
+            # Run convergence and energy conservation audits
+            convergence_rep = self.independent_solver.run_convergence_study(
+                ejecta_mass_msun=input_parameters.get("ejecta_mass_msun", 0.04),
+                expansion_velocity_c=input_parameters.get("expansion_velocity_c", 0.18),
+                lanthanide_mass_fraction=input_parameters.get("lanthanide_mass_fraction", 0.01),
+            )
+            energy_rep = self.independent_solver.verify_energy_conservation(
+                ejecta_mass_msun=input_parameters.get("ejecta_mass_msun", 0.04),
+                expansion_velocity_c=input_parameters.get("expansion_velocity_c", 0.18),
+                lanthanide_mass_fraction=input_parameters.get("lanthanide_mass_fraction", 0.01),
             )
             tolerance = 0.50  # 50% physical modeling agreement between distinct solvers (ODE vs analytic)
         else:
@@ -238,18 +429,22 @@ class ScientificReplicationNetwork:
         else:
             status = ReplicationStatusOutcome.FAILED_NUMERICAL_DIVERGENCE
 
-        solver_label = "INDEPENDENT_ODE" if use_independent_numerical_solver else "REPLAY"
-        audit_sig_payload = f"{investigation_id}:{target_claim_id}:{status.value}:{solver_label}:{max_rel_diff:.6f}"
+        audit_cat = "INDEPENDENT_SCIENTIFIC_REPLICATION" if use_independent_numerical_solver else "INTERNAL_DETERMINISTIC_REPLAY"
+        audit_sig_payload = f"{investigation_id}:{target_claim_id}:{status.value}:{audit_cat}:{max_rel_diff:.6f}"
         sig = hashlib.sha256(audit_sig_payload.encode()).hexdigest()
 
         return ReplicationAuditReport(
             investigation_id=investigation_id,
             target_claim_id=target_claim_id,
             replication_status=status,
+            audit_category=audit_cat,
             max_relative_discrepancy=round(max_rel_diff, 6),
             discrepancy_table=discrepancies,
             provenance_hash_verified=True,
             is_fully_replicated=is_reproduced,
             is_independent_numerical_solver=use_independent_numerical_solver,
+            is_independent_scientific_replication=use_independent_numerical_solver,
+            convergence_report=convergence_rep,
+            energy_budget_report=energy_rep,
             auditor_signature=sig,
         )

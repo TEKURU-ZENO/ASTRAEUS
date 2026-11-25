@@ -430,6 +430,9 @@ class PreRegistrationCommitment(BaseModel):
     frozen_hypothesis_hash: str
     pre_registered_predictions: List[Dict[str, Any]]
     falsification_criteria: List[str]
+    custodian_id: str = "INDEPENDENT_OBSERVATORY_CUSTODIAN"
+    custodian_signature_hex: str = ""
+    committed_at_epoch_sec: float = Field(default_factory=lambda: datetime.now(timezone.utc).timestamp())
     committed_at_iso: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
 
 
@@ -439,106 +442,239 @@ class PreRegisteredDiscoveryAudit(BaseModel):
     commitment_id: str
     commitment_sha256: str
     unblinded_evidence_sha256: str
+    custodian_signature_verified: bool
     was_committed_before_unblinding: bool
     predictions_within_95_ci: int
     total_predictions_evaluated: int
     coverage_fraction: float
     falsification_triggered: bool
+    falsification_reasons: List[str] = Field(default_factory=list)
     discovery_outcome: str
     adjudication_passed: bool
+    audit_notes: List[str] = Field(default_factory=list)
     timestamp_iso: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
 
 
 class PreRegisteredBlindDiscoveryProtocol:
     """
     Implements the scientific standard for autonomous discovery validation:
-    1. Pre-registration: Freezes model and hypothesis predictions, creating an immutable cryptographic digest.
-    2. Withheld Ingestion: Unblinds withheld observational data strictly after pre-registration commitment.
-    3. Adversarial Adjudication: Verifies predictions against withheld evidence and checks falsification criteria.
+    1. Pre-registration: Freezes model and hypothesis predictions, creating an immutable cryptographic digest
+       signed by an independent observatory custodian prior to data access.
+    2. Withheld Ingestion: Unblinds withheld observational data strictly after verifiable pre-registration.
+    3. Adversarial Adjudication: Verifies strict epoch/passband matching, evaluates stored falsification criteria,
+       enforces sample size minimums, and certifies true blind predictive discovery.
     """
 
-    def __init__(self) -> None:
-        pass
+    def __init__(self, custodian_secret_key: Optional[bytes] = None) -> None:
+        import secrets
+        self.custodian_key = custodian_secret_key or secrets.token_bytes(32)
+        self._commitments_ledger: Dict[str, PreRegistrationCommitment] = {}
+
+    def _sign_commitment(self, commitment_id: str, target_id: str, hypothesis_hash: str, committed_at_iso: str) -> str:
+        import hmac, hashlib
+        payload = f"{commitment_id}:{target_id}:{hypothesis_hash}:{committed_at_iso}".encode("utf-8")
+        return hmac.new(self.custodian_key, payload, hashlib.sha256).hexdigest()
 
     def create_pre_registration_commitment(
         self,
         target_id: str,
         hypothesis: StructuredHypothesis,
     ) -> PreRegistrationCommitment:
-        """Freezes hypothesis predictions prior to unblinding withheld data."""
+        """Freezes hypothesis predictions and signs with independent custodian key prior to unblinding."""
+        now_dt = datetime.now(timezone.utc)
+        iso_str = now_dt.isoformat()
+        epoch_sec = now_dt.timestamp()
+
         preds = [
             {
                 "observable_name": p.observable_name,
+                "filter_id": p.observable_name.split("_")[-1] if "_" in p.observable_name else p.observable_name,
                 "predicted_value": p.predicted_value,
                 "uncertainty_range": list(p.uncertainty_range),
                 "epoch_days": p.epoch_days_from_trigger,
             }
             for p in hypothesis.predictions
         ]
-        return PreRegistrationCommitment(
-            commitment_id=f"commit_{target_id}_{hypothesis.hypothesis_id}",
+        cid = f"commit_{target_id}_{hypothesis.hypothesis_id}"
+        h_hash = hypothesis.compute_hash()
+        sig = self._sign_commitment(cid, target_id, h_hash, iso_str)
+
+        commitment = PreRegistrationCommitment(
+            commitment_id=cid,
             target_id=target_id,
-            frozen_hypothesis_hash=hypothesis.compute_hash(),
+            frozen_hypothesis_hash=h_hash,
             pre_registered_predictions=preds,
             falsification_criteria=list(hypothesis.falsification_conditions),
+            custodian_id="INDEPENDENT_OBSERVATORY_CUSTODIAN",
+            custodian_signature_hex=sig,
+            committed_at_epoch_sec=epoch_sec,
+            committed_at_iso=iso_str,
         )
+        self._commitments_ledger[cid] = commitment
+        return commitment
 
     def adjudicate_withheld_discovery(
         self,
         commitment: PreRegistrationCommitment,
         withheld_observations: List[LightCurvePoint],
+        unblinded_timestamp_sec: Optional[float] = None,
+        min_observations_required: int = 5,
+        epoch_tolerance_days: float = 0.35,
+        trigger_mjd: Optional[float] = None,
     ) -> PreRegisteredDiscoveryAudit:
         """
         Adjudicates pre-registered predictions against genuinely withheld observational data.
+        Enforces cryptographic custodian verification, prospective time-ordering, strict passband
+        and epoch alignment, formal falsification evaluation, and sample size constraints.
         """
-        # Canonicalize withheld observations
+        import json, hashlib, hmac
+
+        notes: List[str] = []
+        falsification_reasons: List[str] = []
+
+        # 1. Verify Custodian Cryptographic Signature
+        expected_sig = self._sign_commitment(
+            commitment.commitment_id,
+            commitment.target_id,
+            commitment.frozen_hypothesis_hash,
+            commitment.committed_at_iso,
+        )
+        sig_verified = hmac.compare_digest(expected_sig, commitment.custodian_signature_hex)
+        if not sig_verified:
+            notes.append("Custodian signature verification failed; commitment payload tampered or unauthorized.")
+
+        # 2. Verify Prospective Time-Ordering (Committed before unblinded)
+        current_time_sec = unblinded_timestamp_sec or (datetime.now(timezone.utc).timestamp() + 0.001)
+        committed_before_unblinded = (commitment.committed_at_epoch_sec < current_time_sec)
+        if not committed_before_unblinded:
+            notes.append(
+                f"Prospective integrity breach: committed_at ({commitment.committed_at_epoch_sec}) "
+                f">= unblinded_at ({current_time_sec})."
+            )
+
+        # 3. Canonicalize withheld observations
         obs_payload = [
             {"mjd": o.mjd, "filter": o.filter_id, "mag": o.magnitude, "unc": o.uncertainty_mag}
             for o in withheld_observations
         ]
-        import json, hashlib
         unblinded_hash = hashlib.sha256(
             json.dumps(obs_payload, sort_keys=True, separators=(",", ":")).encode("utf-8")
         ).hexdigest()
 
-        # Evaluate prediction recovery against withheld data
+        # 4. Strict Passband and Epoch Observation Matching
         within_ci = 0
         total_eval = 0
-        min_mjd = min(o.mjd for o in withheld_observations) if withheld_observations else 0.0
+
+        min_obs_mjd = min(o.mjd for o in withheld_observations) if withheld_observations else 0.0
+        min_pred_epoch = (
+            min(p.get("epoch_days", 0.0) for p in commitment.pre_registered_predictions)
+            if commitment.pre_registered_predictions
+            else 0.0
+        )
+        t0_mjd = trigger_mjd if trigger_mjd is not None else (min_obs_mjd - min_pred_epoch)
 
         for pred in commitment.pre_registered_predictions:
             p_val = pred["predicted_value"]
             ci_min, ci_max = pred["uncertainty_range"]
             pred_epoch = pred.get("epoch_days", 0.0)
+            target_flt = pred.get("filter_id", "")
 
-            # Match observation by filter and closest epoch
-            matching = [o for o in withheld_observations if o.filter_id in pred["observable_name"]]
+            # Exact filter match
+            matching = [
+                o for o in withheld_observations
+                if o.filter_id.lower() == target_flt.lower() or target_flt.lower() in o.filter_id.lower()
+            ]
             if matching:
-                best_obs = min(matching, key=lambda o: abs((o.mjd - min_mjd) - pred_epoch))
-                total_eval += 1
-                obs_mag = best_obs.magnitude
-                if ci_min <= obs_mag <= ci_max:
-                    within_ci += 1
+                # Find observation closest to predicted epoch within strict tolerance
+                best_obs = min(matching, key=lambda o: abs((o.mjd - t0_mjd) - pred_epoch))
+                epoch_diff = abs((best_obs.mjd - t0_mjd) - pred_epoch)
+                if epoch_diff <= epoch_tolerance_days:
+                    total_eval += 1
+                    obs_mag = best_obs.magnitude
+                    if ci_min <= obs_mag <= ci_max:
+                        within_ci += 1
 
-        coverage = within_ci / max(1, total_eval) if total_eval > 0 else 1.0
-        passed = (coverage >= 0.80) and (total_eval > 0)
+        coverage = (within_ci / total_eval) if total_eval > 0 else 0.0
 
-        outcome = (
-            "VALIDATED_PREDICTIVE_DISCOVERY"
-            if passed
-            else "FALSIFIED_OR_MISCALIBRATED_PREDICTION"
-        )
+        # 5. Evaluate Stored Falsification Criteria against Unblinded Observations
+        if withheld_observations and len(withheld_observations) >= 2:
+            sorted_obs = sorted(withheld_observations, key=lambda o: o.mjd)
+            t_span = max(0.1, sorted_obs[-1].mjd - sorted_obs[0].mjd)
+            mag_diff = sorted_obs[-1].magnitude - sorted_obs[0].magnitude
+            decay_rate_mag_day = mag_diff / t_span
+
+            # Calculate color if multiple filters available
+            g_obs = [o for o in withheld_observations if o.filter_id.lower() == "g"]
+            r_obs = [o for o in withheld_observations if o.filter_id.lower() in ["r", "ks", "i"]]
+
+            for criterion in commitment.falsification_criteria:
+                crit_lower = criterion.lower()
+                # Condition: Fast decay rate limit
+                if "decay" in crit_lower and (">" in crit_lower or "exceed" in crit_lower or "rate" in crit_lower):
+                    import re
+                    match = re.search(r"(\d+(?:\.\d+)?)", crit_lower)
+                    limit = float(match.group(1)) if match else 3.0
+                    if decay_rate_mag_day > limit:
+                        falsification_reasons.append(
+                            f"Decay rate ({decay_rate_mag_day:.2f} mag/day) exceeded falsification threshold ({limit:.2f} mag/day)."
+                        )
+                # Condition: Color evolution / blue persistence
+                elif "blue" in crit_lower and ("persistent" in crit_lower or "t >" in crit_lower or "t>" in crit_lower or "late" in crit_lower):
+                    if g_obs and r_obs and (sorted_obs[-1].mjd - min_obs_mjd) > 2.0:
+                        late_g = g_obs[-1].magnitude
+                        late_r = r_obs[-1].magnitude
+                        late_color = late_g - late_r
+                        if late_color < 0.20:  # persistent blue color
+                            falsification_reasons.append(
+                                f"Persistent blue emission detected at late epoch: g-r = {late_color:.2f} < 0.20."
+                            )
+                # Condition: Peak luminosity / magnitude ceiling
+                elif "peak" in crit_lower and ("<" in crit_lower or "brighter" in crit_lower or "exceed" in crit_lower):
+                    min_mag = min(o.magnitude for o in withheld_observations)
+                    if min_mag < 15.0:
+                        falsification_reasons.append(
+                            f"Peak apparent brightness ({min_mag:.2f} mag) breached physical parameter ceiling."
+                        )
+
+        falsification_triggered = len(falsification_reasons) > 0
+
+        # 6. Sample Size and Certification Thresholds
+        has_sufficient_sample = (total_eval >= min_observations_required)
+        coverage_passed = (coverage >= 0.80)
+
+        if not sig_verified:
+            outcome = "REJECTED_UNAUTHORIZED_COMMITMENT"
+            passed = False
+        elif not committed_before_unblinded:
+            outcome = "REJECTED_PROSPECTIVE_TIMING_BREACH"
+            passed = False
+        elif falsification_triggered:
+            outcome = "FALSIFIED_BY_EMPIRICAL_CRITERIA"
+            passed = False
+        elif not has_sufficient_sample:
+            outcome = "INSUFFICIENT_OBSERVATIONAL_SUPPORT"
+            passed = False
+            notes.append(f"Evaluated {total_eval} predictions; minimum required is {min_observations_required}.")
+        elif not coverage_passed:
+            outcome = "FALSIFIED_OR_MISCALIBRATED_PREDICTION"
+            passed = False
+        else:
+            outcome = "VALIDATED_PREDICTIVE_DISCOVERY"
+            passed = True
 
         return PreRegisteredDiscoveryAudit(
             target_id=commitment.target_id,
             commitment_id=commitment.commitment_id,
             commitment_sha256=commitment.frozen_hypothesis_hash,
             unblinded_evidence_sha256=unblinded_hash,
-            was_committed_before_unblinding=True,
+            custodian_signature_verified=sig_verified,
+            was_committed_before_unblinding=committed_before_unblinded,
             predictions_within_95_ci=within_ci,
             total_predictions_evaluated=total_eval,
             coverage_fraction=round(coverage, 3),
-            falsification_triggered=not passed,
+            falsification_triggered=falsification_triggered,
+            falsification_reasons=falsification_reasons,
             discovery_outcome=outcome,
             adjudication_passed=passed,
+            audit_notes=notes,
         )

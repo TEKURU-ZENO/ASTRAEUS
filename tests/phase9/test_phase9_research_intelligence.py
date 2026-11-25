@@ -200,9 +200,15 @@ def test_ws9_4_offline_meta_learning_and_regression_detection():
         version="1.0.0",
         hyperparameters={"search_tree_depth": 2, "pruning_factor": 0.8},
         status=MethodVersionStatus.PROMOTED_OPERATIONAL,
-        historical_benchmark_scores={"task_kilonova_cadence": 82.5, "task_supernova_triage": 88.0},
+        historical_benchmark_scores={"task_kilonova_cadence": 86.6, "task_supernova_triage": 86.6},
     )
     optimizer.register_operational_method(base_config)
+
+    # Real evaluation callable executing algorithmic objective
+    def scheduler_benchmark_evaluator(hyperparams):
+        depth = hyperparams.get("search_tree_depth", 2)
+        pruning = hyperparams.get("pruning_factor", 0.8)
+        return 75.0 + depth * 5.0 + pruning * 2.0
 
     # Candidate 1: Improved depth 3 (positive improvement)
     cand_good = ScientificMethodConfig(
@@ -213,8 +219,8 @@ def test_ws9_4_offline_meta_learning_and_regression_detection():
         parent_version="1.0.0",
     )
     tasks = [
-        {"task_id": "task_kilonova_cadence", "difficulty_factor": 1.0},
-        {"task_id": "task_supernova_triage", "difficulty_factor": 1.0},
+        {"task_id": "task_kilonova_cadence", "evaluator": scheduler_benchmark_evaluator},
+        {"task_id": "task_supernova_triage", "evaluator": scheduler_benchmark_evaluator},
     ]
     promoted, msg, scores = optimizer.evaluate_candidate_improvement(cand_good, tasks)
     assert promoted
@@ -266,11 +272,21 @@ def test_ws9_5_multi_agent_research_collective_and_skeptic_veto():
         discriminating_experiment="NIR spectroscopy",
     )
 
-    # 1. Consensus deliberation: All 9 agents endorse
+    # 1. Consensus deliberation with full valid empirical evidence: All 9 agents endorse
+    valid_evidence = {
+        "gw_strain_snr": 32.0,
+        "observations": [{"observable_name": "optical_mag_g", "value": 19.5, "uncertainty": 0.1}],
+        "bayes_factor_vs_null": 25.0,
+        "delta_bic": 10.0,
+        "emd_nats": 2.5,
+        "fisher_condition_number": 12.0,
+        "prior_claims": ["claim_reference_prior_distinct_1"],
+        "alternative_likelihoods": {"hyp_alternative_supernova": 1.5},
+    }
     res_consensus = collective.conduct_deliberation(
         investigation_id="inv_collective_001",
         hypothesis=hyp,
-        empirical_evidence={"gw_strain_snr": 32.0},
+        empirical_evidence=valid_evidence,
         adversarial_skeptic_mode=False,
     )
     assert res_consensus.is_consensus_reached
@@ -282,7 +298,7 @@ def test_ws9_5_multi_agent_research_collective_and_skeptic_veto():
     res_veto = collective.conduct_deliberation(
         investigation_id="inv_collective_002",
         hypothesis=hyp,
-        empirical_evidence={"gw_strain_snr": 32.0},
+        empirical_evidence=valid_evidence,
         adversarial_skeptic_mode=True,
     )
     assert not res_consensus.is_vetoed_by_skeptic
@@ -290,6 +306,16 @@ def test_ws9_5_multi_agent_research_collective_and_skeptic_veto():
     assert not res_veto.is_consensus_reached
     assert res_veto.final_verdict == "REJECTED_OR_BLOCKED_BY_PEER_REVIEW"
     assert "CRITICAL SKEPTIC VETO" in res_veto.veto_details
+
+    # 3. Missing evidence fails closed as INDETERMINATE
+    res_indeterminate = collective.conduct_deliberation(
+        investigation_id="inv_collective_003",
+        hypothesis=hyp,
+        empirical_evidence={},
+        adversarial_skeptic_mode=False,
+    )
+    assert not res_indeterminate.is_consensus_reached
+    assert res_indeterminate.final_verdict == "REJECTED_INDETERMINATE_EVIDENCE"
 
 
 # ==============================================================================

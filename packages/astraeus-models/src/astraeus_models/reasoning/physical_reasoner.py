@@ -104,6 +104,55 @@ class PhysicalReasoningEngine:
         else:
             return False, f"Dimensional mismatch: LHS {lhs_dim} != RHS {tuple(rhs_dim)}."
 
+    def derive_csm_shock_luminosity(
+        self,
+        ambient_density_rho0_g_cm3: float,
+        shock_velocity_cm_s: float,
+        epoch_sec: float,
+        diffusion_time_sec: float,
+    ) -> Dict[str, Any]:
+        """
+        Rigorous physical derivation of circumstellar interaction shock luminosity (e.g. SN2006gy):
+        1. Shock radius expansion: R_shock(t) = v_shock * t [cm]
+        2. Circumstellar swept mass rate:
+           dM_swept/dt = 4 * pi * R_shock(t)^2 * rho_0 * v_shock
+                       = 4 * pi * rho_0 * v_shock^3 * t^2 [g/s]
+        3. Kinetic energy dissipation rate from forward shock:
+           L_kin(t) = 0.5 * (dM_swept/dt) * v_shock^2
+                    = 2 * pi * rho_0 * v_shock^5 * t^2 [erg/s]
+        4. Optical diffusion delay through circumstellar envelope:
+           L_rad(t) = L_kin(t) / (1 + t / t_diff)
+                    = [2 * pi * rho_0 * v_shock^5 * t^2] / [1 + t / t_diff] [erg/s]
+
+        Dimensional verification:
+        [rho_0] * [v_shock]^5 * [t]^2 = [M L^-3] * [L^5 T^-5] * [T^2] = [M L^2 T^-3] = [erg/s].
+        """
+        t = max(1.0, epoch_sec)
+        t_diff = max(1.0, diffusion_time_sec)
+        v = shock_velocity_cm_s
+        rho0 = ambient_density_rho0_g_cm3
+
+        r_shock = v * t
+        dmdt = 4.0 * math.pi * rho0 * (v**3) * (t**2)
+        l_kin = 0.5 * dmdt * (v**2)
+        l_rad = l_kin / (1.0 + t / t_diff)
+
+        # Dimensional check
+        dim_ok, dim_msg = self.verify_dimensional_consistency(
+            lhs_unit="erg/s",
+            rhs_unit_terms=[("g/cm^3", 1), ("cm/s", 5), ("s", 2)],
+        )
+
+        return {
+            "epoch_sec": t,
+            "shock_radius_cm": r_shock,
+            "swept_mass_rate_g_s": dmdt,
+            "kinetic_dissipation_rate_erg_s": l_kin,
+            "diffused_bolometric_luminosity_erg_s": l_rad,
+            "is_dimensionally_sound": dim_ok,
+            "dimensional_verification_message": dim_msg,
+        }
+
     def verify_conservation_laws(
         self,
         total_radiated_energy_erg: float,

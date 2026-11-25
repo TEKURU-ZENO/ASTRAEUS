@@ -225,6 +225,8 @@ def test_ws9_9_evidence_driven_multi_agent_research_collective():
         "bayes_factor_vs_null": 45.0,
         "delta_bic": 12.5,
         "emd_nats": 3.2,
+        "fisher_condition_number": 8.5,
+        "prior_claims": ["claim_reference_prior_non_collision"],
         "alternative_likelihoods": {"hyp_competing_magnetar_v1": 2.1},  # candidate delta-bic 12.5 >> 2.1
     }
 
@@ -243,6 +245,9 @@ def test_ws9_9_evidence_driven_multi_agent_research_collective():
         "observations": [{"observable_name": "optical_mag_g", "value": 20.25, "uncertainty": 0.08}],
         "bayes_factor_vs_null": 15.0,
         "delta_bic": 7.0,
+        "emd_nats": 2.8,
+        "fisher_condition_number": 8.5,
+        "prior_claims": ["claim_reference_prior_non_collision"],
         "alternative_likelihoods": {"hyp_competing_magnetar_v1": 6.5},  # |7.0 - 6.5| = 0.5 <= 2.0!
     }
 
@@ -441,7 +446,11 @@ def test_ws9_9_offline_method_optimization_real_task_execution():
 
     tasks = [
         {"task_id": "task_kilonova_planning", "evaluator": real_task_evaluator},
-        {"task_id": "task_supernova_planning", "historical_episodes": [{"weight": 1.2}, {"weight": 0.9}]},
+        {
+            "task_id": "task_supernova_planning",
+            "historical_episodes": [{"weight": 1.2}, {"weight": 0.9}],
+            "episode_evaluator": lambda hp, ep: 81.0 + ep.get("weight", 1.0) * 0.5,
+        },
     ]
 
     candidate_improved = ScientificMethodConfig(
@@ -486,14 +495,35 @@ def test_ws9_9_withheld_discovery_pre_registration_protocol():
             ),
             HypothesisPrediction(
                 observable_name="optical_mag_g",
-                predicted_value=20.2,
-                uncertainty_range=(19.8, 20.6),
+                predicted_value=19.2,
+                uncertainty_range=(18.8, 19.6),
+                epoch_days_from_trigger=1.0,
+                measurement_condition="g-band filter",
+            ),
+            HypothesisPrediction(
+                observable_name="optical_mag_g",
+                predicted_value=20.5,
+                uncertainty_range=(20.0, 21.0),
                 epoch_days_from_trigger=2.0,
                 measurement_condition="g-band filter",
             ),
+            HypothesisPrediction(
+                observable_name="optical_mag_r",
+                predicted_value=18.0,
+                uncertainty_range=(17.5, 18.5),
+                epoch_days_from_trigger=1.0,
+                measurement_condition="r-band filter",
+            ),
+            HypothesisPrediction(
+                observable_name="optical_mag_r",
+                predicted_value=19.1,
+                uncertainty_range=(18.6, 19.6),
+                epoch_days_from_trigger=2.0,
+                measurement_condition="r-band filter",
+            ),
         ],
         alternatives=["hyp_csm_v1"],
-        falsification_conditions=["No reddening after 48h"],
+        falsification_conditions=["Decay rate exceeds 3.0 mag per day"],
         discriminating_experiment="NIR Ks imaging",
     )
 
@@ -504,19 +534,39 @@ def test_ws9_9_withheld_discovery_pre_registration_protocol():
     )
     assert commitment.commitment_id.startswith("commit_AT2017gfo")
     assert commitment.frozen_hypothesis_hash != ""
+    assert commitment.custodian_signature_hex != ""
 
-    # 2. Unblind withheld test observations
+    # 2. Unblind withheld test observations (5 distinct epochs/passbands)
     withheld_obs = [
         LightCurvePoint(mjd=57982.5, filter_id="g", magnitude=17.48, uncertainty_mag=0.08, facility_id="SWOPE", instrument_id="CAM"),
-        LightCurvePoint(mjd=57984.0, filter_id="g", magnitude=20.22, uncertainty_mag=0.10, facility_id="SWOPE", instrument_id="CAM"),
+        LightCurvePoint(mjd=57983.0, filter_id="g", magnitude=19.18, uncertainty_mag=0.09, facility_id="SWOPE", instrument_id="CAM"),
+        LightCurvePoint(mjd=57984.0, filter_id="g", magnitude=20.45, uncertainty_mag=0.10, facility_id="SWOPE", instrument_id="CAM"),
+        LightCurvePoint(mjd=57983.0, filter_id="r", magnitude=18.05, uncertainty_mag=0.07, facility_id="SWOPE", instrument_id="CAM"),
+        LightCurvePoint(mjd=57984.0, filter_id="r", magnitude=19.08, uncertainty_mag=0.08, facility_id="SWOPE", instrument_id="CAM"),
     ]
 
-    # 3. Adjudicate
+    # 3. Adjudicate certified discovery
     audit = protocol.adjudicate_withheld_discovery(
         commitment=commitment,
         withheld_observations=withheld_obs,
+        min_observations_required=5,
     )
+    assert audit.custodian_signature_verified is True
     assert audit.was_committed_before_unblinding is True
+    assert audit.total_predictions_evaluated == 5
+    assert audit.predictions_within_95_ci == 5
     assert audit.coverage_fraction == 1.0
+    assert audit.falsification_triggered is False
     assert audit.adjudication_passed is True
     assert audit.discovery_outcome == "VALIDATED_PREDICTIVE_DISCOVERY"
+
+    # 4. Adversarial Check: Tampered custodian signature fails adjudication
+    tampered_commit = commitment.model_copy(deep=True)
+    tampered_commit.custodian_signature_hex = "00" * 32
+    audit_tampered = protocol.adjudicate_withheld_discovery(
+        commitment=tampered_commit,
+        withheld_observations=withheld_obs,
+    )
+    assert audit_tampered.custodian_signature_verified is False
+    assert audit_tampered.adjudication_passed is False
+    assert audit_tampered.discovery_outcome == "REJECTED_UNAUTHORIZED_COMMITMENT"

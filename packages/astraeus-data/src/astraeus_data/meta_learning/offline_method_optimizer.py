@@ -114,26 +114,26 @@ class OfflineMethodOptimizer:
             # Execute real task evaluator if provided
             if "evaluator" in task and callable(task["evaluator"]):
                 cand_score = float(task["evaluator"](candidate.hyperparameters))
-            elif "historical_episodes" in task:
-                # Retrospective evaluation across historical episodes
+            elif "historical_episodes" in task and "episode_evaluator" in task and callable(task["episode_evaluator"]):
+                # Retrospective evaluation executing callable across historical episodes
                 episodes = task["historical_episodes"]
-                scores = []
-                for ep in episodes:
-                    # Evaluate objective on episode
-                    alpha = candidate.hyperparameters.get("search_tree_depth", 2)
-                    ep_weight = ep.get("weight", 1.0)
-                    scores.append(80.0 + (alpha - 2) * 2.0 * ep_weight)
+                scores = [float(task["episode_evaluator"](candidate.hyperparameters, ep)) for ep in episodes]
                 cand_score = float(sum(scores) / max(1, len(scores)))
+            elif "historical_episodes" in task and "evaluator" in task and callable(task["evaluator"]):
+                cand_score = float(task["evaluator"](candidate.hyperparameters))
             else:
-                # Parametric fallback for legacy tests
-                alpha = candidate.hyperparameters.get("search_tree_depth", 2)
-                noise_factor = task.get("difficulty_factor", 1.0)
-                cand_score = base_score + (alpha - 2) * 2.5 - (noise_factor * 0.1)
+                # Synthetic scoring fallback is strictly prohibited in scientific optimization
+                has_regression = True
+                regression_notes.append(
+                    f"Task {tid}: missing executable evaluator callable. "
+                    "Synthetic scoring arithmetic is strictly prohibited in scientific method optimization."
+                )
+                cand_score = 0.0
 
             candidate_scores[tid] = round(cand_score, 2)
 
             # Check regression
-            if baseline and tid in baseline.historical_benchmark_scores:
+            if baseline and tid in baseline.historical_benchmark_scores and cand_score > 0.0:
                 b_score = baseline.historical_benchmark_scores[tid]
                 drop_pct = ((b_score - cand_score) / b_score) * 100.0
                 if drop_pct > max_allowable_regression_pct:
