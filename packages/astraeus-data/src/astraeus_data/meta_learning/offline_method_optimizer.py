@@ -49,16 +49,27 @@ class ScientificMethodConfig(BaseModel):
     regression_detected: bool = False
     parent_version: Optional[str] = None
     historical_benchmark_scores: Dict[str, float] = Field(default_factory=dict)
+    baseline_provenance_hash: Optional[str] = None
+    evaluator_identity: Optional[str] = None
+    evaluator_version: Optional[str] = None
     sha256_hash: str = Field(default="")
     created_at_iso: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
 
     def compute_hash(self) -> str:
-        content = f"{self.method_id}:{self.version}:{sorted(self.hyperparameters.items())}:{self.parent_version}"
+        content = f"{self.method_id}:{self.version}:{sorted(self.hyperparameters.items())}:{self.parent_version}:{self.evaluator_identity}:{self.evaluator_version}"
+        return hashlib.sha256(content.encode("utf-8")).hexdigest()
+
+    def compute_baseline_provenance_hash(self) -> str:
+        import json
+        scores_payload = json.dumps(self.historical_benchmark_scores, sort_keys=True)
+        content = f"{self.method_id}:{self.version}:{scores_payload}:{self.evaluator_identity}"
         return hashlib.sha256(content.encode("utf-8")).hexdigest()
 
     def model_post_init(self, __context: Any) -> None:
         if not self.sha256_hash:
             self.sha256_hash = self.compute_hash()
+        if not self.baseline_provenance_hash and self.historical_benchmark_scores:
+            self.baseline_provenance_hash = self.compute_baseline_provenance_hash()
 
 
 class OfflineMethodOptimizer:
@@ -82,8 +93,10 @@ class OfflineMethodOptimizer:
             )
 
     def register_operational_method(self, method: ScientificMethodConfig) -> None:
-        """Registers the baseline operational method."""
+        """Registers the baseline operational method with cryptographic score provenance."""
         method.status = MethodVersionStatus.PROMOTED_OPERATIONAL
+        if not method.baseline_provenance_hash and method.historical_benchmark_scores:
+            method.baseline_provenance_hash = method.compute_baseline_provenance_hash()
         self._operational_methods[method.method_id] = method
 
     def get_operational_method(self, method_id: str) -> Optional[ScientificMethodConfig]:
@@ -95,10 +108,12 @@ class OfflineMethodOptimizer:
         candidate: ScientificMethodConfig,
         benchmark_tasks: List[Dict[str, Any]],
         max_allowable_regression_pct: float = 0.50,
+        verify_evaluator_identity: bool = True,
     ) -> Tuple[bool, str, Dict[str, float]]:
         """
         Evaluates a candidate method against historical tasks.
         Ensures zero regression (> 0.5% degradation on any historical task blocks promotion).
+        Verifies baseline score provenance and evaluator identity consistency.
         """
         self.assert_offline_gate()
 
@@ -107,7 +122,26 @@ class OfflineMethodOptimizer:
         has_regression = False
         regression_notes = []
 
+        # 1. Verify baseline provenance integrity
+        if baseline and baseline.historical_benchmark_scores:
+            expected_prov = baseline.compute_baseline_provenance_hash()
+            if baseline.baseline_provenance_hash and baseline.baseline_provenance_hash != expected_prov:
+                has_regression = True
+                regression_notes.append("Baseline provenance breach: stored baseline scores tampered or corrupted.")
+
         for task in benchmark_tasks:
+            tid = task["task_id"]
+            base_score = baseline.historical_benchmark_scores.get(tid, 80.0) if baseline else 80.0
+
+            # 2. Verify evaluator identity consistency
+            task_eval_id = task.get("evaluator_identity")
+            if verify_evaluator_identity and task_eval_id and baseline and baseline.evaluator_identity:
+                if task_eval_id != baseline.evaluator_identity:
+                    has_regression = True
+                    regression_notes.append(
+                        f"Task {tid}: Evaluator mismatch ({task_eval_id} vs baseline {baseline.evaluator_identity}). "
+                        "Regression gate strictly prohibits comparing scores across differently evaluated baselines."
+                    )
             tid = task["task_id"]
             base_score = baseline.historical_benchmark_scores.get(tid, 80.0) if baseline else 80.0
 

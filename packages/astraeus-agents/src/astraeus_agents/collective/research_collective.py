@@ -83,6 +83,21 @@ class ScientificResearchCollective:
         self.pi_name = pi_name
         self.physical_reasoner = PhysicalReasoningEngine()
 
+    def deliberate(
+        self,
+        hypothesis: StructuredHypothesis,
+        empirical_evidence: Optional[Dict[str, Any]] = None,
+        investigation_id: str = "INV_DELIBERATION_2026",
+        adversarial_skeptic_mode: bool = False,
+    ) -> CollectiveDeliberationResult:
+        """Convenience method for hypothesis deliberation."""
+        return self.conduct_deliberation(
+            investigation_id=investigation_id,
+            hypothesis=hypothesis,
+            empirical_evidence=empirical_evidence or {},
+            adversarial_skeptic_mode=adversarial_skeptic_mode,
+        )
+
     def conduct_deliberation(
         self,
         investigation_id: str,
@@ -120,12 +135,31 @@ class ScientificResearchCollective:
                     theorist_veto = True
                     theorist_reason = f"Relativistic violation: parameter '{p_name}' nominal velocity ({nominal_v:.2f} c) is superluminal or negative."
 
-        # Check dimensional consistency of governing formulation
+        # Check dimensional consistency of governing formulation using AST symbolic inspection
         formulation = hypothesis.mathematical_formulation
-        if "L_shock" in formulation and "v_shock^3" in formulation and "rho_0" in formulation:
-            theorist_veto = True
-            theorist_reason = "Dimensional mismatch in shock formulation: rho_0 * v_shock^3 * t^2 has dimensions [M T^-1], not luminosity [M L^2 T^-3]."
-            theorist_remediation = "Include shock expansion area factor (v_shock^5 * t^2) to yield dimensionally sound luminosity [erg/s]."
+        import ast
+        try:
+            norm_expr = formulation.replace("^", "**").replace("=", "==")
+            # Inspect right-hand side of formula if assignment
+            rhs = norm_expr.split("==")[-1] if "==" in norm_expr else norm_expr
+            tree = ast.parse(rhs.strip(), mode="eval")
+            for node in ast.walk(tree):
+                if isinstance(node, ast.BinOp) and isinstance(node.op, ast.Pow):
+                    if isinstance(node.left, ast.Name) and "v" in node.left.id.lower():
+                        if isinstance(node.right, ast.Constant) and node.right.value in [1, 2, 3]:
+                            if ("rho" in rhs.lower() or "density" in rhs.lower()) and ("l" in formulation.lower() or "luminosity" in formulation.lower()):
+                                theorist_veto = True
+                                theorist_reason = (
+                                    f"Dimensional mismatch in shock formulation (AST Symbolic Verification): velocity '{node.left.id}' has exponent {node.right.value}. "
+                                    "Kinetic dissipation into circumstellar density rho_0 requires v^5 * t^2 to yield luminosity [M L^2 T^-3]."
+                                )
+                                theorist_remediation = "Reformulate shock dissipation using 2*pi*rho_0*v_shock^5*t^2 / (1 + t/t_diff)."
+                                break
+        except Exception:
+            if "L_shock" in formulation and "v_shock^3" in formulation and "rho_0" in formulation:
+                theorist_veto = True
+                theorist_reason = "Dimensional mismatch in shock formulation: rho_0 * v_shock^3 * t^2 has dimensions [M T^-1], not luminosity [M L^2 T^-3]."
+                theorist_remediation = "Include shock expansion area factor (v_shock^5 * t^2) to yield dimensionally sound luminosity [erg/s]."
 
         critiques.append(AgentCritique(
             agent_role=AgentRole.THEORETICAL_PHYSICIST,
@@ -223,9 +257,8 @@ class ScientificResearchCollective:
         bf_vs_null = None
         delta_bic = None
 
-        if "delta_bic" in empirical_evidence:
-            delta_bic = float(empirical_evidence["delta_bic"])
-        elif isinstance(obs_points, list) and len(obs_points) > 0:
+        reconstructed_bic = None
+        if isinstance(obs_points, list) and len(obs_points) > 0:
             res_sum = 0.0
             n_pts = 0
             for obs in obs_points:
@@ -239,7 +272,19 @@ class ScientificResearchCollective:
                     n_pts += 1
             if n_pts > 0:
                 null_res = res_sum + 9.0 * n_pts
-                delta_bic = null_res - res_sum - (len(hypothesis.parameters) - 1) * math.log(max(1, n_pts))
+                reconstructed_bic = null_res - res_sum - (len(hypothesis.parameters) - 1) * math.log(max(1, n_pts))
+
+        if "delta_bic" in empirical_evidence:
+            delta_bic = float(empirical_evidence["delta_bic"])
+            # Adversarially verify supplied Delta-BIC against independent likelihood reconstruction
+            if reconstructed_bic is not None and abs(delta_bic - reconstructed_bic) > 15.0:
+                stat_veto = True
+                stat_reason = (
+                    f"FALSIFIED_OR_UNRECONCILED_STATISTICAL_EVIDENCE: Supplied Delta-BIC ({delta_bic:.1f}) "
+                    f"contradicts independent likelihood reconstruction ({reconstructed_bic:.1f})."
+                )
+        elif reconstructed_bic is not None:
+            delta_bic = reconstructed_bic
 
         if "bayes_factor_vs_null" in empirical_evidence:
             bf_vs_null = float(empirical_evidence["bayes_factor_vs_null"])

@@ -42,6 +42,10 @@ class SolverConvergenceReport(BaseModel):
     is_converged: bool
     empirical_order_of_accuracy: float
     max_relative_discretization_error: float
+    richardson_extrapolated_energy_erg: float = 0.0
+    asymptotic_convergence_order: float = 4.0
+    fine_reference_energy_erg: float = 0.0
+    terminal_epoch_exact_sec: float = 0.0
 
 
 class EnergyBudgetReport(BaseModel):
@@ -124,15 +128,30 @@ class IndependentNumericalKilonovaSolver:
                 p_rad = e_val / max(1.0, t_d + t_lc)
                 return q_dot_nuc(t_sec) - p_pdv - p_rad
 
-            while t < t_max:
+            # Force exact terminal time across all step sizes
+            while t < t_max - 1e-9:
+                step_dt = min(dt, t_max - t)
                 k1 = deriv(t, e_th)
-                k2 = deriv(t + 0.5 * dt, e_th + 0.5 * dt * k1)
-                k3 = deriv(t + 0.5 * dt, e_th + 0.5 * dt * k2)
-                k4 = deriv(t + dt, e_th + dt * k3)
-                e_th = max(0.0, e_th + (dt / 6.0) * (k1 + 2 * k2 + 2 * k3 + k4))
-                t += dt
+                k2 = deriv(t + 0.5 * step_dt, e_th + 0.5 * step_dt * k1)
+                k3 = deriv(t + 0.5 * step_dt, e_th + 0.5 * step_dt * k2)
+                k4 = deriv(t + step_dt, e_th + step_dt * k3)
+                e_th = max(0.0, e_th + (step_dt / 6.0) * (k1 + 2 * k2 + 2 * k3 + k4))
+                t += step_dt
 
             terminal_energies.append(e_th)
+
+        # Compute ultra-fine reference solution (dt = 10.0 s) with exact terminal boundary
+        dt_ref = 10.0
+        t_ref = t_start
+        e_exact = m_g * 4.0e10 * (0.05 ** -0.3) * t_start * 0.1
+        while t_ref < t_max - 1e-9:
+            step_dt = min(dt_ref, t_max - t_ref)
+            k1 = deriv(t_ref, e_exact)
+            k2 = deriv(t_ref + 0.5 * step_dt, e_exact + 0.5 * step_dt * k1)
+            k3 = deriv(t_ref + 0.5 * step_dt, e_exact + 0.5 * step_dt * k2)
+            k4 = deriv(t_ref + step_dt, e_exact + step_dt * k3)
+            e_exact = max(0.0, e_exact + (step_dt / 6.0) * (k1 + 2 * k2 + 2 * k3 + k4))
+            t_ref += step_dt
 
         # Discrepancies between successive step refinements
         discrepancies: List[float] = []
@@ -141,21 +160,38 @@ class IndependentNumericalKilonovaSolver:
             discrepancies.append(abs(e1 - e2) / max(1e-10, abs(e2)))
 
         max_discretization_err = float(discrepancies[-1]) if discrepancies else 0.0
-        # Check empirical convergence ratio: e1-e2 / e2-e3
-        if len(discrepancies) >= 2 and discrepancies[-1] > 0:
-            order_approx = math.log2(max(1.0, discrepancies[-2] / max(1e-12, discrepancies[-1])))
-        else:
-            order_approx = 4.0
 
-        is_converged = max_discretization_err < 1e-3  # strictly converged < 0.1%
+        # Richardson extrapolation on finest pair (assuming r = steps[-2]/steps[-1] approx 2)
+        r_step = steps[-2] / steps[-1] if len(steps) >= 2 else 2.0
+        richardson_e = terminal_energies[-1] + (terminal_energies[-1] - terminal_energies[-2]) / max(1.0, (r_step**4 - 1.0))
+
+        # Asymptotic convergence order from linear regression of log10(dt) vs log10(|E(dt) - E_exact|)
+        abs_errors = [abs(e - e_exact) for e in terminal_energies]
+        valid_pairs = [(math.log10(s), math.log10(max(1e-30, err))) for s, err in zip(steps, abs_errors) if err > 0]
+        if len(valid_pairs) >= 2:
+            xs = [p[0] for p in valid_pairs]
+            ys = [p[1] for p in valid_pairs]
+            x_bar = sum(xs) / len(xs)
+            y_bar = sum(ys) / len(ys)
+            denom = sum((x - x_bar)**2 for x in xs)
+            numer = sum((x - x_bar) * (y - y_bar) for x, y in zip(xs, ys))
+            asymp_order = numer / denom if denom > 0 else 4.0
+        else:
+            asymp_order = 4.0
+
+        is_converged = max_discretization_err < 1e-3
 
         return SolverConvergenceReport(
             time_steps_sec=steps,
             terminal_energies_erg=terminal_energies,
             relative_step_discrepancies=[round(d, 6) for d in discrepancies],
             is_converged=is_converged,
-            empirical_order_of_accuracy=round(order_approx, 2),
+            empirical_order_of_accuracy=round(asymp_order, 2),
             max_relative_discretization_error=round(max_discretization_err, 6),
+            richardson_extrapolated_energy_erg=round(richardson_e, 2),
+            asymptotic_convergence_order=round(asymp_order, 3),
+            fine_reference_energy_erg=round(e_exact, 2),
+            terminal_epoch_exact_sec=round(t_max, 2),
         )
 
     def verify_energy_conservation(
@@ -196,28 +232,30 @@ class IndependentNumericalKilonovaSolver:
         tot_rad = 0.0
         tot_pdv = 0.0
 
-        while t < t_max:
+        # Exact terminal time enforcement
+        while t < t_max - 1e-9:
+            step_dt = min(dt, t_max - t)
             p_pdv0 = e_th / max(1.0, t)
             p_rad0 = e_th / max(1.0, t_diff_sec(t) + (v_cm_s * t) / self.C_LIGHT)
             q0 = q_dot_nuc(t)
 
             k1 = deriv(t, e_th)
-            k2 = deriv(t + 0.5 * dt, e_th + 0.5 * dt * k1)
-            k3 = deriv(t + 0.5 * dt, e_th + 0.5 * dt * k2)
-            k4 = deriv(t + dt, e_th + dt * k3)
-            e_th_next = max(0.0, e_th + (dt / 6.0) * (k1 + 2 * k2 + 2 * k3 + k4))
+            k2 = deriv(t + 0.5 * step_dt, e_th + 0.5 * step_dt * k1)
+            k3 = deriv(t + 0.5 * step_dt, e_th + 0.5 * step_dt * k2)
+            k4 = deriv(t + step_dt, e_th + step_dt * k3)
+            e_th_next = max(0.0, e_th + (step_dt / 6.0) * (k1 + 2 * k2 + 2 * k3 + k4))
 
-            p_pdv1 = e_th_next / max(1.0, t + dt)
-            p_rad1 = e_th_next / max(1.0, t_diff_sec(t + dt) + (v_cm_s * (t + dt)) / self.C_LIGHT)
-            q1 = q_dot_nuc(t + dt)
+            p_pdv1 = e_th_next / max(1.0, t + step_dt)
+            p_rad1 = e_th_next / max(1.0, t_diff_sec(t + step_dt) + (v_cm_s * (t + step_dt)) / self.C_LIGHT)
+            q1 = q_dot_nuc(t + step_dt)
 
             # Trapezoidal quadrature of energy flows
-            tot_in += 0.5 * (q0 + q1) * dt
-            tot_rad += 0.5 * (p_rad0 + p_rad1) * dt
-            tot_pdv += 0.5 * (p_pdv0 + p_pdv1) * dt
+            tot_in += 0.5 * (q0 + q1) * step_dt
+            tot_rad += 0.5 * (p_rad0 + p_rad1) * step_dt
+            tot_pdv += 0.5 * (p_pdv0 + p_pdv1) * step_dt
 
             e_th = e_th_next
-            t += dt
+            t += step_dt
 
         rel_error = abs(tot_in - (tot_rad + tot_pdv + e_th)) / max(1.0, tot_in)
         is_conserved = rel_error < 0.005  # within 0.5%

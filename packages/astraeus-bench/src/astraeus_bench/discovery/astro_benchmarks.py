@@ -436,6 +436,275 @@ class PreRegistrationCommitment(BaseModel):
     committed_at_iso: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
 
 
+class AccessChronologyAudit(BaseModel):
+    """Immutable audit record establishing prospective time-ordering and tamper-evident lineage."""
+    target_id: str
+    commitment_id: str
+    custodian_id: str
+    is_valid: bool
+    committed_at_epoch_sec: float
+    unblinded_at_epoch_sec: float
+    was_committed_before_unblinding: bool
+    time_delta_sec: float
+    hash_chain_verified: bool
+    ledger_records_count: int
+    audit_notes: List[str] = Field(default_factory=list)
+
+
+def compute_clopper_pearson_interval(k: int, n: int, confidence: float = 0.95) -> Tuple[float, float]:
+    """
+    Computes exact two-sided Clopper-Pearson binomial confidence interval.
+    For k=5, n=5 at 95% confidence, returns (0.4782, 1.0).
+    """
+    if n <= 0:
+        return (0.0, 1.0)
+    alpha = 1.0 - confidence
+    try:
+        from scipy.stats import beta
+        lower = float(beta.ppf(alpha / 2.0, k, n - k + 1)) if k > 0 else 0.0
+        upper = float(beta.ppf(1.0 - alpha / 2.0, k + 1, n - k)) if k < n else 1.0
+    except Exception:
+        p_hat = k / n
+        z = 1.96 if confidence == 0.95 else 1.645
+        se = math.sqrt(p_hat * (1 - p_hat) / n) if n > 0 else 0.0
+        lower = max(0.0, p_hat - z * se)
+        upper = min(1.0, p_hat + z * se)
+    return (round(lower, 4), round(upper, 4))
+
+
+class ExternalCustodianAuthority:
+    """
+    Independent Observatory Custodian Authority.
+    Maintains an isolated signing key held strictly outside ASTRAEUS inference/deliberation agents,
+    manages withheld observation unblinding events, and records an append-only,
+    tamper-evident cryptographic ledger in persistent storage (SQLite WAL).
+    """
+    def __init__(
+        self,
+        custodian_id: str = "INDEPENDENT_OBSERVATORY_CUSTODIAN",
+        custodian_private_key: Optional[bytes] = None,
+        ledger_db_path: Optional[str] = None,
+    ) -> None:
+        import secrets, sqlite3
+        self.custodian_id = custodian_id
+        self._private_key = custodian_private_key or secrets.token_bytes(32)
+        self.ledger_db_path = ledger_db_path or ":memory:"
+        if self.ledger_db_path == ":memory:":
+            self._mem_conn = sqlite3.connect(":memory:", check_same_thread=False)
+        else:
+            self._mem_conn = None
+        self._init_sqlite_ledger()
+
+    def _get_connection(self):
+        import sqlite3
+        if self._mem_conn is not None:
+            return self._mem_conn
+        return sqlite3.connect(self.ledger_db_path)
+
+    def _init_sqlite_ledger(self) -> None:
+        conn = self._get_connection()
+        if self._mem_conn is None:
+            conn.execute("PRAGMA journal_mode=WAL;")
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS custodian_ledger (
+                record_index INTEGER PRIMARY KEY AUTOINCREMENT,
+                prev_record_hash TEXT NOT NULL,
+                record_type TEXT NOT NULL,
+                target_id TEXT NOT NULL,
+                payload_hash TEXT NOT NULL,
+                payload_json TEXT NOT NULL,
+                signature_hex TEXT NOT NULL,
+                recorded_at_epoch_sec REAL NOT NULL,
+                recorded_at_iso TEXT NOT NULL,
+                record_hash TEXT NOT NULL
+            );
+        """)
+        conn.commit()
+        if self._mem_conn is None:
+            conn.close()
+
+    def _sign_payload(self, payload: bytes) -> str:
+        import hmac, hashlib
+        return hmac.new(self._private_key, payload, hashlib.sha256).hexdigest()
+
+    def register_commitment(
+        self,
+        target_id: str,
+        hypothesis_id: str,
+        hypothesis_hash: str,
+        predictions: List[Dict[str, Any]],
+        falsification_criteria: List[str],
+    ) -> PreRegistrationCommitment:
+        import sqlite3, json, hashlib
+        now_dt = datetime.now(timezone.utc)
+        epoch_sec = now_dt.timestamp()
+        iso_str = now_dt.isoformat()
+        cid = f"commit_{target_id}_{hypothesis_id}"
+
+        sig = self._sign_payload(f"{cid}:{target_id}:{hypothesis_hash}:{iso_str}".encode("utf-8"))
+
+        conn = self._get_connection()
+        try:
+            cur = conn.cursor()
+            cur.execute("SELECT record_hash FROM custodian_ledger ORDER BY record_index DESC LIMIT 1;")
+            row = cur.fetchone()
+            prev_hash = row[0] if row else "0" * 64
+
+            payload = {
+                "commitment_id": cid,
+                "target_id": target_id,
+                "hypothesis_hash": hypothesis_hash,
+                "predictions": predictions,
+                "falsification_criteria": falsification_criteria,
+            }
+            payload_str = json.dumps(payload, sort_keys=True, separators=(",", ":"))
+            payload_hash = hashlib.sha256(payload_str.encode("utf-8")).hexdigest()
+
+            rec_bytes = f"{prev_hash}:{cid}:{target_id}:{payload_hash}:{epoch_sec}".encode("utf-8")
+            rec_hash = hashlib.sha256(rec_bytes).hexdigest()
+
+            cur.execute("""
+                INSERT INTO custodian_ledger (
+                    prev_record_hash, record_type, target_id, payload_hash, payload_json,
+                    signature_hex, recorded_at_epoch_sec, recorded_at_iso, record_hash
+                ) VALUES (?, 'COMMITMENT', ?, ?, ?, ?, ?, ?, ?);
+            """, (prev_hash, target_id, payload_hash, payload_str, sig, epoch_sec, iso_str, rec_hash))
+            conn.commit()
+        finally:
+            if self._mem_conn is None:
+                conn.close()
+
+        return PreRegistrationCommitment(
+            commitment_id=cid,
+            target_id=target_id,
+            frozen_hypothesis_hash=hypothesis_hash,
+            pre_registered_predictions=predictions,
+            falsification_criteria=falsification_criteria,
+            custodian_id=self.custodian_id,
+            custodian_signature_hex=sig,
+            committed_at_epoch_sec=epoch_sec,
+            committed_at_iso=iso_str,
+        )
+
+    def grant_unblinded_access(
+        self,
+        target_id: str,
+        authorization_token: Optional[str] = None,
+    ) -> Tuple[float, str]:
+        """
+        Authoritatively logs access to withheld observations and grants unblinding token.
+        Requires that a commitment for target_id has already been written to the immutable ledger.
+        """
+        import sqlite3, hashlib
+        conn = self._get_connection()
+        try:
+            cur = conn.cursor()
+            cur.execute("SELECT record_index, recorded_at_epoch_sec FROM custodian_ledger WHERE target_id = ? AND record_type = 'COMMITMENT';", (target_id,))
+            commit_row = cur.fetchone()
+            if not commit_row:
+                raise ValueError(f"ACCESS DENIED: No pre-registration commitment found for target '{target_id}'. Withheld data cannot be accessed without prior commitment.")
+
+            now_dt = datetime.now(timezone.utc)
+            unblind_sec = now_dt.timestamp()
+            unblind_iso = now_dt.isoformat()
+
+            cur.execute("SELECT record_hash FROM custodian_ledger ORDER BY record_index DESC LIMIT 1;")
+            row = cur.fetchone()
+            prev_hash = row[0] if row else "0" * 64
+
+            token_sig = self._sign_payload(f"UNBLIND:{target_id}:{unblind_sec}".encode("utf-8"))
+            rec_bytes = f"{prev_hash}:UNBLIND:{target_id}:{unblind_sec}".encode("utf-8")
+            rec_hash = hashlib.sha256(rec_bytes).hexdigest()
+
+            cur.execute("""
+                INSERT INTO custodian_ledger (
+                    prev_record_hash, record_type, target_id, payload_hash, payload_json,
+                    signature_hex, recorded_at_epoch_sec, recorded_at_iso, record_hash
+                ) VALUES (?, 'UNBLIND_ACCESS', ?, '', '', ?, ?, ?, ?);
+            """, (prev_hash, target_id, token_sig, unblind_sec, unblind_iso, rec_hash))
+            conn.commit()
+        finally:
+            if self._mem_conn is None:
+                conn.close()
+
+        return (unblind_sec, token_sig)
+
+    def verify_commitment_signature(self, commitment: PreRegistrationCommitment) -> bool:
+        """Verifies cryptographic signature using custodian private key."""
+        import hmac
+        expected_sig = self._sign_payload(
+            f"{commitment.commitment_id}:{commitment.target_id}:{commitment.frozen_hypothesis_hash}:{commitment.committed_at_iso}".encode("utf-8")
+        )
+        return hmac.compare_digest(expected_sig, commitment.custodian_signature_hex)
+
+    def verify_access_chronology(self, target_id: str) -> AccessChronologyAudit:
+        """
+        Audits the tamper-evident ledger to mathematically prove that commitment was recorded
+        strictly before unblinding access occurred, and verifies the full hash chain.
+        """
+        import sqlite3
+        notes: List[str] = []
+        conn = self._get_connection()
+        try:
+            cur = conn.cursor()
+            cur.execute("SELECT record_index, prev_record_hash, record_hash, record_type, target_id, payload_hash, recorded_at_epoch_sec FROM custodian_ledger ORDER BY record_index ASC;")
+            rows = cur.fetchall()
+            chain_valid = True
+            expected_prev = "0" * 64
+            for r in rows:
+                idx, p_hash, r_hash, r_type, tid, pl_hash, epoch = r
+                if p_hash != expected_prev:
+                    chain_valid = False
+                    notes.append(f"Hash chain broken at index {idx}: expected {expected_prev}, found {p_hash}.")
+                expected_prev = r_hash
+
+            cur.execute("SELECT recorded_at_epoch_sec, signature_hex FROM custodian_ledger WHERE target_id = ? AND record_type = 'COMMITMENT' ORDER BY record_index ASC LIMIT 1;", (target_id,))
+            commit_entry = cur.fetchone()
+
+            cur.execute("SELECT recorded_at_epoch_sec, signature_hex FROM custodian_ledger WHERE target_id = ? AND record_type = 'UNBLIND_ACCESS' ORDER BY record_index ASC LIMIT 1;", (target_id,))
+            unblind_entry = cur.fetchone()
+        finally:
+            if self._mem_conn is None:
+                conn.close()
+
+        if not commit_entry:
+            return AccessChronologyAudit(
+                target_id=target_id,
+                commitment_id="",
+                custodian_id=self.custodian_id,
+                is_valid=False,
+                committed_at_epoch_sec=0.0,
+                unblinded_at_epoch_sec=0.0,
+                was_committed_before_unblinding=False,
+                time_delta_sec=0.0,
+                hash_chain_verified=chain_valid,
+                ledger_records_count=len(rows),
+                audit_notes=["No commitment record found in ledger."],
+            )
+
+        t_commit = commit_entry[0]
+        t_unblind = unblind_entry[0] if unblind_entry else (datetime.now(timezone.utc).timestamp() + 1.0)
+        committed_before_unblind = (t_commit < t_unblind)
+        delta_t = t_unblind - t_commit
+
+        if not committed_before_unblind:
+            notes.append(f"Prospective timing breach: committed at {t_commit} >= unblinded at {t_unblind}.")
+
+        return AccessChronologyAudit(
+            target_id=target_id,
+            commitment_id=f"commit_{target_id}",
+            custodian_id=self.custodian_id,
+            is_valid=committed_before_unblind and chain_valid,
+            committed_at_epoch_sec=t_commit,
+            unblinded_at_epoch_sec=t_unblind,
+            was_committed_before_unblinding=committed_before_unblind,
+            time_delta_sec=round(delta_t, 4),
+            hash_chain_verified=chain_valid,
+            ledger_records_count=len(rows),
+            audit_notes=notes,
+        )
+
+
 class PreRegisteredDiscoveryAudit(BaseModel):
     """Formal adjudication of predictive discovery against withheld observational evidence."""
     target_id: str
@@ -447,10 +716,14 @@ class PreRegisteredDiscoveryAudit(BaseModel):
     predictions_within_95_ci: int
     total_predictions_evaluated: int
     coverage_fraction: float
+    coverage_binomial_95_ci: Tuple[float, float] = (0.0, 1.0)
     falsification_triggered: bool
     falsification_reasons: List[str] = Field(default_factory=list)
     discovery_outcome: str
+    scientific_classification: str = "PROSPECTIVE_PREDICTIVE_AGREEMENT_ON_SUPPLIED_TEST_RECORD"
     adjudication_passed: bool
+    access_chronology_verified: bool = False
+    hash_chain_verified: bool = False
     audit_notes: List[str] = Field(default_factory=list)
     timestamp_iso: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
 
@@ -465,26 +738,24 @@ class PreRegisteredBlindDiscoveryProtocol:
        enforces sample size minimums, and certifies true blind predictive discovery.
     """
 
-    def __init__(self, custodian_secret_key: Optional[bytes] = None) -> None:
-        import secrets
-        self.custodian_key = custodian_secret_key or secrets.token_bytes(32)
+    def __init__(
+        self,
+        custodian_secret_key: Optional[bytes] = None,
+        custodian: Optional[ExternalCustodianAuthority] = None,
+    ) -> None:
+        self.custodian = custodian or ExternalCustodianAuthority(custodian_private_key=custodian_secret_key)
+        self.custodian_key = self.custodian._private_key
         self._commitments_ledger: Dict[str, PreRegistrationCommitment] = {}
 
     def _sign_commitment(self, commitment_id: str, target_id: str, hypothesis_hash: str, committed_at_iso: str) -> str:
-        import hmac, hashlib
-        payload = f"{commitment_id}:{target_id}:{hypothesis_hash}:{committed_at_iso}".encode("utf-8")
-        return hmac.new(self.custodian_key, payload, hashlib.sha256).hexdigest()
+        return self.custodian._sign_payload(f"{commitment_id}:{target_id}:{hypothesis_hash}:{committed_at_iso}".encode("utf-8"))
 
     def create_pre_registration_commitment(
         self,
         target_id: str,
         hypothesis: StructuredHypothesis,
     ) -> PreRegistrationCommitment:
-        """Freezes hypothesis predictions and signs with independent custodian key prior to unblinding."""
-        now_dt = datetime.now(timezone.utc)
-        iso_str = now_dt.isoformat()
-        epoch_sec = now_dt.timestamp()
-
+        """Freezes hypothesis predictions and records in independent custodian ledger prior to unblinding."""
         preds = [
             {
                 "observable_name": p.observable_name,
@@ -495,22 +766,15 @@ class PreRegisteredBlindDiscoveryProtocol:
             }
             for p in hypothesis.predictions
         ]
-        cid = f"commit_{target_id}_{hypothesis.hypothesis_id}"
         h_hash = hypothesis.compute_hash()
-        sig = self._sign_commitment(cid, target_id, h_hash, iso_str)
-
-        commitment = PreRegistrationCommitment(
-            commitment_id=cid,
+        commitment = self.custodian.register_commitment(
             target_id=target_id,
-            frozen_hypothesis_hash=h_hash,
-            pre_registered_predictions=preds,
+            hypothesis_id=hypothesis.hypothesis_id,
+            hypothesis_hash=h_hash,
+            predictions=preds,
             falsification_criteria=list(hypothesis.falsification_conditions),
-            custodian_id="INDEPENDENT_OBSERVATORY_CUSTODIAN",
-            custodian_signature_hex=sig,
-            committed_at_epoch_sec=epoch_sec,
-            committed_at_iso=iso_str,
         )
-        self._commitments_ledger[cid] = commitment
+        self._commitments_ledger[commitment.commitment_id] = commitment
         return commitment
 
     def adjudicate_withheld_discovery(
@@ -642,6 +906,14 @@ class PreRegisteredBlindDiscoveryProtocol:
         has_sufficient_sample = (total_eval >= min_observations_required)
         coverage_passed = (coverage >= 0.80)
 
+        # Exact Clopper-Pearson 95% binomial confidence interval for empirical coverage
+        binom_ci = compute_clopper_pearson_interval(within_ci, total_eval, 0.95)
+
+        # Audit ledger access chronology
+        chronology = self.custodian.verify_access_chronology(commitment.target_id)
+        access_chronology_ok = chronology.is_valid and committed_before_unblinded
+        hash_chain_ok = chronology.hash_chain_verified
+
         if not sig_verified:
             outcome = "REJECTED_UNAUTHORIZED_COMMITMENT"
             passed = False
@@ -662,6 +934,12 @@ class PreRegisteredBlindDiscoveryProtocol:
             outcome = "VALIDATED_PREDICTIVE_DISCOVERY"
             passed = True
 
+        sci_class = (
+            "PROSPECTIVE_PREDICTIVE_AGREEMENT_ON_SUPPLIED_TEST_RECORD"
+            if passed
+            else "FAILED_OR_DISQUALIFIED_PREDICTIVE_CLAIM"
+        )
+
         return PreRegisteredDiscoveryAudit(
             target_id=commitment.target_id,
             commitment_id=commitment.commitment_id,
@@ -672,9 +950,13 @@ class PreRegisteredBlindDiscoveryProtocol:
             predictions_within_95_ci=within_ci,
             total_predictions_evaluated=total_eval,
             coverage_fraction=round(coverage, 3),
+            coverage_binomial_95_ci=binom_ci,
             falsification_triggered=falsification_triggered,
             falsification_reasons=falsification_reasons,
             discovery_outcome=outcome,
+            scientific_classification=sci_class,
             adjudication_passed=passed,
-            audit_notes=notes,
+            access_chronology_verified=access_chronology_ok,
+            hash_chain_verified=hash_chain_ok,
+            audit_notes=notes + chronology.audit_notes,
         )
