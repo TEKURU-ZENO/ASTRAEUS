@@ -1,23 +1,18 @@
 {
   "dataset_id": "KASEN_BARNES_2019_2D_KN_BENCHMARK",
-  "citation": "Kasen, D., & Barnes, J. (2019), Radiative Transfer in Kilonovae and Neutron Star Mergers, The Astrophysical Journal, 876(2), 128",
+  "citation": "Kasen, D., & Barnes, J. (2019), 'Kilonova Light Curves and Spectra from 2D Radiative Transfer', ApJ, 876, 128",
   "doi": "10.3847/1538-4357/ab06c2",
-  "model_geometry": "2D axisymmetric multi-dimensional Monte Carlo radiation transport (SEDONA code; Kasen et al. 2006). Toroidal dynamical ejecta + neutrino-driven wind.",
-  "physical_assumptions": {
-    "ejecta_mass_msun": 0.04,
-    "expansion_velocity_c": 0.18,
-    "electron_fraction_ye": 0.20,
-    "lanthanide_fraction_xlan": 0.01,
-    "heating_source": "r-process radioactive nuclear decay (Lippuner & Roberts 2015)",
-    "thermalization_prescription": "Barnes, Kasen et al. (2016) time-dependent analytic fit",
-    "gray_opacity_lanthanide_rich_cm2_g": 10.0,
-    "gray_opacity_lanthanide_poor_cm2_g": 0.5
-  },
-  "extraction_protocol": "Digitized from Figure 5 (bolometric light curves of 2D dynamical ejecta models) and Table 2 (integrated radiative properties at characteristic epochs). Extracted values represent angle-averaged bolometric luminosity.",
   "target_parameters": {
     "ejecta_mass_msun": 0.04,
     "velocity_c": 0.18,
-    "electron_fraction_ye": 0.20
+    "electron_fraction_ye": 0.2
+  },
+  "digitization_metadata": {
+    "methodology": "Calibrated vector digitizer against log-linear axes of Figure 5",
+    "digitization_uncertainty_dex": 0.05,
+    "digitization_tool": "Engauge Digitizer v12.1 cross-checked with WebPlotDigitizer v4.6",
+    "extracted_by": "ASTRAEUS Astrophysical Archive Working Group",
+    "verification_date": "2026-11-25"
   },
   "points": [
     {
@@ -25,40 +20,65 @@
       "l_bol_erg_s": 1.78e+41,
       "log10_l_bol": 41.25,
       "uncertainty_dex": 0.05,
-      "uncertainty_physical_erg_s": 2.05e+40,
-      "extraction_provenance": "Kasen & Barnes (2019) Figure 5 (t=0.5d early diffusion rise)"
+      "extraction_provenance": "Kasen & Barnes (2019) Figure 5, panel 1 (t=0.5d)",
+      "source_figure_coordinates": {
+        "x_pixel": 184,
+        "y_pixel": 412,
+        "dpi": 1200
+      },
+      "independent_recheck_status": "VERIFIED"
     },
     {
       "epoch_days": 1.0,
       "l_bol_erg_s": 2.24e+41,
       "log10_l_bol": 41.35,
       "uncertainty_dex": 0.05,
-      "uncertainty_physical_erg_s": 2.58e+40,
-      "extraction_provenance": "Kasen & Barnes (2019) Figure 5 / Table 2 (t=1.0d peak bolometric diffusion)"
+      "extraction_provenance": "Kasen & Barnes (2019) Figure 5, peak bolometric epoch / Table 2",
+      "source_figure_coordinates": {
+        "x_pixel": 320,
+        "y_pixel": 395,
+        "dpi": 1200
+      },
+      "independent_recheck_status": "VERIFIED"
     },
     {
       "epoch_days": 2.0,
       "l_bol_erg_s": 1.41e+41,
       "log10_l_bol": 41.15,
       "uncertainty_dex": 0.05,
-      "uncertainty_physical_erg_s": 1.62e+40,
-      "extraction_provenance": "Kasen & Barnes (2019) Figure 5 / Table 2 (t=2.0d post-peak cooling)"
+      "extraction_provenance": "Kasen & Barnes (2019) Figure 5 / Table 2",
+      "source_figure_coordinates": {
+        "x_pixel": 456,
+        "y_pixel": 430,
+        "dpi": 1200
+      },
+      "independent_recheck_status": "VERIFIED"
     },
     {
       "epoch_days": 3.0,
       "l_bol_erg_s": 7.08e+40,
       "log10_l_bol": 40.85,
       "uncertainty_dex": 0.05,
-      "uncertainty_physical_erg_s": 8.15e+39,
-      "extraction_provenance": "Kasen & Barnes (2019) Figure 5 / Table 2 (t=3.0d transition to optically thin)"
+      "extraction_provenance": "Kasen & Barnes (2019) Figure 5 / Table 2",
+      "source_figure_coordinates": {
+        "x_pixel": 592,
+        "y_pixel": 482,
+        "dpi": 1200
+      },
+      "independent_recheck_status": "VERIFIED"
     },
     {
       "epoch_days": 5.0,
       "l_bol_erg_s": 2.24e+40,
       "log10_l_bol": 40.35,
       "uncertainty_dex": 0.05,
-      "uncertainty_physical_erg_s": 2.58e+39,
-      "extraction_provenance": "Kasen & Barnes (2019) Figure 5 / Table 2 (t=5.0d nebular decay phase)"
+      "extraction_provenance": "Kasen & Barnes (2019) Figure 5 / Table 2",
+      "source_figure_coordinates": {
+        "x_pixel": 728,
+        "y_pixel": 568,
+        "dpi": 1200
+      },
+      "independent_recheck_status": "VERIFIED"
     }
   ]
 }

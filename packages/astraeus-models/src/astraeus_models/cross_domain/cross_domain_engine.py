@@ -447,92 +447,29 @@ class CrossDomainIntelligenceEngine:
         The threshold D_crit = 3.0 is pre-frozen prior to evaluation.
         Computes confusion matrix, False Positive Rate (FPR), and False Negative Rate (FNR).
         """
-        # Define 12 independently labelled transfer pairs (6 valid, 6 invalid)
+        from pathlib import Path
+        import json, hashlib
+
+        data_file = Path(__file__).parent / "data" / "held_out_transfer_benchmark.json"
+        if not data_file.exists():
+            raise FileNotFoundError(
+                f"CRITICAL ASSET FAILURE: Held-out transfer benchmark asset not found at '{data_file}'. "
+                "Under WS8.12 governance, benchmark cases must be loaded from an independently curated, versioned disk asset."
+            )
+
+        with open(data_file, "rb") as f:
+            raw_bytes = f.read()
+        asset_sha256 = hashlib.sha256(raw_bytes).hexdigest()
+        data = json.loads(raw_bytes.decode("utf-8"))
+
         benchmark_cases = [
-            # 1. Kilonova -> Type Ia Supernova (Valid: expanding radioactive shell, super-Eddington)
             {
-                "name": "Kilonova_to_TypeIaSN",
-                "label": "VALID",
-                "src_invariants": DimensionlessInvariants(gravitational_compactness=1e-4, eddington_ratio=1.5e4, dynamical_to_cooling_timescale_ratio=0.1, virial_ratio=0.5),
-                "tgt_invariants": DimensionlessInvariants(gravitational_compactness=2e-4, eddington_ratio=1.2e4, dynamical_to_cooling_timescale_ratio=0.15, virial_ratio=0.5),
-            },
-            # 2. Shock Breakout -> Relativistic Shock Breakout (Valid: fast radiation shock)
-            {
-                "name": "ShockBreakout_to_RelativisticShock",
-                "label": "VALID",
-                "src_invariants": DimensionlessInvariants(gravitational_compactness=5e-5, eddington_ratio=5e4, dynamical_to_cooling_timescale_ratio=0.01, virial_ratio=0.5),
-                "tgt_invariants": DimensionlessInvariants(gravitational_compactness=8e-5, eddington_ratio=4.5e4, dynamical_to_cooling_timescale_ratio=0.012, virial_ratio=0.5),
-            },
-            # 3. CV Accretion Disk -> AGN Accretion Disk (Valid: Shakura-Sunyaev thin disk)
-            {
-                "name": "CataclysmicVariableDisk_to_AGNDisk",
-                "label": "VALID",
-                "src_invariants": DimensionlessInvariants(gravitational_compactness=0.01, eddington_ratio=0.2, dynamical_to_cooling_timescale_ratio=0.001, virial_ratio=0.5),
-                "tgt_invariants": DimensionlessInvariants(gravitational_compactness=0.02, eddington_ratio=0.25, dynamical_to_cooling_timescale_ratio=0.0015, virial_ratio=0.5),
-            },
-            # 4. Exoplanet Troposphere -> Earth Stratosphere (Valid: hydrostatic barometric balance)
-            {
-                "name": "ExoplanetTroposphere_to_EarthStratosphere",
-                "label": "VALID",
-                "src_invariants": DimensionlessInvariants(gravitational_compactness=1e-9, eddington_ratio=1e-6, dynamical_to_cooling_timescale_ratio=1.0, virial_ratio=0.5),
-                "tgt_invariants": DimensionlessInvariants(gravitational_compactness=1.2e-9, eddington_ratio=1.1e-6, dynamical_to_cooling_timescale_ratio=1.1, virial_ratio=0.5),
-            },
-            # 5. GRB Relativistic Jet -> Microquasar Jet (Valid: synchrotron beaming)
-            {
-                "name": "GRBJet_to_MicroquasarJet",
-                "label": "VALID",
-                "src_invariants": DimensionlessInvariants(gravitational_compactness=0.1, eddington_ratio=1e3, dynamical_to_cooling_timescale_ratio=0.05, virial_ratio=0.5),
-                "tgt_invariants": DimensionlessInvariants(gravitational_compactness=0.08, eddington_ratio=800.0, dynamical_to_cooling_timescale_ratio=0.06, virial_ratio=0.5),
-            },
-            # 6. Pulsar Wind Nebula -> Supernova Remnant (Valid: relativistic expansion bubble)
-            {
-                "name": "PWN_to_SNRemnant",
-                "label": "VALID",
-                "src_invariants": DimensionlessInvariants(gravitational_compactness=1e-6, eddington_ratio=50.0, dynamical_to_cooling_timescale_ratio=0.2, virial_ratio=0.5),
-                "tgt_invariants": DimensionlessInvariants(gravitational_compactness=1.5e-6, eddington_ratio=40.0, dynamical_to_cooling_timescale_ratio=0.25, virial_ratio=0.5),
-            },
-            # 7. Kilonova -> Exoplanet Atmosphere (Invalid: 5 dex compactness & 10 dex Eddington mismatch)
-            {
-                "name": "Kilonova_to_Exoplanet",
-                "label": "INVALID",
-                "src_invariants": DimensionlessInvariants(gravitational_compactness=1e-4, eddington_ratio=1.5e4, dynamical_to_cooling_timescale_ratio=0.1, virial_ratio=0.5),
-                "tgt_invariants": DimensionlessInvariants(gravitational_compactness=1e-9, eddington_ratio=1e-6, dynamical_to_cooling_timescale_ratio=1.0, virial_ratio=0.5),
-            },
-            # 8. Kilonova -> FLRW Cosmology (Invalid: 8 dex compactness & timescale divergence)
-            {
-                "name": "Kilonova_to_FLRWCosmology",
-                "label": "INVALID",
-                "src_invariants": DimensionlessInvariants(gravitational_compactness=1e-4, eddington_ratio=1.5e4, dynamical_to_cooling_timescale_ratio=0.1, virial_ratio=0.5),
-                "tgt_invariants": DimensionlessInvariants(gravitational_compactness=1e-12, eddington_ratio=1e-5, dynamical_to_cooling_timescale_ratio=0.0026, virial_ratio=0.5),
-            },
-            # 9. Exoplanet -> Kerr Event Horizon (Invalid: 8 dex compactness & relativistic curvature)
-            {
-                "name": "Exoplanet_to_KerrHorizon",
-                "label": "INVALID",
-                "src_invariants": DimensionlessInvariants(gravitational_compactness=1e-9, eddington_ratio=1e-6, dynamical_to_cooling_timescale_ratio=1.0, virial_ratio=0.5),
-                "tgt_invariants": DimensionlessInvariants(gravitational_compactness=0.5, eddington_ratio=1.0, dynamical_to_cooling_timescale_ratio=0.00036, virial_ratio=0.5),
-            },
-            # 10. Intergalactic Medium -> Neutron Star Core (Invalid: 11 dex density & compactness)
-            {
-                "name": "IGM_to_NeutronStarCore",
-                "label": "INVALID",
-                "src_invariants": DimensionlessInvariants(gravitational_compactness=1e-12, eddington_ratio=1e-6, dynamical_to_cooling_timescale_ratio=10.0, virial_ratio=0.5),
-                "tgt_invariants": DimensionlessInvariants(gravitational_compactness=0.2, eddington_ratio=10.0, dynamical_to_cooling_timescale_ratio=0.01, virial_ratio=0.5),
-            },
-            # 11. AGN Disk -> Planetary Mantle Convection (Invalid: radiation vs rock rheology)
-            {
-                "name": "AGNDisk_to_PlanetaryMantle",
-                "label": "INVALID",
-                "src_invariants": DimensionlessInvariants(gravitational_compactness=0.02, eddington_ratio=0.25, dynamical_to_cooling_timescale_ratio=0.0015, virial_ratio=0.5),
-                "tgt_invariants": DimensionlessInvariants(gravitational_compactness=1e-9, eddington_ratio=1e-12, dynamical_to_cooling_timescale_ratio=1e5, virial_ratio=0.5),
-            },
-            # 12. Solar Flare -> Molecular Cloud Core (Invalid: magnetic reconnection vs cold gas)
-            {
-                "name": "SolarFlare_to_MolecularCloud",
-                "label": "INVALID",
-                "src_invariants": DimensionlessInvariants(gravitational_compactness=1e-6, eddington_ratio=10.0, dynamical_to_cooling_timescale_ratio=0.001, virial_ratio=0.5),
-                "tgt_invariants": DimensionlessInvariants(gravitational_compactness=1e-10, eddington_ratio=1e-8, dynamical_to_cooling_timescale_ratio=100.0, virial_ratio=0.5),
-            },
+                "name": c["name"],
+                "label": c["label"],
+                "src_invariants": DimensionlessInvariants(**c["src_invariants"]),
+                "tgt_invariants": DimensionlessInvariants(**c["tgt_invariants"]),
+            }
+            for c in data["cases"]
         ]
 
         tp = 0
@@ -581,6 +518,9 @@ class CrossDomainIntelligenceEngine:
         separation_margin = min(invalid_scores) - max(valid_scores)
 
         return {
+            "benchmark_id": data.get("benchmark_id", "ASTRAEUS_CROSS_DOMAIN_TRANSFER_HELD_OUT_V1"),
+            "benchmark_version": data.get("version", "1.0.0"),
+            "benchmark_asset_sha256": asset_sha256,
             "pre_frozen_threshold": divergence_threshold,
             "total_benchmark_cases": len(benchmark_cases),
             "true_positives": tp,

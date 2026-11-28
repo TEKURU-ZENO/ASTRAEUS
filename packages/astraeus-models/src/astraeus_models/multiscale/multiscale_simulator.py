@@ -191,47 +191,34 @@ class MultiScaleSimulator:
         import json, hashlib
 
         data_file = Path(__file__).parent / "data" / "kasen_barnes_2019_2d_reference.json"
-        if data_file.exists():
-            with open(data_file, "rb") as f:
-                raw_bytes = f.read()
-            prov_hash = hashlib.sha256(raw_bytes).hexdigest()
-            data = json.loads(raw_bytes.decode("utf-8"))
-            points = [
-                ReferenceBenchmarkPoint(
-                    epoch_days=p["epoch_days"],
-                    l_bol_erg_s=p["l_bol_erg_s"],
-                    log10_l_bol=p["log10_l_bol"],
-                    uncertainty_dex=p.get("uncertainty_dex", 0.05),
-                    extraction_provenance=p.get("extraction_provenance", ""),
-                )
-                for p in data["points"]
-            ]
-            return ExternalReferenceDataset(
-                dataset_id=data["dataset_id"],
-                citation=data["citation"],
-                doi=data["doi"],
-                target_parameters=data["target_parameters"],
-                provenance_sha256=prov_hash,
-                points=points,
+        if not data_file.exists():
+            raise FileNotFoundError(
+                f"CRITICAL PROVENANCE FAILURE: Standalone reference asset not found at '{data_file}'. "
+                "Under WS8.12 governance, fallback to embedded mock or hardcoded datasets is strictly prohibited."
             )
-        else:
-            raw_points = [
-                ReferenceBenchmarkPoint(epoch_days=0.5, l_bol_erg_s=1.78e41, log10_l_bol=41.25, extraction_provenance="Kasen & Barnes (2019) Figure 5"),
-                ReferenceBenchmarkPoint(epoch_days=1.0, l_bol_erg_s=2.24e41, log10_l_bol=41.35, extraction_provenance="Kasen & Barnes (2019) Figure 5 / Table 2"),
-                ReferenceBenchmarkPoint(epoch_days=2.0, l_bol_erg_s=1.41e41, log10_l_bol=41.15, extraction_provenance="Kasen & Barnes (2019) Figure 5 / Table 2"),
-                ReferenceBenchmarkPoint(epoch_days=3.0, l_bol_erg_s=7.08e40, log10_l_bol=40.85, extraction_provenance="Kasen & Barnes (2019) Figure 5 / Table 2"),
-                ReferenceBenchmarkPoint(epoch_days=5.0, l_bol_erg_s=2.24e40, log10_l_bol=40.35, extraction_provenance="Kasen & Barnes (2019) Figure 5 / Table 2"),
-            ]
-            pts_dict = [p.model_dump() for p in raw_points]
-            prov_hash = hashlib.sha256(json.dumps(pts_dict, sort_keys=True).encode("utf-8")).hexdigest()
-            return ExternalReferenceDataset(
-                dataset_id="KASEN_BARNES_2019_2D_KN_BENCHMARK",
-                citation="Kasen, D., & Barnes, J. (2019), ApJ 876, 128",
-                doi="10.3847/1538-4357/ab06c2",
-                target_parameters={"ejecta_mass_msun": 0.04, "velocity_c": 0.18, "electron_fraction_ye": 0.20},
-                provenance_sha256=prov_hash,
-                points=raw_points,
+
+        with open(data_file, "rb") as f:
+            raw_bytes = f.read()
+        prov_hash = hashlib.sha256(raw_bytes).hexdigest()
+        data = json.loads(raw_bytes.decode("utf-8"))
+        points = [
+            ReferenceBenchmarkPoint(
+                epoch_days=p["epoch_days"],
+                l_bol_erg_s=p["l_bol_erg_s"],
+                log10_l_bol=p["log10_l_bol"],
+                uncertainty_dex=p.get("uncertainty_dex", 0.05),
+                extraction_provenance=p.get("extraction_provenance", ""),
             )
+            for p in data["points"]
+        ]
+        return ExternalReferenceDataset(
+            dataset_id=data["dataset_id"],
+            citation=data["citation"],
+            doi=data["doi"],
+            target_parameters=data["target_parameters"],
+            provenance_sha256=prov_hash,
+            points=points,
+        )
 
     def validate_parameter_sensitivity_grid(self) -> Dict[str, Any]:
         """
@@ -309,8 +296,8 @@ class MultiScaleSimulator:
         mean_dex = float(np.mean(dex_errors))
 
         # Scientific acceptance criteria in physical observable space:
-        # Mean physical relative error <= 10%, max physical error <= 20%
-        is_consistent = (mean_phys_err <= 0.10) and (max_phys_err <= 0.20)
+        # Mean physical relative error <= 5% (0.05), max physical error <= 15% (0.15)
+        is_consistent = (mean_phys_err <= 0.05) and (max_phys_err <= 0.15)
 
         return MultiScaleBenchmarkReport(
             benchmark_source=ref_dataset.citation,

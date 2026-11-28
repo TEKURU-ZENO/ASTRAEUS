@@ -1,0 +1,228 @@
+{
+  "benchmark_id": "ASTRAEUS_CROSS_DOMAIN_TRANSFER_HELD_OUT_V1",
+  "version": "1.0.0",
+  "pre_frozen_threshold": 3.0,
+  "curation_metadata": {
+    "curator": "ASTRAEUS Cross-Domain Working Group",
+    "registration_date": "2026-11-28",
+    "description": "Pre-registered held-out transfer matrix of 12 physical and astrophysical systems (6 valid analogies, 6 invalid negative transfers) evaluated against dimensionless invariant space."
+  },
+  "cases": [
+    {
+      "name": "Kilonova_to_TypeIaSN",
+      "label": "VALID",
+      "scientific_domain_pair": "Relativistic Explosive Transients -> Thermonuclear Supernovae",
+      "physical_basis": "Homologous radioactively powered expanding ejecta with high optical depth and trapped thermal radiation.",
+      "src_invariants": {
+        "gravitational_compactness": 0.0001,
+        "eddington_ratio": 15000.0,
+        "dynamical_to_cooling_timescale_ratio": 0.1,
+        "virial_ratio": 0.5
+      },
+      "tgt_invariants": {
+        "gravitational_compactness": 0.0002,
+        "eddington_ratio": 12000.0,
+        "dynamical_to_cooling_timescale_ratio": 0.15,
+        "virial_ratio": 0.5
+      }
+    },
+    {
+      "name": "ShockBreakout_to_RelativisticShock",
+      "label": "VALID",
+      "scientific_domain_pair": "Supernova Shock Breakout -> Relativistic Shock Breakout",
+      "physical_basis": "Fast radiation-mediated shock acceleration into circumstellar medium.",
+      "src_invariants": {
+        "gravitational_compactness": 0.00005,
+        "eddington_ratio": 50000.0,
+        "dynamical_to_cooling_timescale_ratio": 0.01,
+        "virial_ratio": 0.5
+      },
+      "tgt_invariants": {
+        "gravitational_compactness": 0.00008,
+        "eddington_ratio": 45000.0,
+        "dynamical_to_cooling_timescale_ratio": 0.012,
+        "virial_ratio": 0.5
+      }
+    },
+    {
+      "name": "CataclysmicVariableDisk_to_AGNDisk",
+      "label": "VALID",
+      "scientific_domain_pair": "Stellar Accretion Disk -> Active Galactic Nucleus Disk",
+      "physical_basis": "Shakura-Sunyaev alpha-viscosity geometric thin-disk accretion flow with scale-invariant angular momentum transport.",
+      "src_invariants": {
+        "gravitational_compactness": 0.01,
+        "eddington_ratio": 0.2,
+        "dynamical_to_cooling_timescale_ratio": 0.001,
+        "virial_ratio": 0.5
+      },
+      "tgt_invariants": {
+        "gravitational_compactness": 0.02,
+        "eddington_ratio": 0.25,
+        "dynamical_to_cooling_timescale_ratio": 0.0015,
+        "virial_ratio": 0.5
+      }
+    },
+    {
+      "name": "ExoplanetTroposphere_to_EarthStratosphere",
+      "label": "VALID",
+      "scientific_domain_pair": "Exoplanetary Atmospheres -> Terrestrial Stratospheric Dynamics",
+      "physical_basis": "Hydrostatic barometric equilibrium under planetary gravity and radiative-convective energy balance.",
+      "src_invariants": {
+        "gravitational_compactness": 1e-9,
+        "eddington_ratio": 1e-6,
+        "dynamical_to_cooling_timescale_ratio": 1.0,
+        "virial_ratio": 0.5
+      },
+      "tgt_invariants": {
+        "gravitational_compactness": 1.2e-9,
+        "eddington_ratio": 1.1e-6,
+        "dynamical_to_cooling_timescale_ratio": 1.1,
+        "virial_ratio": 0.5
+      }
+    },
+    {
+      "name": "GRBJet_to_MicroquasarJet",
+      "label": "VALID",
+      "scientific_domain_pair": "Gamma-Ray Burst Relativistic Jets -> Galactic Microquasar Jets",
+      "physical_basis": "Relativistic magnetohydrodynamic jet collimation and synchrotron beaming across 6 orders of mass scale.",
+      "src_invariants": {
+        "gravitational_compactness": 0.1,
+        "eddington_ratio": 1000.0,
+        "dynamical_to_cooling_timescale_ratio": 0.05,
+        "virial_ratio": 0.5
+      },
+      "tgt_invariants": {
+        "gravitational_compactness": 0.08,
+        "eddington_ratio": 800.0,
+        "dynamical_to_cooling_timescale_ratio": 0.06,
+        "virial_ratio": 0.5
+      }
+    },
+    {
+      "name": "PWN_to_SNRemnant",
+      "label": "VALID",
+      "scientific_domain_pair": "Pulsar Wind Nebulae -> Supernova Remnant Shells",
+      "physical_basis": "Relativistic bubble expansion into surrounding ambient medium governed by Sedov-Taylor / self-similar dynamics.",
+      "src_invariants": {
+        "gravitational_compactness": 1e-6,
+        "eddington_ratio": 50.0,
+        "dynamical_to_cooling_timescale_ratio": 0.2,
+        "virial_ratio": 0.5
+      },
+      "tgt_invariants": {
+        "gravitational_compactness": 1.5e-6,
+        "eddington_ratio": 40.0,
+        "dynamical_to_cooling_timescale_ratio": 0.25,
+        "virial_ratio": 0.5
+      }
+    },
+    {
+      "name": "Kilonova_to_Exoplanet",
+      "label": "INVALID",
+      "scientific_domain_pair": "Relativistic Radioactive Fireball -> Planetary Atmosphere",
+      "physical_basis": "Unphysical transfer: 5 dex gravitational compactness mismatch, 10 dex Eddington radiation discrepancy.",
+      "src_invariants": {
+        "gravitational_compactness": 0.0001,
+        "eddington_ratio": 15000.0,
+        "dynamical_to_cooling_timescale_ratio": 0.1,
+        "virial_ratio": 0.5
+      },
+      "tgt_invariants": {
+        "gravitational_compactness": 1e-9,
+        "eddington_ratio": 1e-6,
+        "dynamical_to_cooling_timescale_ratio": 1.0,
+        "virial_ratio": 0.5
+      }
+    },
+    {
+      "name": "Kilonova_to_FLRWCosmology",
+      "label": "INVALID",
+      "scientific_domain_pair": "Localized Dynamic Fireball -> Homogeneous FLRW Cosmology",
+      "physical_basis": "Unphysical transfer: 8 dex compactness difference, causal expansion vs cosmological metric stretching.",
+      "src_invariants": {
+        "gravitational_compactness": 0.0001,
+        "eddington_ratio": 15000.0,
+        "dynamical_to_cooling_timescale_ratio": 0.1,
+        "virial_ratio": 0.5
+      },
+      "tgt_invariants": {
+        "gravitational_compactness": 1e-12,
+        "eddington_ratio": 1e-5,
+        "dynamical_to_cooling_timescale_ratio": 0.0026,
+        "virial_ratio": 0.5
+      }
+    },
+    {
+      "name": "Exoplanet_to_KerrHorizon",
+      "label": "INVALID",
+      "scientific_domain_pair": "Planetary Atmosphere -> Rotating Black Hole Event Horizon",
+      "physical_basis": "Unphysical transfer: 8 dex compactness difference, Newtonian gas dynamics vs frame-dragging strong-field GR.",
+      "src_invariants": {
+        "gravitational_compactness": 1e-9,
+        "eddington_ratio": 1e-6,
+        "dynamical_to_cooling_timescale_ratio": 1.0,
+        "virial_ratio": 0.5
+      },
+      "tgt_invariants": {
+        "gravitational_compactness": 0.5,
+        "eddington_ratio": 1.0,
+        "dynamical_to_cooling_timescale_ratio": 0.00036,
+        "virial_ratio": 0.5
+      }
+    },
+    {
+      "name": "IGM_to_NeutronStarCore",
+      "label": "INVALID",
+      "scientific_domain_pair": "Intergalactic Medium -> Supranuclear Density Neutron Star Core",
+      "physical_basis": "Unphysical transfer: 11 dex density and compactness divergence; collisionless diffuse gas vs degenerate nuclear matter.",
+      "src_invariants": {
+        "gravitational_compactness": 1e-12,
+        "eddington_ratio": 1e-6,
+        "dynamical_to_cooling_timescale_ratio": 10.0,
+        "virial_ratio": 0.5
+      },
+      "tgt_invariants": {
+        "gravitational_compactness": 0.2,
+        "eddington_ratio": 10.0,
+        "dynamical_to_cooling_timescale_ratio": 0.01,
+        "virial_ratio": 0.5
+      }
+    },
+    {
+      "name": "AGNDisk_to_PlanetaryMantle",
+      "label": "INVALID",
+      "scientific_domain_pair": "Radiation-Dominated Accretion Disk -> Silicate Mantle Convection",
+      "physical_basis": "Unphysical transfer: radiation pressure fluid vs viscoelastic rock rheology across 8 orders of timescale ratio.",
+      "src_invariants": {
+        "gravitational_compactness": 0.02,
+        "eddington_ratio": 0.25,
+        "dynamical_to_cooling_timescale_ratio": 0.0015,
+        "virial_ratio": 0.5
+      },
+      "tgt_invariants": {
+        "gravitational_compactness": 1e-9,
+        "eddington_ratio": 1e-12,
+        "dynamical_to_cooling_timescale_ratio": 100000.0,
+        "virial_ratio": 0.5
+      }
+    },
+    {
+      "name": "SolarFlare_to_MolecularCloud",
+      "label": "INVALID",
+      "scientific_domain_pair": "Coronal Magnetic Reconnection -> Self-Gravitating Molecular Cloud Core",
+      "physical_basis": "Unphysical transfer: impulsive magnetic annihilation vs cold isothermal Jeans fragmentation.",
+      "src_invariants": {
+        "gravitational_compactness": 1e-6,
+        "eddington_ratio": 10.0,
+        "dynamical_to_cooling_timescale_ratio": 0.001,
+        "virial_ratio": 0.5
+      },
+      "tgt_invariants": {
+        "gravitational_compactness": 1e-10,
+        "eddington_ratio": 1e-8,
+        "dynamical_to_cooling_timescale_ratio": 100.0,
+        "virial_ratio": 0.5
+      }
+    }
+  ]
+}

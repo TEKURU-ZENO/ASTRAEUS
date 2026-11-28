@@ -112,7 +112,7 @@ def test_ws9_11_exact_clopper_pearson_coverage_intervals():
     assert ci_25[1] <= 1.0
 
     # C. Adjudication with External Custodian
-    custodian = ExternalCustodianAuthority(custodian_id="EXT_CUSTODIAN_TEST")
+    custodian = ExternalCustodianAuthority(custodian_id="EXT_CUSTODIAN_TEST", allow_ephemeral_for_testing=True)
     protocol = PreRegisteredBlindDiscoveryProtocol(custodian=custodian)
 
     h = StructuredHypothesis(
@@ -214,11 +214,11 @@ def test_ws9_11_independent_rk4_exact_terminal_time_and_richardson_convergence()
 def test_ws9_11_ppc_bivariate_covariance_and_misspecification_rejection():
     engine = ComputationalExperimentEngine(random_seed=42)
     epochs = [0.5, 1.0, 2.0]
-    flts = {"g": 477.0, "r": 623.1}
+    flts = {"g": 4770.0, "r": 6230.0}
 
     # A. Well-specified data with preserved covariance
     obs_valid = engine.forward_simulate_kilonova(0.04, 0.18, 0.01, epochs, flts, inject_noise=True, photometric_noise_mag=0.03)
-    recovery_valid = engine.perform_inverse_parameter_recovery(obs_valid, grid_resolution=10)
+    recovery_valid = engine.perform_inverse_parameter_recovery(obs_valid, grid_resolution=15)
 
     ppc_valid = engine.evaluate_parameter_posterior_predictive_check(
         model_name="Kilonova_Covariant_PPC",
@@ -226,7 +226,7 @@ def test_ws9_11_ppc_bivariate_covariance_and_misspecification_rejection():
         posterior_results=recovery_valid,
         epochs_days=epochs,
         filter_wavelengths=flts,
-        n_replications=60,
+        n_replications=80,
         correlation_coeff=-0.65,
     )
     assert ppc_valid.ppc_passed is True

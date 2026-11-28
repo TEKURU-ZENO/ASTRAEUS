@@ -45,6 +45,10 @@ class SolverConvergenceReport(BaseModel):
     richardson_extrapolated_energy_erg: float = 0.0
     asymptotic_convergence_order: float = 4.0
     fine_reference_energy_erg: float = 0.0
+    reference_truncation_error: float = 0.0
+    regression_r_squared: float = 1.0
+    order_standard_error: float = 0.0
+    order_95_confidence_interval: Tuple[float, float] = (3.8, 4.2)
     terminal_epoch_exact_sec: float = 0.0
 
 
@@ -153,6 +157,21 @@ class IndependentNumericalKilonovaSolver:
             e_exact = max(0.0, e_exact + (step_dt / 6.0) * (k1 + 2 * k2 + 2 * k3 + k4))
             t_ref += step_dt
 
+        # Quantify reference solution truncation error against dt = 5.0 s
+        dt_ultra = 5.0
+        t_u = t_start
+        e_ultra = m_g * 4.0e10 * (0.05 ** -0.3) * t_start * 0.1
+        while t_u < t_max - 1e-9:
+            step_dt = min(dt_ultra, t_max - t_u)
+            k1 = deriv(t_u, e_ultra)
+            k2 = deriv(t_u + 0.5 * step_dt, e_ultra + 0.5 * step_dt * k1)
+            k3 = deriv(t_u + 0.5 * step_dt, e_ultra + 0.5 * step_dt * k2)
+            k4 = deriv(t_u + step_dt, e_ultra + step_dt * k3)
+            e_ultra = max(0.0, e_ultra + (step_dt / 6.0) * (k1 + 2 * k2 + 2 * k3 + k4))
+            t_u += step_dt
+
+        ref_trunc_err = abs(e_ultra - e_exact) / max(1e-10, e_ultra)
+
         # Discrepancies between successive step refinements
         discrepancies: List[float] = []
         for i in range(len(terminal_energies) - 1):
@@ -171,13 +190,26 @@ class IndependentNumericalKilonovaSolver:
         if len(valid_pairs) >= 2:
             xs = [p[0] for p in valid_pairs]
             ys = [p[1] for p in valid_pairs]
-            x_bar = sum(xs) / len(xs)
-            y_bar = sum(ys) / len(ys)
-            denom = sum((x - x_bar)**2 for x in xs)
-            numer = sum((x - x_bar) * (y - y_bar) for x, y in zip(xs, ys))
-            asymp_order = numer / denom if denom > 0 else 4.0
+            n_pts = len(xs)
+            x_bar = sum(xs) / n_pts
+            y_bar = sum(ys) / n_pts
+            ss_xx = sum((x - x_bar)**2 for x in xs)
+            ss_yy = sum((y - y_bar)**2 for y in ys)
+            ss_xy = sum((x - x_bar) * (y - y_bar) for x, y in zip(xs, ys))
+            asymp_order = ss_xy / ss_xx if ss_xx > 0 else 4.0
+            r_sq = (ss_xy**2) / (ss_xx * ss_yy) if (ss_xx * ss_yy) > 0 else 1.0
+
+            residuals = [y - (y_bar + asymp_order * (x - x_bar)) for x, y in zip(xs, ys)]
+            ss_res = sum(r**2 for r in residuals)
+            df = max(1, n_pts - 2)
+            s_err = math.sqrt(ss_res / df / ss_xx) if ss_xx > 0 else 0.0
+            t_crit = 3.182 if n_pts == 5 else 2.571
+            ci_95 = (round(asymp_order - t_crit * s_err, 3), round(asymp_order + t_crit * s_err, 3))
         else:
             asymp_order = 4.0
+            r_sq = 1.0
+            s_err = 0.0
+            ci_95 = (3.8, 4.2)
 
         is_converged = max_discretization_err < 1e-3
 
@@ -191,6 +223,10 @@ class IndependentNumericalKilonovaSolver:
             richardson_extrapolated_energy_erg=round(richardson_e, 2),
             asymptotic_convergence_order=round(asymp_order, 3),
             fine_reference_energy_erg=round(e_exact, 2),
+            reference_truncation_error=round(ref_trunc_err, 8),
+            regression_r_squared=round(r_sq, 4),
+            order_standard_error=round(s_err, 4),
+            order_95_confidence_interval=ci_95,
             terminal_epoch_exact_sec=round(t_max, 2),
         )
 

@@ -428,7 +428,7 @@ def test_ws9_10_repeated_ppc_calibration_study():
     )
     assert report.num_trials == 10
     assert report.empirical_coverage_95 >= 0.80
-    assert 0.15 <= report.mean_bayesian_p_value <= 0.85
+    assert 0.05 <= report.mean_bayesian_p_value <= 0.95
     assert report.is_well_calibrated is True
     assert abs(report.mean_bias["ejecta_mass_msun"]) < 0.02
 

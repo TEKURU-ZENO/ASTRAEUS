@@ -455,20 +455,30 @@ def compute_clopper_pearson_interval(k: int, n: int, confidence: float = 0.95) -
     """
     Computes exact two-sided Clopper-Pearson binomial confidence interval.
     For k=5, n=5 at 95% confidence, returns (0.4782, 1.0).
+    Under WS8.12 governance:
+    - Inputs are strictly validated (n >= 1, 0 <= k <= n, 0 < confidence < 1).
+    - Silently falling back to normal/Wald approximations is strictly prohibited.
+    - If exact Beta distribution quantile calculation fails, fails closed immediately.
     """
+    if not isinstance(n, (int, np.integer)) or not isinstance(k, (int, np.integer)):
+        raise TypeError(f"Sample size n and success count k must be integers, got n={type(n)}, k={type(k)}")
     if n <= 0:
-        return (0.0, 1.0)
+        raise ValueError(f"Sample size n must be a positive integer, got n={n}")
+    if k < 0 or k > n:
+        raise ValueError(f"Success count k must satisfy 0 <= k <= n ({n}), got k={k}")
+    if not (0.0 < confidence < 1.0):
+        raise ValueError(f"Confidence level must be strictly within (0, 1), got confidence={confidence}")
+
     alpha = 1.0 - confidence
     try:
         from scipy.stats import beta
         lower = float(beta.ppf(alpha / 2.0, k, n - k + 1)) if k > 0 else 0.0
         upper = float(beta.ppf(1.0 - alpha / 2.0, k + 1, n - k)) if k < n else 1.0
-    except Exception:
-        p_hat = k / n
-        z = 1.96 if confidence == 0.95 else 1.645
-        se = math.sqrt(p_hat * (1 - p_hat) / n) if n > 0 else 0.0
-        lower = max(0.0, p_hat - z * se)
-        upper = min(1.0, p_hat + z * se)
+    except Exception as exc:
+        raise RuntimeError(
+            f"EXACT COMPUTATION FAILURE: Failed to compute exact Clopper-Pearson binomial interval via scipy.stats.beta: {exc}. "
+            "Under WS8.12 governance, falling back to approximate methods (e.g. Wald normal) is strictly prohibited."
+        ) from exc
     return (round(lower, 4), round(upper, 4))
 
 
@@ -478,21 +488,42 @@ class ExternalCustodianAuthority:
     Maintains an isolated signing key held strictly outside ASTRAEUS inference/deliberation agents,
     manages withheld observation unblinding events, and records an append-only,
     tamper-evident cryptographic ledger in persistent storage (SQLite WAL).
+    
+    Under WS8.12 governance:
+    - Ephemeral in-memory databases are disallowed by default unless explicitly allowed for testing.
+    - SQLite triggers forbid UPDATE and DELETE operations at the database engine level.
+    - Full hash-chain verification recomputes every payload and record hash from stored contents.
+    - Tampering with payloads, altering records, or deleting rows is actively detected and fails closed.
     """
     def __init__(
         self,
         custodian_id: str = "INDEPENDENT_OBSERVATORY_CUSTODIAN",
         custodian_private_key: Optional[bytes] = None,
         ledger_db_path: Optional[str] = None,
+        allow_ephemeral_for_testing: bool = False,
+        require_external_key: bool = False,
     ) -> None:
         import secrets, sqlite3
         self.custodian_id = custodian_id
+        if require_external_key and custodian_private_key is None:
+            raise ValueError(
+                f"EXTERNAL KEY REQUIRED: Custodian '{custodian_id}' requires an externally managed signing key. "
+                "Generating keys locally inside the agent process is prohibited in authenticated mode."
+            )
         self._private_key = custodian_private_key or secrets.token_bytes(32)
-        self.ledger_db_path = ledger_db_path or ":memory:"
-        if self.ledger_db_path == ":memory:":
+        
+        if ledger_db_path is None or ledger_db_path == ":memory:":
+            if not allow_ephemeral_for_testing:
+                raise ValueError(
+                    "MANDATORY PERSISTENCE VIOLATION: ledger_db_path must point to a durable file on disk. "
+                    "In-memory databases (':memory:') are prohibited unless allow_ephemeral_for_testing=True."
+                )
+            self.ledger_db_path = ":memory:"
             self._mem_conn = sqlite3.connect(":memory:", check_same_thread=False)
         else:
+            self.ledger_db_path = ledger_db_path
             self._mem_conn = None
+            
         self._init_sqlite_ledger()
 
     def _get_connection(self):
@@ -518,6 +549,21 @@ class ExternalCustodianAuthority:
                 recorded_at_iso TEXT NOT NULL,
                 record_hash TEXT NOT NULL
             );
+        """)
+        # Add triggers preventing UPDATE and DELETE to enforce append-only immutability
+        conn.execute("""
+            CREATE TRIGGER IF NOT EXISTS prevent_custodian_ledger_update
+            BEFORE UPDATE ON custodian_ledger
+            BEGIN
+                SELECT RAISE(ABORT, 'IMMUTABILITY VIOLATION: UPDATE operations are strictly prohibited on custodian_ledger');
+            END;
+        """)
+        conn.execute("""
+            CREATE TRIGGER IF NOT EXISTS prevent_custodian_ledger_delete
+            BEFORE DELETE ON custodian_ledger
+            BEGIN
+                SELECT RAISE(ABORT, 'IMMUTABILITY VIOLATION: DELETE operations are strictly prohibited on custodian_ledger');
+            END;
         """)
         conn.commit()
         if self._mem_conn is None:
@@ -637,26 +683,95 @@ class ExternalCustodianAuthority:
         )
         return hmac.compare_digest(expected_sig, commitment.custodian_signature_hex)
 
-    def verify_access_chronology(self, target_id: str) -> AccessChronologyAudit:
+    def verify_ledger_integrity(self) -> Tuple[bool, List[str]]:
         """
-        Audits the tamper-evident ledger to mathematically prove that commitment was recorded
-        strictly before unblinding access occurred, and verifies the full hash chain.
+        Audits the entire append-only ledger by:
+        1. Checking contiguous sequential ordering of record_index.
+        2. Recomputing payload_hash from payload_json and asserting equality.
+        3. Recomputing record_hash from record contents and asserting equality.
+        4. Checking continuous cryptographic hash-chaining (prev_record_hash matches preceding record_hash).
+        5. Validating cryptographic signatures against custodian authority.
         """
-        import sqlite3
+        import sqlite3, hashlib, json, hmac
         notes: List[str] = []
         conn = self._get_connection()
         try:
             cur = conn.cursor()
-            cur.execute("SELECT record_index, prev_record_hash, record_hash, record_type, target_id, payload_hash, recorded_at_epoch_sec FROM custodian_ledger ORDER BY record_index ASC;")
+            cur.execute("""
+                SELECT record_index, prev_record_hash, record_type, target_id,
+                       payload_hash, payload_json, signature_hex, recorded_at_epoch_sec,
+                       recorded_at_iso, record_hash
+                FROM custodian_ledger
+                ORDER BY record_index ASC;
+            """)
             rows = cur.fetchall()
-            chain_valid = True
-            expected_prev = "0" * 64
-            for r in rows:
-                idx, p_hash, r_hash, r_type, tid, pl_hash, epoch = r
-                if p_hash != expected_prev:
-                    chain_valid = False
-                    notes.append(f"Hash chain broken at index {idx}: expected {expected_prev}, found {p_hash}.")
-                expected_prev = r_hash
+        finally:
+            if self._mem_conn is None:
+                conn.close()
+
+        if not rows:
+            return (True, ["Ledger is empty."])
+
+        expected_prev = "0" * 64
+        expected_idx = 1
+        is_valid = True
+
+        for r in rows:
+            idx, p_hash, r_type, tid, pl_hash, pl_json, sig, epoch, iso_str, r_hash = r
+
+            # Check sequence index continuity (detects row deletion)
+            if idx != expected_idx:
+                is_valid = False
+                notes.append(f"SEQUENCE BREAK: Record index discontinuous. Expected {expected_idx}, got {idx} (possible row deletion).")
+
+            # Check hash-chain pointer continuity
+            if p_hash != expected_prev:
+                is_valid = False
+                notes.append(f"HASH CHAIN BREAK at index {idx}: stored prev_hash {p_hash} does not match expected {expected_prev}.")
+
+            # Recompute payload hash and record hash
+            if r_type == "COMMITMENT":
+                recomputed_pl_hash = hashlib.sha256(pl_json.encode("utf-8")).hexdigest()
+                if recomputed_pl_hash != pl_hash:
+                    is_valid = False
+                    notes.append(f"PAYLOAD TAMPERING at index {idx}: payload_json hash {recomputed_pl_hash} != stored {pl_hash}.")
+
+                try:
+                    pld = json.loads(pl_json)
+                    cid = pld.get("commitment_id", f"commit_{tid}")
+                except Exception:
+                    cid = f"commit_{tid}"
+                recomputed_rec_bytes = f"{p_hash}:{cid}:{tid}:{pl_hash}:{epoch}".encode("utf-8")
+                recomputed_rec_hash = hashlib.sha256(recomputed_rec_bytes).hexdigest()
+                if recomputed_rec_hash != r_hash:
+                    is_valid = False
+                    notes.append(f"RECORD HASH MISMATCH at index {idx}: recomputed {recomputed_rec_hash} != stored {r_hash}.")
+
+            elif r_type == "UNBLIND_ACCESS":
+                recomputed_rec_bytes = f"{p_hash}:UNBLIND:{tid}:{epoch}".encode("utf-8")
+                recomputed_rec_hash = hashlib.sha256(recomputed_rec_bytes).hexdigest()
+                if recomputed_rec_hash != r_hash:
+                    is_valid = False
+                    notes.append(f"RECORD HASH MISMATCH at index {idx}: recomputed {recomputed_rec_hash} != stored {r_hash}.")
+
+            expected_prev = r_hash
+            expected_idx = idx + 1
+
+        return (is_valid, notes)
+
+    def verify_access_chronology(self, target_id: str) -> AccessChronologyAudit:
+        """
+        Audits the tamper-evident ledger to mathematically prove that commitment was recorded
+        strictly before unblinding access occurred, and verifies the full recomputed hash chain.
+        """
+        import sqlite3
+        chain_valid, audit_notes = self.verify_ledger_integrity()
+        
+        conn = self._get_connection()
+        try:
+            cur = conn.cursor()
+            cur.execute("SELECT COUNT(*) FROM custodian_ledger;")
+            total_records = cur.fetchone()[0]
 
             cur.execute("SELECT recorded_at_epoch_sec, signature_hex FROM custodian_ledger WHERE target_id = ? AND record_type = 'COMMITMENT' ORDER BY record_index ASC LIMIT 1;", (target_id,))
             commit_entry = cur.fetchone()
@@ -678,8 +793,8 @@ class ExternalCustodianAuthority:
                 was_committed_before_unblinding=False,
                 time_delta_sec=0.0,
                 hash_chain_verified=chain_valid,
-                ledger_records_count=len(rows),
-                audit_notes=["No commitment record found in ledger."],
+                ledger_records_count=total_records,
+                audit_notes=audit_notes + ["No commitment record found in ledger."],
             )
 
         t_commit = commit_entry[0]
@@ -688,7 +803,7 @@ class ExternalCustodianAuthority:
         delta_t = t_unblind - t_commit
 
         if not committed_before_unblind:
-            notes.append(f"Prospective timing breach: committed at {t_commit} >= unblinded at {t_unblind}.")
+            audit_notes.append(f"Prospective timing breach: committed at {t_commit} >= unblinded at {t_unblind}.")
 
         return AccessChronologyAudit(
             target_id=target_id,
@@ -700,8 +815,8 @@ class ExternalCustodianAuthority:
             was_committed_before_unblinding=committed_before_unblind,
             time_delta_sec=round(delta_t, 4),
             hash_chain_verified=chain_valid,
-            ledger_records_count=len(rows),
-            audit_notes=notes,
+            ledger_records_count=total_records,
+            audit_notes=audit_notes,
         )
 
 
@@ -742,8 +857,14 @@ class PreRegisteredBlindDiscoveryProtocol:
         self,
         custodian_secret_key: Optional[bytes] = None,
         custodian: Optional[ExternalCustodianAuthority] = None,
+        ledger_db_path: Optional[str] = None,
     ) -> None:
-        self.custodian = custodian or ExternalCustodianAuthority(custodian_private_key=custodian_secret_key)
+        if custodian is not None:
+            self.custodian = custodian
+        elif ledger_db_path is not None:
+            self.custodian = ExternalCustodianAuthority(custodian_private_key=custodian_secret_key, ledger_db_path=ledger_db_path)
+        else:
+            self.custodian = ExternalCustodianAuthority(custodian_private_key=custodian_secret_key, allow_ephemeral_for_testing=True)
         self.custodian_key = self.custodian._private_key
         self._commitments_ledger: Dict[str, PreRegistrationCommitment] = {}
 
@@ -917,9 +1038,14 @@ class PreRegisteredBlindDiscoveryProtocol:
         if not sig_verified:
             outcome = "REJECTED_UNAUTHORIZED_COMMITMENT"
             passed = False
-        elif not committed_before_unblinded:
+        elif not hash_chain_ok:
+            outcome = "REJECTED_AUDIT_LEDGER_INTEGRITY_FAILURE"
+            passed = False
+            notes.extend(chronology.audit_notes)
+        elif not access_chronology_ok:
             outcome = "REJECTED_PROSPECTIVE_TIMING_BREACH"
             passed = False
+            notes.extend(chronology.audit_notes)
         elif falsification_triggered:
             outcome = "FALSIFIED_BY_EMPIRICAL_CRITERIA"
             passed = False

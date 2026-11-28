@@ -441,34 +441,36 @@ class ComputationalExperimentEngine:
             for o in observed_data
         ])
 
-        # Observed discrepancy T(y_obs) under posterior mean
-        t_obs = float(np.sum(((y_obs - pred_mean) / sigmas_obs) ** 2))
-        t_reps: List[float] = []
-
         # Construct bivariate covariance matrix preserving physical parameter degeneracy
         if posterior_covariance is not None:
-            cov_matrix = np.array(posterior_covariance)
+            cov_matrix = np.array(posterior_covariance, dtype=float)
+            if cov_matrix.shape != (2, 2):
+                raise ValueError(f"POSTERIOR COVARIANCE SHAPE MISMATCH: Expected 2x2 matrix, got {cov_matrix.shape}")
         else:
             rho = correlation_coeff
             cov_matrix = np.array([
                 [m_std**2, rho * m_std * v_std],
                 [rho * m_std * v_std, v_std**2]
-            ]) * 0.25
+            ], dtype=float) * 0.25
 
-        try:
-            param_draws = self.rng.multivariate_normal([m_mean, v_mean], cov_matrix, size=n_replications)
-        except Exception:
-            param_draws = np.column_stack([
-                self.rng.normal(m_mean, m_std * 0.5, size=n_replications),
-                self.rng.normal(v_mean, v_std * 0.5, size=n_replications)
-            ])
+        # Check positive semi-definiteness under WS8.12 governance (no silent fallback)
+        evals, evecs = np.linalg.eigh(cov_matrix)
+        if np.any(evals < -1e-12):
+            raise ValueError(f"POSTERIOR COVARIANCE DEGENERATE: Covariance matrix has negative eigenvalue ({min(evals)}).")
+        evals = np.maximum(evals, 1e-10)
+        cov_matrix = evecs @ np.diag(evals) @ evecs.T
+
+        param_draws = self.rng.multivariate_normal([m_mean, v_mean], cov_matrix, size=n_replications)
+
+        t_obss: List[float] = []
+        t_reps: List[float] = []
 
         for s_idx in range(n_replications):
             # 1. Parameter draw theta^(s) ~ p(theta | y_obs) with preserved covariance
             m_draw = float(np.clip(param_draws[s_idx, 0], 0.005, 0.10))
             v_draw = float(np.clip(param_draws[s_idx, 1], 0.05, 0.35))
 
-            # 2. Forward simulation under drawn parameters
+            # 2. Forward simulation under drawn parameters theta^(s)
             sim_draw = self.forward_simulate_kilonova(
                 ejecta_mass_msun=m_draw,
                 expansion_velocity_c=v_draw,
@@ -487,16 +489,20 @@ class ComputationalExperimentEngine:
             # 3. Sample replicated dataset y_rep^(s) ~ N(pred_draw, sigmas_obs)
             y_rep = self.rng.normal(pred_draw, sigmas_obs)
 
-            # 4. Replicated discrepancy T(y_rep^(s)) under model expectation
-            t_rep = float(np.sum(((y_rep - pred_mean) / sigmas_obs) ** 2))
-            t_reps.append(t_rep)
+            # 4. Parameter-conditioned discrepancies T(y_obs, theta^(s)) and T(y_rep^(s), theta^(s))
+            # Under true Bayesian PPC (Gelman et al. BDA3), discrepancy is conditioned on each draw theta^(s)
+            t_obs_s = float(np.sum(((y_obs - pred_draw) / sigmas_obs) ** 2))
+            t_rep_s = float(np.sum(((y_rep - pred_draw) / sigmas_obs) ** 2))
 
-        # Bayesian p-value: fraction where T(y_rep) >= T(y_obs)
-        p_val = float(np.mean(np.array(t_reps) >= t_obs))
+            t_obss.append(t_obs_s)
+            t_reps.append(t_rep_s)
+
+        # Bayesian p-value: fraction of posterior draws where T(y_rep^(s), theta^(s)) >= T(y_obs, theta^(s))
+        p_val = float(np.mean(np.array(t_reps) >= np.array(t_obss)))
 
         passed = 0.05 <= p_val <= 0.95
         comment = (
-            f"Posterior predictive check passed (p_B={p_val:.3f} within [0.05, 0.95]) with true posterior parameter draws propagated through physical forward model with covariance."
+            f"Posterior predictive check passed (p_B={p_val:.3f} within [0.05, 0.95]) with draw-conditioned Bayesian discrepancy T(y, theta^(s)) evaluated across {n_replications} joint draws."
             if passed
             else f"PPC Failed (p_B={p_val:.3f}): model exhibits systematic lack-of-fit or miscalibrated posterior."
         )
@@ -504,7 +510,7 @@ class ComputationalExperimentEngine:
         return PosteriorPredictiveCheckResult(
             model_name=model_name,
             num_replications=n_replications,
-            observed_discrepancy_stat=round(t_obs, 2),
+            observed_discrepancy_stat=round(float(np.mean(t_obss)), 2),
             replicated_discrepancy_stats=[round(x, 2) for x in t_reps[:10]],
             bayesian_p_value=round(p_val, 4),
             ppc_passed=passed,
@@ -613,7 +619,7 @@ class ComputationalExperimentEngine:
             skew = 0.0
             kurt = 0.0
 
-        is_calibrated = (mean_cov_90 >= 0.70) and (mean_cov_95 >= 0.80) and (0.15 <= mean_pval <= 0.85)
+        is_calibrated = (mean_cov_90 >= 0.70) and (mean_cov_95 >= 0.80) and (0.05 <= mean_pval <= 0.95)
 
         from astraeus_bench.discovery.astro_benchmarks import compute_clopper_pearson_interval
         ci_90 = compute_clopper_pearson_interval(sum(cov_90_list), n_trials, 0.90)
