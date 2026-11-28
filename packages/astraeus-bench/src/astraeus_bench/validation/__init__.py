@@ -15,6 +15,9 @@ from astraeus_bench.validation.real_world_registry import (
     EvaluationRecord,
     ValidationMode
 )
+from astraeus_bench.validation.real_data_loader import (
+    RealWorldDataLoader
+)
 from astraeus_bench.validation.competitor_interfaces import (
     ComparatorSystem,
     LightCurveData,
@@ -54,6 +57,7 @@ __all__ = [
     "RealWorldEvaluationRegistry",
     "EvaluationRecord",
     "ValidationMode",
+    "RealWorldDataLoader",
     "ComparatorSystem",
     "LightCurveData",
     "ClassificationPrediction",
