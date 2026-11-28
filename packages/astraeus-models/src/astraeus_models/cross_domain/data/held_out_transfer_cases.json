@@ -1,0 +1,223 @@
+{
+  "benchmark_id": "ASTRAEUS_CROSS_DOMAIN_TRANSFER_BLIND_CASES_V1",
+  "version": "1.0.0",
+  "description": "Blind input cases for cross-domain transfer evaluation. Contains NO adjudication labels.",
+  "cases": [
+    {
+      "case_id": "TC_01",
+      "name": "Kilonova_to_TypeIaSN",
+      "source_domain": "MULTI_MESSENGER_TRANSIENTS",
+      "target_domain": "MULTI_MESSENGER_TRANSIENTS",
+      "src_invariants": {
+        "gravitational_compactness": 0.0001,
+        "eddington_ratio": 15000.0,
+        "dynamical_to_cooling_timescale_ratio": 0.1,
+        "virial_ratio": 0.5
+      },
+      "tgt_invariants": {
+        "gravitational_compactness": 0.0002,
+        "eddington_ratio": 12000.0,
+        "dynamical_to_cooling_timescale_ratio": 0.15,
+        "virial_ratio": 0.5
+      }
+    },
+    {
+      "case_id": "TC_02",
+      "name": "ShockBreakout_to_RelativisticShock",
+      "source_domain": "MULTI_MESSENGER_TRANSIENTS",
+      "target_domain": "EXTREME_GRAVITY_COMPACT_OBJECTS",
+      "src_invariants": {
+        "gravitational_compactness": 0.00005,
+        "eddington_ratio": 50000.0,
+        "dynamical_to_cooling_timescale_ratio": 0.01,
+        "virial_ratio": 0.5
+      },
+      "tgt_invariants": {
+        "gravitational_compactness": 0.00008,
+        "eddington_ratio": 45000.0,
+        "dynamical_to_cooling_timescale_ratio": 0.012,
+        "virial_ratio": 0.5
+      }
+    },
+    {
+      "case_id": "TC_03",
+      "name": "CataclysmicVariableDisk_to_AGNDisk",
+      "source_domain": "EXTREME_GRAVITY_COMPACT_OBJECTS",
+      "target_domain": "EXTREME_GRAVITY_COMPACT_OBJECTS",
+      "src_invariants": {
+        "gravitational_compactness": 0.01,
+        "eddington_ratio": 0.2,
+        "dynamical_to_cooling_timescale_ratio": 0.001,
+        "virial_ratio": 0.5
+      },
+      "tgt_invariants": {
+        "gravitational_compactness": 0.02,
+        "eddington_ratio": 0.25,
+        "dynamical_to_cooling_timescale_ratio": 0.0015,
+        "virial_ratio": 0.5
+      }
+    },
+    {
+      "case_id": "TC_04",
+      "name": "ExoplanetTroposphere_to_EarthStratosphere",
+      "source_domain": "EXOPLANETS_ASTROBIOLOGY",
+      "target_domain": "EXOPLANETS_ASTROBIOLOGY",
+      "src_invariants": {
+        "gravitational_compactness": 1e-9,
+        "eddington_ratio": 1e-6,
+        "dynamical_to_cooling_timescale_ratio": 1.0,
+        "virial_ratio": 0.5
+      },
+      "tgt_invariants": {
+        "gravitational_compactness": 1.2e-9,
+        "eddington_ratio": 1.1e-6,
+        "dynamical_to_cooling_timescale_ratio": 1.1,
+        "virial_ratio": 0.5
+      }
+    },
+    {
+      "case_id": "TC_05",
+      "name": "GRBJet_to_MicroquasarJet",
+      "source_domain": "MULTI_MESSENGER_TRANSIENTS",
+      "target_domain": "EXTREME_GRAVITY_COMPACT_OBJECTS",
+      "src_invariants": {
+        "gravitational_compactness": 0.1,
+        "eddington_ratio": 1000.0,
+        "dynamical_to_cooling_timescale_ratio": 0.05,
+        "virial_ratio": 0.5
+      },
+      "tgt_invariants": {
+        "gravitational_compactness": 0.08,
+        "eddington_ratio": 800.0,
+        "dynamical_to_cooling_timescale_ratio": 0.06,
+        "virial_ratio": 0.5
+      }
+    },
+    {
+      "case_id": "TC_06",
+      "name": "PWN_to_SNRemnant",
+      "source_domain": "EXTREME_GRAVITY_COMPACT_OBJECTS",
+      "target_domain": "MULTI_MESSENGER_TRANSIENTS",
+      "src_invariants": {
+        "gravitational_compactness": 1e-6,
+        "eddington_ratio": 50.0,
+        "dynamical_to_cooling_timescale_ratio": 0.2,
+        "virial_ratio": 0.5
+      },
+      "tgt_invariants": {
+        "gravitational_compactness": 1.5e-6,
+        "eddington_ratio": 40.0,
+        "dynamical_to_cooling_timescale_ratio": 0.25,
+        "virial_ratio": 0.5
+      }
+    },
+    {
+      "case_id": "TC_07",
+      "name": "Kilonova_to_Exoplanet",
+      "source_domain": "MULTI_MESSENGER_TRANSIENTS",
+      "target_domain": "EXOPLANETS_ASTROBIOLOGY",
+      "src_invariants": {
+        "gravitational_compactness": 0.0001,
+        "eddington_ratio": 15000.0,
+        "dynamical_to_cooling_timescale_ratio": 0.1,
+        "virial_ratio": 0.5
+      },
+      "tgt_invariants": {
+        "gravitational_compactness": 1e-9,
+        "eddington_ratio": 1e-6,
+        "dynamical_to_cooling_timescale_ratio": 1.0,
+        "virial_ratio": 0.5
+      }
+    },
+    {
+      "case_id": "TC_08",
+      "name": "Kilonova_to_FLRWCosmology",
+      "source_domain": "MULTI_MESSENGER_TRANSIENTS",
+      "target_domain": "COSMOLOGY_STRUCTURE",
+      "src_invariants": {
+        "gravitational_compactness": 0.0001,
+        "eddington_ratio": 15000.0,
+        "dynamical_to_cooling_timescale_ratio": 0.1,
+        "virial_ratio": 0.5
+      },
+      "tgt_invariants": {
+        "gravitational_compactness": 1e-12,
+        "eddington_ratio": 1e-5,
+        "dynamical_to_cooling_timescale_ratio": 0.0026,
+        "virial_ratio": 0.5
+      }
+    },
+    {
+      "case_id": "TC_09",
+      "name": "Exoplanet_to_KerrHorizon",
+      "source_domain": "EXOPLANETS_ASTROBIOLOGY",
+      "target_domain": "EXTREME_GRAVITY_COMPACT_OBJECTS",
+      "src_invariants": {
+        "gravitational_compactness": 1e-9,
+        "eddington_ratio": 1e-6,
+        "dynamical_to_cooling_timescale_ratio": 1.0,
+        "virial_ratio": 0.5
+      },
+      "tgt_invariants": {
+        "gravitational_compactness": 0.5,
+        "eddington_ratio": 1.0,
+        "dynamical_to_cooling_timescale_ratio": 0.00036,
+        "virial_ratio": 0.5
+      }
+    },
+    {
+      "case_id": "TC_10",
+      "name": "IGM_to_NeutronStarCore",
+      "source_domain": "COSMOLOGY_STRUCTURE",
+      "target_domain": "EXTREME_GRAVITY_COMPACT_OBJECTS",
+      "src_invariants": {
+        "gravitational_compactness": 1e-12,
+        "eddington_ratio": 1e-6,
+        "dynamical_to_cooling_timescale_ratio": 10.0,
+        "virial_ratio": 0.5
+      },
+      "tgt_invariants": {
+        "gravitational_compactness": 0.2,
+        "eddington_ratio": 10.0,
+        "dynamical_to_cooling_timescale_ratio": 0.01,
+        "virial_ratio": 0.5
+      }
+    },
+    {
+      "case_id": "TC_11",
+      "name": "AGNDisk_to_PlanetaryMantle",
+      "source_domain": "EXTREME_GRAVITY_COMPACT_OBJECTS",
+      "target_domain": "EXOPLANETS_ASTROBIOLOGY",
+      "src_invariants": {
+        "gravitational_compactness": 0.02,
+        "eddington_ratio": 0.25,
+        "dynamical_to_cooling_timescale_ratio": 0.0015,
+        "virial_ratio": 0.5
+      },
+      "tgt_invariants": {
+        "gravitational_compactness": 1e-9,
+        "eddington_ratio": 1e-12,
+        "dynamical_to_cooling_timescale_ratio": 100000.0,
+        "virial_ratio": 0.5
+      }
+    },
+    {
+      "case_id": "TC_12",
+      "name": "SolarFlare_to_MolecularCloud",
+      "source_domain": "EXOPLANETS_ASTROBIOLOGY",
+      "target_domain": "COSMOLOGY_STRUCTURE",
+      "src_invariants": {
+        "gravitational_compactness": 1e-6,
+        "eddington_ratio": 10.0,
+        "dynamical_to_cooling_timescale_ratio": 0.001,
+        "virial_ratio": 0.5
+      },
+      "tgt_invariants": {
+        "gravitational_compactness": 1e-10,
+        "eddington_ratio": 1e-8,
+        "dynamical_to_cooling_timescale_ratio": 100.0,
+        "virial_ratio": 0.5
+      }
+    }
+  ]
+}

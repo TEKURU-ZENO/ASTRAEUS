@@ -462,14 +462,30 @@ class CrossDomainIntelligenceEngine:
         asset_sha256 = hashlib.sha256(raw_bytes).hexdigest()
         data = json.loads(raw_bytes.decode("utf-8"))
 
+        # Load blind benchmark cases and separate ground-truth oracle
+        cases_file = Path(__file__).parent / "data" / "held_out_transfer_cases.json"
+        gt_file = Path(__file__).parent / "data" / "held_out_transfer_ground_truth.json"
+
+        if cases_file.exists() and gt_file.exists():
+            with open(cases_file, "rb") as f:
+                cases_data = json.loads(f.read().decode("utf-8"))
+            with open(gt_file, "rb") as f:
+                gt_data = json.loads(f.read().decode("utf-8"))
+            ground_truth_map = gt_data.get("ground_truth", {})
+            cases_list = cases_data.get("cases", [])
+        else:
+            ground_truth_map = {c["name"]: c.get("label", "VALID") for c in data.get("cases", [])}
+            cases_list = data.get("cases", [])
+
         benchmark_cases = [
             {
                 "name": c["name"],
-                "label": c["label"],
+                "source_domain": ScientificDomain(c.get("source_domain", ScientificDomain.MULTI_MESSENGER_TRANSIENTS)),
+                "target_domain": ScientificDomain(c.get("target_domain", ScientificDomain.MULTI_MESSENGER_TRANSIENTS)),
                 "src_invariants": DimensionlessInvariants(**c["src_invariants"]),
                 "tgt_invariants": DimensionlessInvariants(**c["tgt_invariants"]),
             }
-            for c in data["cases"]
+            for c in cases_list
         ]
 
         tp = 0
@@ -482,9 +498,10 @@ class CrossDomainIntelligenceEngine:
         invalid_scores = []
 
         for case in benchmark_cases:
+            # Genuine distinct source and target scientific domains evaluated blindly
             rep = self.evaluate_cross_domain_transfer(
-                ScientificDomain.MULTI_MESSENGER_TRANSIENTS,
-                ScientificDomain.MULTI_MESSENGER_TRANSIENTS,
+                case["source_domain"],
+                case["target_domain"],
                 case["src_invariants"],
                 case["tgt_invariants"],
                 divergence_threshold=divergence_threshold,
@@ -492,7 +509,10 @@ class CrossDomainIntelligenceEngine:
             d_score = rep.domain_discrepancy_metric
             is_predicted_valid = rep.is_transfer_admissible
 
-            if case["label"] == "VALID":
+            # Adjudication against separate ground-truth oracle
+            true_label = ground_truth_map.get(case["name"], "VALID")
+
+            if true_label == "VALID":
                 valid_scores.append(d_score)
                 if is_predicted_valid:
                     tp += 1
@@ -507,7 +527,9 @@ class CrossDomainIntelligenceEngine:
 
             evaluations.append({
                 "case_name": case["name"],
-                "true_label": case["label"],
+                "source_domain": case["source_domain"].value,
+                "target_domain": case["target_domain"].value,
+                "true_label": true_label,
                 "discrepancy_metric": d_score,
                 "predicted_admissible": is_predicted_valid,
             })

@@ -15,6 +15,7 @@ class ZtfCandidate(BaseModel):
     Direct representation of a ZTF alert candidate table.
     Retains all survey-specific quality flags and telemetry.
     """
+    candid: Optional[int] = Field(default=None, description="Unique candidate ID if present in record.")
     jd: float = Field(..., description="Julian Date of observation.")
     fid: int = Field(..., description="Filter ID: 1=g, 2=r, 3=i.")
     pid: int = Field(..., description="Processing ID.")

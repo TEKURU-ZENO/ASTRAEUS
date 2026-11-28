@@ -1,17 +1,27 @@
-"""Alert and scientific event ingestion engines for ASTRAEUS."""
+"""
+ASTRAEUS Ingestion Package.
+Provides multi-survey scientific event ingestion, quarantine enforcement,
+and archival alert replay.
+"""
 
-from astraeus_data.ingestion.alert_ingester import AlertIngestionEngine
 from astraeus_data.ingestion.scientific_event_engine import (
     ScientificEventIngestionEngine,
     UnifiedScientificEvent,
-    IngestionStatus,
     EventIngestionResult,
+    IngestionStatus,
+)
+from astraeus_data.ingestion.alert_replay_engine import (
+    ArchivalAlertReplayEngine,
+    ReplayEventItem,
+    ReplayExecutionSummary,
 )
 
 __all__ = [
-    "AlertIngestionEngine",
     "ScientificEventIngestionEngine",
     "UnifiedScientificEvent",
-    "IngestionStatus",
     "EventIngestionResult",
+    "IngestionStatus",
+    "ArchivalAlertReplayEngine",
+    "ReplayEventItem",
+    "ReplayExecutionSummary",
 ]

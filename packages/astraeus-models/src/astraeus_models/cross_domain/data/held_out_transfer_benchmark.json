@@ -11,6 +11,8 @@
     {
       "name": "Kilonova_to_TypeIaSN",
       "label": "VALID",
+      "source_domain": "MULTI_MESSENGER_TRANSIENTS",
+      "target_domain": "MULTI_MESSENGER_TRANSIENTS",
       "scientific_domain_pair": "Relativistic Explosive Transients -> Thermonuclear Supernovae",
       "physical_basis": "Homologous radioactively powered expanding ejecta with high optical depth and trapped thermal radiation.",
       "src_invariants": {
@@ -29,6 +31,8 @@
     {
       "name": "ShockBreakout_to_RelativisticShock",
       "label": "VALID",
+      "source_domain": "MULTI_MESSENGER_TRANSIENTS",
+      "target_domain": "EXTREME_GRAVITY_COMPACT_OBJECTS",
       "scientific_domain_pair": "Supernova Shock Breakout -> Relativistic Shock Breakout",
       "physical_basis": "Fast radiation-mediated shock acceleration into circumstellar medium.",
       "src_invariants": {
@@ -47,6 +51,8 @@
     {
       "name": "CataclysmicVariableDisk_to_AGNDisk",
       "label": "VALID",
+      "source_domain": "EXTREME_GRAVITY_COMPACT_OBJECTS",
+      "target_domain": "EXTREME_GRAVITY_COMPACT_OBJECTS",
       "scientific_domain_pair": "Stellar Accretion Disk -> Active Galactic Nucleus Disk",
       "physical_basis": "Shakura-Sunyaev alpha-viscosity geometric thin-disk accretion flow with scale-invariant angular momentum transport.",
       "src_invariants": {
@@ -65,6 +71,8 @@
     {
       "name": "ExoplanetTroposphere_to_EarthStratosphere",
       "label": "VALID",
+      "source_domain": "EXOPLANETS_ASTROBIOLOGY",
+      "target_domain": "EXOPLANETS_ASTROBIOLOGY",
       "scientific_domain_pair": "Exoplanetary Atmospheres -> Terrestrial Stratospheric Dynamics",
       "physical_basis": "Hydrostatic barometric equilibrium under planetary gravity and radiative-convective energy balance.",
       "src_invariants": {
@@ -83,6 +91,8 @@
     {
       "name": "GRBJet_to_MicroquasarJet",
       "label": "VALID",
+      "source_domain": "MULTI_MESSENGER_TRANSIENTS",
+      "target_domain": "EXTREME_GRAVITY_COMPACT_OBJECTS",
       "scientific_domain_pair": "Gamma-Ray Burst Relativistic Jets -> Galactic Microquasar Jets",
       "physical_basis": "Relativistic magnetohydrodynamic jet collimation and synchrotron beaming across 6 orders of mass scale.",
       "src_invariants": {
@@ -101,6 +111,8 @@
     {
       "name": "PWN_to_SNRemnant",
       "label": "VALID",
+      "source_domain": "EXTREME_GRAVITY_COMPACT_OBJECTS",
+      "target_domain": "MULTI_MESSENGER_TRANSIENTS",
       "scientific_domain_pair": "Pulsar Wind Nebulae -> Supernova Remnant Shells",
       "physical_basis": "Relativistic bubble expansion into surrounding ambient medium governed by Sedov-Taylor / self-similar dynamics.",
       "src_invariants": {
@@ -119,6 +131,8 @@
     {
       "name": "Kilonova_to_Exoplanet",
       "label": "INVALID",
+      "source_domain": "MULTI_MESSENGER_TRANSIENTS",
+      "target_domain": "EXOPLANETS_ASTROBIOLOGY",
       "scientific_domain_pair": "Relativistic Radioactive Fireball -> Planetary Atmosphere",
       "physical_basis": "Unphysical transfer: 5 dex gravitational compactness mismatch, 10 dex Eddington radiation discrepancy.",
       "src_invariants": {
@@ -137,6 +151,8 @@
     {
       "name": "Kilonova_to_FLRWCosmology",
       "label": "INVALID",
+      "source_domain": "MULTI_MESSENGER_TRANSIENTS",
+      "target_domain": "COSMOLOGY_STRUCTURE",
       "scientific_domain_pair": "Localized Dynamic Fireball -> Homogeneous FLRW Cosmology",
       "physical_basis": "Unphysical transfer: 8 dex compactness difference, causal expansion vs cosmological metric stretching.",
       "src_invariants": {
@@ -155,6 +171,8 @@
     {
       "name": "Exoplanet_to_KerrHorizon",
       "label": "INVALID",
+      "source_domain": "EXOPLANETS_ASTROBIOLOGY",
+      "target_domain": "EXTREME_GRAVITY_COMPACT_OBJECTS",
       "scientific_domain_pair": "Planetary Atmosphere -> Rotating Black Hole Event Horizon",
       "physical_basis": "Unphysical transfer: 8 dex compactness difference, Newtonian gas dynamics vs frame-dragging strong-field GR.",
       "src_invariants": {
@@ -173,6 +191,8 @@
     {
       "name": "IGM_to_NeutronStarCore",
       "label": "INVALID",
+      "source_domain": "COSMOLOGY_STRUCTURE",
+      "target_domain": "EXTREME_GRAVITY_COMPACT_OBJECTS",
       "scientific_domain_pair": "Intergalactic Medium -> Supranuclear Density Neutron Star Core",
       "physical_basis": "Unphysical transfer: 11 dex density and compactness divergence; collisionless diffuse gas vs degenerate nuclear matter.",
       "src_invariants": {
@@ -191,6 +211,8 @@
     {
       "name": "AGNDisk_to_PlanetaryMantle",
       "label": "INVALID",
+      "source_domain": "EXTREME_GRAVITY_COMPACT_OBJECTS",
+      "target_domain": "EXOPLANETS_ASTROBIOLOGY",
       "scientific_domain_pair": "Radiation-Dominated Accretion Disk -> Silicate Mantle Convection",
       "physical_basis": "Unphysical transfer: radiation pressure fluid vs viscoelastic rock rheology across 8 orders of timescale ratio.",
       "src_invariants": {
@@ -209,6 +231,8 @@
     {
       "name": "SolarFlare_to_MolecularCloud",
       "label": "INVALID",
+      "source_domain": "EXOPLANETS_ASTROBIOLOGY",
+      "target_domain": "COSMOLOGY_STRUCTURE",
       "scientific_domain_pair": "Coronal Magnetic Reconnection -> Self-Gravitating Molecular Cloud Core",
       "physical_basis": "Unphysical transfer: impulsive magnetic annihilation vs cold isothermal Jeans fragmentation.",
       "src_invariants": {

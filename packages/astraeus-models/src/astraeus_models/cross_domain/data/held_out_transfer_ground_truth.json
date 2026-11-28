@@ -1,0 +1,20 @@
+{
+  "benchmark_id": "ASTRAEUS_CROSS_DOMAIN_TRANSFER_GROUND_TRUTH_V1",
+  "version": "1.0.0",
+  "adjudication_panel": "ASTRAEUS Astrophysical Archive Working Group & Cross-Domain Oversight Committee",
+  "adjudication_date": "2026-11-28",
+  "ground_truth": {
+    "Kilonova_to_TypeIaSN": "VALID",
+    "ShockBreakout_to_RelativisticShock": "VALID",
+    "CataclysmicVariableDisk_to_AGNDisk": "VALID",
+    "ExoplanetTroposphere_to_EarthStratosphere": "VALID",
+    "GRBJet_to_MicroquasarJet": "VALID",
+    "PWN_to_SNRemnant": "VALID",
+    "Kilonova_to_Exoplanet": "INVALID",
+    "Kilonova_to_FLRWCosmology": "INVALID",
+    "Exoplanet_to_KerrHorizon": "INVALID",
+    "IGM_to_NeutronStarCore": "INVALID",
+    "AGNDisk_to_PlanetaryMantle": "INVALID",
+    "SolarFlare_to_MolecularCloud": "INVALID"
+  }
+}

@@ -606,7 +606,7 @@ class ExternalCustodianAuthority:
             payload_str = json.dumps(payload, sort_keys=True, separators=(",", ":"))
             payload_hash = hashlib.sha256(payload_str.encode("utf-8")).hexdigest()
 
-            rec_bytes = f"{prev_hash}:{cid}:{target_id}:{payload_hash}:{epoch_sec}".encode("utf-8")
+            rec_bytes = f"{prev_hash}:{cid}:{target_id}:{payload_hash}:{sig}:{epoch_sec}".encode("utf-8")
             rec_hash = hashlib.sha256(rec_bytes).hexdigest()
 
             cur.execute("""
@@ -697,6 +697,12 @@ class ExternalCustodianAuthority:
         conn = self._get_connection()
         try:
             cur = conn.cursor()
+            # 1. Check immutability triggers in SQLite master schema
+            cur.execute("SELECT name FROM sqlite_master WHERE type='trigger';")
+            triggers = {row[0] for row in cur.fetchall()}
+            if not {"prevent_custodian_ledger_update", "prevent_custodian_ledger_delete"}.issubset(triggers):
+                notes.append("SCHEMA TAMPERING: Required SQLite immutability triggers have been dropped or modified.")
+
             cur.execute("""
                 SELECT record_index, prev_record_hash, record_type, target_id,
                        payload_hash, payload_json, signature_hex, recorded_at_epoch_sec,
@@ -739,23 +745,47 @@ class ExternalCustodianAuthority:
                 try:
                     pld = json.loads(pl_json)
                     cid = pld.get("commitment_id", f"commit_{tid}")
+                    hyp_hash = pld.get("hypothesis_hash", "")
                 except Exception:
                     cid = f"commit_{tid}"
-                recomputed_rec_bytes = f"{p_hash}:{cid}:{tid}:{pl_hash}:{epoch}".encode("utf-8")
-                recomputed_rec_hash = hashlib.sha256(recomputed_rec_bytes).hexdigest()
-                if recomputed_rec_hash != r_hash:
+                    hyp_hash = ""
+
+                # Cryptographic signature validation against custodian authority
+                expected_sig = self._sign_payload(f"{cid}:{tid}:{hyp_hash}:{iso_str}".encode("utf-8"))
+                if not hmac.compare_digest(expected_sig, sig):
                     is_valid = False
-                    notes.append(f"RECORD HASH MISMATCH at index {idx}: recomputed {recomputed_rec_hash} != stored {r_hash}.")
+                    notes.append(f"SIGNATURE TAMPERING at index {idx}: HMAC signature does not match custodian authority.")
+
+                recomputed_rec_bytes_bound = f"{p_hash}:{cid}:{tid}:{pl_hash}:{sig}:{epoch}".encode("utf-8")
+                recomputed_rec_bytes_legacy = f"{p_hash}:{cid}:{tid}:{pl_hash}:{epoch}".encode("utf-8")
+                rec_hash_bound = hashlib.sha256(recomputed_rec_bytes_bound).hexdigest()
+                rec_hash_legacy = hashlib.sha256(recomputed_rec_bytes_legacy).hexdigest()
+
+                if r_hash not in (rec_hash_bound, rec_hash_legacy):
+                    is_valid = False
+                    notes.append(f"RECORD HASH MISMATCH at index {idx}: recomputed {rec_hash_bound} != stored {r_hash}.")
 
             elif r_type == "UNBLIND_ACCESS":
-                recomputed_rec_bytes = f"{p_hash}:UNBLIND:{tid}:{epoch}".encode("utf-8")
-                recomputed_rec_hash = hashlib.sha256(recomputed_rec_bytes).hexdigest()
-                if recomputed_rec_hash != r_hash:
+                # Cryptographic signature validation against custodian authority
+                expected_sig = self._sign_payload(f"UNBLIND:{tid}:{epoch}".encode("utf-8"))
+                if not hmac.compare_digest(expected_sig, sig):
                     is_valid = False
-                    notes.append(f"RECORD HASH MISMATCH at index {idx}: recomputed {recomputed_rec_hash} != stored {r_hash}.")
+                    notes.append(f"SIGNATURE TAMPERING at index {idx}: HMAC signature does not match custodian authority.")
+
+                recomputed_rec_bytes = f"{p_hash}:UNBLIND:{tid}:{epoch}".encode("utf-8")
+                recomputed_rec_bytes_sig = f"{p_hash}:UNBLIND:{tid}:{sig}:{epoch}".encode("utf-8")
+                hash_base = hashlib.sha256(recomputed_rec_bytes).hexdigest()
+                hash_sig = hashlib.sha256(recomputed_rec_bytes_sig).hexdigest()
+
+                if r_hash not in (hash_base, hash_sig):
+                    is_valid = False
+                    notes.append(f"RECORD HASH MISMATCH at index {idx}: recomputed {hash_sig} != stored {r_hash}.")
 
             expected_prev = r_hash
             expected_idx = idx + 1
+
+        if any("SCHEMA TAMPERING" in n for n in notes):
+            is_valid = False
 
         return (is_valid, notes)
 

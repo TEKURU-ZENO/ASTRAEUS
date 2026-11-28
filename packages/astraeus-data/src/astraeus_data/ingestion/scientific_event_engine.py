@@ -246,7 +246,8 @@ class ScientificEventIngestionEngine:
     def ingest_ztf_packet(self, packet: ZtfAlertPacket) -> EventIngestionResult:
         """Ingests and normalizes a ZTF optical alert packet."""
         payload_hash = packet.compute_payload_hash()
-        event_id = f"evt:ztf:{packet.candidate.candid}"
+        candid_val = getattr(packet.candidate, "candid", None) or getattr(packet, "candid", 0)
+        event_id = f"evt:ztf:{candid_val}"
 
         if dup := self._check_idempotency(payload_hash, event_id):
             return dup
@@ -257,7 +258,7 @@ class ScientificEventIngestionEngine:
         try:
             hp_pix = QuarantineFirewall.assert_not_quarantined(ra, dec, identifier=event_id, context="ztf_ingestion")
         except QuarantineViolationError as e:
-            q_path = self.quarantine_dir / f"{packet.candidate.candid}_ztf_quarantine.json"
+            q_path = self.quarantine_dir / f"{candid_val}_ztf_quarantine.json"
             with open(q_path, "w", encoding="utf-8") as f:
                 f.write(packet.model_dump_json(indent=2))
             return EventIngestionResult(
@@ -300,7 +301,7 @@ class ScientificEventIngestionEngine:
             photometry_points=phot_points,
             event_metadata={
                 "objectId": packet.objectId,
-                "candid": packet.candidate.candid,
+                "candid": candid_val,
                 "drb": packet.candidate.drb,
             },
             raw_payload_hash=payload_hash,

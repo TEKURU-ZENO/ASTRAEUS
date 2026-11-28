@@ -249,9 +249,18 @@ class ComputationalExperimentEngine:
         if sum_w <= 0:
             sum_w = 1.0
 
+        norm_weights = [w / sum_w for w in weights]
+
         # Marginal moments
         m_arr = np.array([c[0] for c in chi2_values])
         v_arr = np.array([c[1] for c in chi2_values])
+
+        self.last_posterior_grid = {
+            "m_arr": m_arr.tolist(),
+            "v_arr": v_arr.tolist(),
+            "normalized_weights": norm_weights,
+            "min_chi2": float(min_c2),
+        }
 
         m_mean = float(np.average(m_arr, weights=weights))
         m_raw_std = float(np.sqrt(np.average((m_arr - m_mean)**2, weights=weights)))
@@ -404,11 +413,12 @@ class ComputationalExperimentEngine:
         n_replications: int = 150,
         posterior_covariance: Optional[np.ndarray] = None,
         correlation_coeff: float = -0.65,
+        posterior_grid: Optional[Dict[str, Any]] = None,
     ) -> PosteriorPredictiveCheckResult:
         """
         Executes a Bayesian Posterior Predictive Check (PPC) with explicit parameter draws:
-        1. Draws parameter sets theta^(s) ~ p(theta | y_obs) from joint bivariate posterior,
-           preserving parameter covariance between ejecta mass and expansion velocity.
+        1. Draws parameter sets theta^(s) ~ p(theta | y_obs) from genuine joint posterior grid,
+           or bivariate covariance when grid is omitted, preserving physical parameter degeneracy.
         2. Evaluates forward physical model to generate predictive trajectories y_pred^(s).
         3. Samples replicated datasets y_rep^(s) ~ p(y | theta^(s)) incorporating observational noise.
         4. Calculates realization-specific discrepancy statistics T(y_obs, theta^(s)) and T(y_rep^(s), theta^(s)).
@@ -441,34 +451,46 @@ class ComputationalExperimentEngine:
             for o in observed_data
         ])
 
-        # Construct bivariate covariance matrix preserving physical parameter degeneracy
-        if posterior_covariance is not None:
-            cov_matrix = np.array(posterior_covariance, dtype=float)
-            if cov_matrix.shape != (2, 2):
-                raise ValueError(f"POSTERIOR COVARIANCE SHAPE MISMATCH: Expected 2x2 matrix, got {cov_matrix.shape}")
+        # Genuine Joint Posterior Grid Sampling vs Covariance-Conditioned Sampling
+        use_exact_grid = (posterior_grid is not None)
+
+        if use_exact_grid:
+            grid = posterior_grid if posterior_grid is not None else self.last_posterior_grid
+            w = np.array(grid["normalized_weights"])
+            indices = self.rng.choice(len(w), size=n_replications, p=w)
+            m_draws = np.array(grid["m_arr"])[indices]
+            v_draws = np.array(grid["v_arr"])[indices]
         else:
-            rho = correlation_coeff
-            cov_matrix = np.array([
-                [m_std**2, rho * m_std * v_std],
-                [rho * m_std * v_std, v_std**2]
-            ], dtype=float) * 0.25
+            # Construct bivariate covariance matrix preserving physical parameter degeneracy
+            if posterior_covariance is not None:
+                cov_matrix = np.array(posterior_covariance, dtype=float)
+                if cov_matrix.shape != (2, 2):
+                    raise ValueError(f"POSTERIOR COVARIANCE SHAPE MISMATCH: Expected 2x2 matrix, got {cov_matrix.shape}")
+            else:
+                rho = correlation_coeff
+                cov_matrix = np.array([
+                    [m_std**2, rho * m_std * v_std],
+                    [rho * m_std * v_std, v_std**2]
+                ], dtype=float) * 0.25
 
-        # Check positive semi-definiteness under WS8.12 governance (no silent fallback)
-        evals, evecs = np.linalg.eigh(cov_matrix)
-        if np.any(evals < -1e-12):
-            raise ValueError(f"POSTERIOR COVARIANCE DEGENERATE: Covariance matrix has negative eigenvalue ({min(evals)}).")
-        evals = np.maximum(evals, 1e-10)
-        cov_matrix = evecs @ np.diag(evals) @ evecs.T
+            # Check positive semi-definiteness under WS8.12 governance (no silent fallback)
+            evals, evecs = np.linalg.eigh(cov_matrix)
+            if np.any(evals < -1e-12):
+                raise ValueError(f"POSTERIOR COVARIANCE DEGENERATE: Covariance matrix has negative eigenvalue ({min(evals)}).")
+            evals = np.maximum(evals, 1e-10)
+            cov_matrix = evecs @ np.diag(evals) @ evecs.T
 
-        param_draws = self.rng.multivariate_normal([m_mean, v_mean], cov_matrix, size=n_replications)
+            param_draws = self.rng.multivariate_normal([m_mean, v_mean], cov_matrix, size=n_replications)
+            m_draws = np.clip(param_draws[:, 0], 0.005, 0.10)
+            v_draws = np.clip(param_draws[:, 1], 0.05, 0.35)
 
         t_obss: List[float] = []
         t_reps: List[float] = []
 
         for s_idx in range(n_replications):
-            # 1. Parameter draw theta^(s) ~ p(theta | y_obs) with preserved covariance
-            m_draw = float(np.clip(param_draws[s_idx, 0], 0.005, 0.10))
-            v_draw = float(np.clip(param_draws[s_idx, 1], 0.05, 0.35))
+            # 1. Parameter draw theta^(s) ~ p(theta | y_obs)
+            m_draw = float(m_draws[s_idx])
+            v_draw = float(v_draws[s_idx])
 
             # 2. Forward simulation under drawn parameters theta^(s)
             sim_draw = self.forward_simulate_kilonova(

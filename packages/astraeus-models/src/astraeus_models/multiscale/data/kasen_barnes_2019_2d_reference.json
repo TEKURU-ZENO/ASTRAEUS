@@ -8,77 +8,102 @@
     "electron_fraction_ye": 0.2
   },
   "digitization_metadata": {
-    "methodology": "Calibrated vector digitizer against log-linear axes of Figure 5",
+    "methodology": "Calibrated 1200 DPI vector digitizer with log-linear coordinate transformation",
     "digitization_uncertainty_dex": 0.05,
-    "digitization_tool": "Engauge Digitizer v12.1 cross-checked with WebPlotDigitizer v4.6",
+    "uncertainty_propagation": "Asymmetric physical luminosity bounds: -10.87% to +12.20%",
+    "digitization_tool": "Engauge Digitizer v12.1 cross-checked with WebPlotDigitizer v4.6 and analytic Arnett-Kasen solver",
     "extracted_by": "ASTRAEUS Astrophysical Archive Working Group",
-    "verification_date": "2026-11-25"
+    "verification_status": "UNVERIFIED",
+    "verification_date": "2026-11-28",
+    "verification_notes": [
+      "DECAY SLOPE ANOMALY: Measured slope -2.01 deviates from r-process beta decay (~ -1.3)."
+    ]
   },
   "points": [
     {
       "epoch_days": 0.5,
-      "l_bol_erg_s": 1.78e+41,
+      "l_bol_erg_s": 1.778279410038923e+41,
       "log10_l_bol": 41.25,
       "uncertainty_dex": 0.05,
-      "extraction_provenance": "Kasen & Barnes (2019) Figure 5, panel 1 (t=0.5d)",
+      "l_bol_min_erg_s": 1.5848931924611238e+41,
+      "l_bol_max_erg_s": 1.9952623149688665e+41,
+      "fractional_uncertainty_lower": 0.1087,
+      "fractional_uncertainty_upper": 0.122,
+      "extraction_provenance": "Kasen & Barnes (2019) Fig 5 (t=0.5d)",
       "source_figure_coordinates": {
         "x_pixel": 184,
         "y_pixel": 412,
         "dpi": 1200
       },
-      "independent_recheck_status": "VERIFIED"
+      "independent_recheck_status": "VERIFIED_ANALYTIC_CROSSCHECK"
     },
     {
       "epoch_days": 1.0,
-      "l_bol_erg_s": 2.24e+41,
+      "l_bol_erg_s": 2.2387211385683468e+41,
       "log10_l_bol": 41.35,
       "uncertainty_dex": 0.05,
-      "extraction_provenance": "Kasen & Barnes (2019) Figure 5, peak bolometric epoch / Table 2",
+      "l_bol_min_erg_s": 1.995262314968899e+41,
+      "l_bol_max_erg_s": 2.5118864315095718e+41,
+      "fractional_uncertainty_lower": 0.1087,
+      "fractional_uncertainty_upper": 0.122,
+      "extraction_provenance": "Kasen & Barnes (2019) Fig 5 peak / Tab 2",
       "source_figure_coordinates": {
         "x_pixel": 320,
         "y_pixel": 395,
         "dpi": 1200
       },
-      "independent_recheck_status": "VERIFIED"
+      "independent_recheck_status": "VERIFIED_ANALYTIC_CROSSCHECK"
     },
     {
       "epoch_days": 2.0,
-      "l_bol_erg_s": 1.41e+41,
+      "l_bol_erg_s": 1.4125375446227496e+41,
       "log10_l_bol": 41.15,
       "uncertainty_dex": 0.05,
-      "extraction_provenance": "Kasen & Barnes (2019) Figure 5 / Table 2",
+      "l_bol_min_erg_s": 1.2589254117941713e+41,
+      "l_bol_max_erg_s": 1.584893192461098e+41,
+      "fractional_uncertainty_lower": 0.1087,
+      "fractional_uncertainty_upper": 0.122,
+      "extraction_provenance": "Kasen & Barnes (2019) Fig 5 / Tab 2",
       "source_figure_coordinates": {
         "x_pixel": 456,
         "y_pixel": 430,
         "dpi": 1200
       },
-      "independent_recheck_status": "VERIFIED"
+      "independent_recheck_status": "VERIFIED_ANALYTIC_CROSSCHECK"
     },
     {
       "epoch_days": 3.0,
-      "l_bol_erg_s": 7.08e+40,
+      "l_bol_erg_s": 7.079457843841403e+40,
       "log10_l_bol": 40.85,
       "uncertainty_dex": 0.05,
-      "extraction_provenance": "Kasen & Barnes (2019) Figure 5 / Table 2",
+      "l_bol_min_erg_s": 6.309573444801994e+40,
+      "l_bol_max_erg_s": 7.943282347242789e+40,
+      "fractional_uncertainty_lower": 0.1087,
+      "fractional_uncertainty_upper": 0.122,
+      "extraction_provenance": "Kasen & Barnes (2019) Fig 5 / Tab 2",
       "source_figure_coordinates": {
         "x_pixel": 592,
         "y_pixel": 482,
         "dpi": 1200
       },
-      "independent_recheck_status": "VERIFIED"
+      "independent_recheck_status": "VERIFIED_ANALYTIC_CROSSCHECK"
     },
     {
       "epoch_days": 5.0,
-      "l_bol_erg_s": 2.24e+40,
+      "l_bol_erg_s": 2.238721138568347e+40,
       "log10_l_bol": 40.35,
       "uncertainty_dex": 0.05,
-      "extraction_provenance": "Kasen & Barnes (2019) Figure 5 / Table 2",
+      "l_bol_min_erg_s": 1.995262314968899e+40,
+      "l_bol_max_erg_s": 2.511886431509572e+40,
+      "fractional_uncertainty_lower": 0.1087,
+      "fractional_uncertainty_upper": 0.122,
+      "extraction_provenance": "Kasen & Barnes (2019) Fig 5 / Tab 2",
       "source_figure_coordinates": {
         "x_pixel": 728,
         "y_pixel": 568,
         "dpi": 1200
       },
-      "independent_recheck_status": "VERIFIED"
+      "independent_recheck_status": "VERIFIED_ANALYTIC_CROSSCHECK"
     }
   ]
 }
