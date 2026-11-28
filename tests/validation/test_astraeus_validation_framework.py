@@ -22,6 +22,8 @@ from astraeus_bench.validation import (
     EvaluationRecord,
     ValidationMode,
     RealWorldDataLoader,
+    RealVerifiableKilonovaBenchmark,
+    RealVerifiableCosmologyBenchmark,
     ComparatorSystem,
     LightCurveData,
     MultimodalQuery,
@@ -336,3 +338,74 @@ def test_ws_f_retrieval_poisoning_detection_on_real_tns_bibcodes():
     res_poison = verifier.verify_retrieval_integrity(bibcode="malicious_injected_bibcode_123", retrieved_claims=[])
     assert res_poison.is_compliant is False
     assert "POISONING / INTEGRITY VIOLATION" in res_poison.failure_reason
+
+
+def test_ws_b_real_verifiable_kilonova_benchmark_on_authentic_at2017gfo():
+    """
+    WS-B: Replaces synthetic forward-simulated kilonova data (forward_simulate_kilonova)
+    and inflated discovery/endorsement claims with an authentic observational benchmark:
+    - Real Swope 1.0m telescope photometry of AT2017gfo (GW170817 electromagnetic counterpart)
+    - Reference: Villar et al. 2017 (ApJ 851, L21), NASA ADS: 2017ApJ...851L..21V
+    - Physical model selection: Kasen radioactive r-process model vs. Circumstellar shock breakout
+    - Enforces honest epistemic demarcation: RETROSPECTIVE_OBSERVATIONAL_BENCHMARK_VERIFIED
+    """
+    benchmark = RealVerifiableKilonovaBenchmark(workspace_root=".")
+
+    # 1. Verify authentic dataset properties
+    raw_data = benchmark.at2017gfo_data
+    assert raw_data["is_authentic_observational_data"] is True
+    assert raw_data["is_synthetic"] is False
+    assert raw_data["target_id"] == "AT2017gfo"
+    assert raw_data["host_galaxy"] == "NGC 4993"
+    assert raw_data["bibcode"] == "2017ApJ...851L..21V"
+    assert len(raw_data["dataset_sha256"]) == 64
+    assert raw_data["num_observations"] >= 10
+
+    # 2. Execute model discrimination benchmark
+    res = benchmark.evaluate_model_discrimination()
+    assert res["benchmark_passed"] is True
+    assert res["goodness_of_fit_passed"] is True
+    assert res["chi2_red_kilonova"] <= 2.0
+    assert res["decisive_model_preference"] is True
+    assert res["delta_bic"] >= 10.0
+    assert res["bayes_factor_vs_shock"] >= 50.0
+    assert res["coverage_passed"] is True
+    assert res["coverage_fraction"] >= 0.85
+
+    # 3. Verify honest epistemic demarcation
+    assert res["discovery_outcome"] == "RETROSPECTIVE_OBSERVATIONAL_BENCHMARK_VERIFIED"
+    assert res["scientific_classification"] == "RETROSPECTIVE_OBSERVATIONAL_AGREEMENT_ON_HISTORICAL_RECORD"
+    assert res["deliberation_verdict"] == "INTERNAL_COLLECTIVE_ENDORSED_PRE_SUBMISSION"
+    assert "NOT an autonomous prospective discovery" in res["epistemic_demarcation"]
+
+
+def test_ws_b_real_verifiable_cosmology_benchmark_and_simulation_demarcation():
+    """
+    WS-B: Replaces locally synthesized mock 16x16x16 cubes (formerly "GenuineSimulationDataset")
+    with authentic observational catalogs (Gaia DR3 quasars) and strict epistemic demarcation:
+    - In silico simulation cubes are strictly categorized as LEVEL_3_THEORETICAL_SIMULATION
+    - Real Gaia DR3 quasar distributions provide authentic observational baryon tracer benchmarks
+    """
+    from engines.hydrodynamics.train_surrogate import (
+        SyntheticHydrodynamicSimulationDataset,
+        GenuineSimulationDataset
+    )
+
+    # 1. Verify that SyntheticHydrodynamicSimulationDataset is aliased and demarcated
+    assert SyntheticHydrodynamicSimulationDataset is GenuineSimulationDataset
+    assert "IN SILICO synthetic cosmological simulation volumes" in SyntheticHydrodynamicSimulationDataset.__doc__
+    assert "CANNOT substitute" in SyntheticHydrodynamicSimulationDataset.__doc__
+    assert "real-world observational telescope data" in SyntheticHydrodynamicSimulationDataset.__doc__
+
+    # 2. Evaluate authentic Gaia DR3 quasar observational benchmark
+    cosmo_bench = RealVerifiableCosmologyBenchmark(workspace_root=".")
+    res = cosmo_bench.evaluate_observational_baryon_tracers()
+
+    assert res["benchmark_passed"] is True
+    assert res["total_verified_quasars"] > 50
+    assert res["redshift_completeness"] >= 0.80
+    assert res["mean_redshift"] > 1.0
+    assert res["redshift_range"][1] > 2.0
+    assert 16.0 <= res["mean_apparent_mag_g"] <= 21.0
+    assert res["evidence_tier"] == "LEVEL_1_REAL_OBSERVATIONAL_DATA"
+    assert "LEVEL_3_THEORETICAL_SIMULATION" in res["simulation_demarcation"]

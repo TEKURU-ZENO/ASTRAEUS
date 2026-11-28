@@ -31,11 +31,17 @@ from engines.hydrodynamics.physics_loss import PhysicsConservationLoss
 from engines.hydrodynamics.surrogate_benchmark import ReferenceHydroSolver3D
 
 
-class GenuineSimulationDataset(Dataset):
+class SyntheticHydrodynamicSimulationDataset(Dataset):
     """
-    Dataset of genuine cosmological simulation snapshots loaded from persistent storage.
+    Synthetic dataset of hydrodynamic simulation snapshots generated via Zel'dovich/Euler-Poisson approximation.
     Input: Dark matter density field delta_dm (shape 1, N, N, N).
     Target: Hydrodynamic fields [rho_gas, vx, vy, vz, T_gas] (shape 5, N, N, N).
+
+    EPISTEMIC DEMARCATION:
+    This dataset contains IN SILICO synthetic cosmological simulation volumes generated
+    for numerical surrogate training and Navier-Stokes conservation checks.
+    It is strictly a Level 3 Theoretical Simulation Benchmark and CANNOT substitute
+    for real-world observational telescope data.
     """
 
     def __init__(self, filepaths: List[str]):
@@ -69,6 +75,10 @@ class GenuineSimulationDataset(Dataset):
 
     def __getitem__(self, idx: int) -> Tuple[torch.Tensor, torch.Tensor]:
         return self.samples[idx]
+
+
+# Backward-compatibility alias for legacy test fixtures:
+GenuineSimulationDataset = SyntheticHydrodynamicSimulationDataset
 
 
 class DisjointCosmoHydroDataset(Dataset):

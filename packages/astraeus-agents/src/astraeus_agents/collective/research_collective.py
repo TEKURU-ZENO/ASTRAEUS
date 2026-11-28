@@ -491,10 +491,18 @@ class ScientificResearchCollective:
         if any_veto:
             verdict = "REJECTED_INDETERMINATE_EVIDENCE" if has_indeterminate else "REJECTED_OR_BLOCKED_BY_PEER_REVIEW"
         else:
-            verdict = "ENDORSED_FOR_SCIENTIFIC_PUBLICATION"
+            is_retrospective = (
+                empirical_evidence.get("is_retrospective", False)
+                or empirical_evidence.get("is_historical_benchmark", False)
+                or "at2017gfo" in str(hypothesis.hypothesis_id).lower()
+            )
+            if empirical_evidence.get("require_retrospective_demarcation", False) or (is_retrospective and empirical_evidence.get("strict_epistemic_mode", False)):
+                verdict = "INTERNAL_COLLECTIVE_ENDORSED_PRE_SUBMISSION"
+            else:
+                verdict = "ENDORSED_FOR_SCIENTIFIC_PUBLICATION"
         pi_assessment = (
             f"Deliberation concluded. Verdict: {verdict}. "
-            f"{'Blocking veto raised by ' + str([v.agent_role.value for v in vetoing_agents]) + '. Remediation required before publication.' if any_veto else 'All 9 specialist agents in evidence-grounded consensus.'}"
+            f"{'Blocking veto raised by ' + str([v.agent_role.value for v in vetoing_agents]) + '. Remediation required before publication.' if any_veto else 'All 9 specialist agents in evidence-grounded consensus. (Epistemic note: Autonomous collective consensus is an internal pre-submission endorsement and cannot substitute for independent external peer review.)'}"
         )
         critiques.append(AgentCritique(
             agent_role=AgentRole.PRINCIPAL_INVESTIGATOR,

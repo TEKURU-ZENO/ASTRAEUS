@@ -18,6 +18,10 @@ from astraeus_bench.validation.real_world_registry import (
 from astraeus_bench.validation.real_data_loader import (
     RealWorldDataLoader
 )
+from astraeus_bench.validation.verifiable_benchmarks import (
+    RealVerifiableKilonovaBenchmark,
+    RealVerifiableCosmologyBenchmark
+)
 from astraeus_bench.validation.competitor_interfaces import (
     ComparatorSystem,
     LightCurveData,
@@ -58,6 +62,8 @@ __all__ = [
     "EvaluationRecord",
     "ValidationMode",
     "RealWorldDataLoader",
+    "RealVerifiableKilonovaBenchmark",
+    "RealVerifiableCosmologyBenchmark",
     "ComparatorSystem",
     "LightCurveData",
     "ClassificationPrediction",

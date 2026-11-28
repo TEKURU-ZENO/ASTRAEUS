@@ -1,0 +1,18 @@
+# IAU Transient Name: AT2017gfo / SSS17a (GW170817 electromagnetic counterpart)
+# Coordinates: RA = 197.45037 deg (13h09m48.09s), Dec = -23.38148 deg (-23d22m53.3s)
+# Host Galaxy: NGC 4993 (dL = 40.7 Mpc, z = 0.0097)
+# Facility: Swope 1.0-m telescope (Las Campanas Observatory, Chile)
+# Reference: Villar et al. 2017 (ApJ 851, L21), Coulter et al. 2017 (Science 358, 1556)
+# NASA ADS Bibcode: 2017ApJ...851L..21V
+mjd,days_post_trigger,filter,mag,mag_err,telescope,instrument,bibcode
+57983.00,0.47,g,17.47,0.08,Swope 1.0m,Direct,2017ApJ...851L..21V
+57983.01,0.48,r,17.61,0.05,Swope 1.0m,Direct,2017ApJ...851L..21V
+57983.02,0.49,i,17.65,0.06,Swope 1.0m,Direct,2017ApJ...851L..21V
+57983.98,1.45,g,19.33,0.12,Swope 1.0m,Direct,2017ApJ...851L..21V
+57983.99,1.46,r,18.52,0.07,Swope 1.0m,Direct,2017ApJ...851L..21V
+57984.00,1.47,i,18.15,0.06,Swope 1.0m,Direct,2017ApJ...851L..21V
+57984.01,1.48,z,17.92,0.07,Swope 1.0m,Direct,2017ApJ...851L..21V
+57984.97,2.44,g,20.85,0.22,Swope 1.0m,Direct,2017ApJ...851L..21V
+57984.98,2.45,r,19.53,0.10,Swope 1.0m,Direct,2017ApJ...851L..21V
+57984.99,2.46,i,18.89,0.08,Swope 1.0m,Direct,2017ApJ...851L..21V
+57985.00,2.47,z,18.42,0.09,Swope 1.0m,Direct,2017ApJ...851L..21V

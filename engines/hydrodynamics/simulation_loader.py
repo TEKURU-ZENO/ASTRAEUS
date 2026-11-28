@@ -212,9 +212,14 @@ def populate_benchmark_dataset(
     force_regenerate: bool = False,
 ) -> Dict[str, List[str]]:
     """
-    Populates genuine CAMELS/IllustrisTNG formatted simulation snapshots on disk
+    Populates synthetic CAMELS/IllustrisTNG-compatible simulation snapshots on disk
     divided strictly into disjoint splits: train (6 snapshots), val (2 snapshots), test (2 snapshots).
     Returns dictionary of manifest filepaths and checksums.
+
+    EPISTEMIC NOTICE:
+    These snapshots are synthetic mock volumes generated via Zel'dovich initial conditions
+    and Euler-Poisson evolution for numerical surrogate training. They are strictly in silico
+    simulations and cannot be classified as empirical astronomical telescope observations.
     """
     os.makedirs(output_dir, exist_ok=True)
 

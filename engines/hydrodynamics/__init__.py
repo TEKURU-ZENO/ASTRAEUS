@@ -36,6 +36,7 @@ from engines.hydrodynamics.surrogate_benchmark import (
     HydroSurrogateBenchmark,
 )
 from engines.hydrodynamics.train_surrogate import (
+    SyntheticHydrodynamicSimulationDataset,
     GenuineSimulationDataset,
     DisjointCosmoHydroDataset,
     HydroSurrogateTrainer,
@@ -59,6 +60,7 @@ __all__ = [
     "periodic_poisson_solver_3d",
     "ReferenceHydroSolver3D",
     "HydroSurrogateBenchmark",
+    "SyntheticHydrodynamicSimulationDataset",
     "GenuineSimulationDataset",
     "DisjointCosmoHydroDataset",
     "HydroSurrogateTrainer",

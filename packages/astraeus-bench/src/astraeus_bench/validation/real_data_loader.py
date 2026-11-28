@@ -10,6 +10,7 @@ Replaces synthetic testbed fixtures with authentic astronomical observations sto
 import os
 import json
 import zipfile
+import hashlib
 from typing import List, Dict, Optional, Any
 import pandas as pd
 import numpy as np
@@ -173,3 +174,88 @@ class RealWorldDataLoader:
                 "classification": str(row.get("classlabel_dsc_joint", "quasar"))
             })
         return records
+
+    def load_authentic_at2017gfo_photometry(self) -> Dict[str, Any]:
+        """
+        Loads authentic, published multi-band optical/NIR photometry of kilonova AT2017gfo
+        (GW170817 electromagnetic counterpart) observed by the Swope 1.0m telescope at Las Campanas.
+        Primary source: Villar et al. 2017 (ApJ 851, L21), Coulter et al. 2017 (Science 358, 1556).
+        NASA ADS Bibcode: 2017ApJ...851L..21V.
+        """
+        csv_path = os.path.join(
+            self.workspace_root,
+            "data",
+            "external_validity_v1",
+            "raw",
+            "kilonova",
+            "at2017gfo_swope_photometry.csv"
+        )
+        if not os.path.exists(csv_path):
+            raise FileNotFoundError(f"Authentic AT2017gfo observational dataset not found at: {csv_path}")
+
+        with open(csv_path, "rb") as f:
+            file_bytes = f.read()
+            dataset_sha256 = hashlib.sha256(file_bytes).hexdigest()
+
+        # Parse CSV lines ignoring comment lines
+        df = pd.read_csv(csv_path, comment="#")
+
+        observations = []
+        mjds = []
+        fluxes = []
+        flux_errs = []
+        passbands = []
+
+        for _, row in df.iterrows():
+            mjd_val = float(row["mjd"])
+            filt_val = str(row["filter"]).strip()
+            mag_val = float(row["mag"])
+            err_val = float(row["mag_err"])
+
+            # Pogson flux conversion (zero-point = 25.0)
+            flux = 10.0 ** (-0.4 * (mag_val - 25.0))
+            flux_err = flux * (np.log(10.0) / 2.5) * err_val
+
+            obs_record = {
+                "mjd": mjd_val,
+                "days_post_trigger": float(row["days_post_trigger"]),
+                "filter": filt_val,
+                "mag": mag_val,
+                "mag_err": err_val,
+                "flux": float(flux),
+                "flux_err": float(flux_err),
+                "telescope": str(row.get("telescope", "Swope 1.0m")),
+                "instrument": str(row.get("instrument", "Direct")),
+                "bibcode": str(row.get("bibcode", "2017ApJ...851L..21V")),
+            }
+            observations.append(obs_record)
+
+            mjds.append(mjd_val)
+            fluxes.append(float(flux))
+            flux_errs.append(float(flux_err))
+            passbands.append(filt_val)
+
+        light_curve = LightCurveData(
+            target_id="AT2017gfo",
+            ra=197.45037,
+            dec=-23.38148,
+            mjd=mjds,
+            flux=fluxes,
+            flux_err=flux_errs,
+            passband=passbands
+        )
+
+        return {
+            "target_id": "AT2017gfo",
+            "host_galaxy": "NGC 4993",
+            "distance_mpc": 40.7,
+            "merger_utc": "2017-08-17T12:41:04Z",
+            "merger_mjd": 57982.5285,
+            "observations": observations,
+            "light_curve": light_curve,
+            "dataset_sha256": dataset_sha256,
+            "num_observations": len(observations),
+            "bibcode": "2017ApJ...851L..21V",
+            "is_authentic_observational_data": True,
+            "is_synthetic": False
+        }

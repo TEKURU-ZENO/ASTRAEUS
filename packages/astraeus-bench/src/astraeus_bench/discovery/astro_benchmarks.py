@@ -936,6 +936,7 @@ class PreRegisteredBlindDiscoveryProtocol:
         min_observations_required: int = 5,
         epoch_tolerance_days: float = 0.35,
         trigger_mjd: Optional[float] = None,
+        is_retrospective_benchmark: bool = False,
     ) -> PreRegisteredDiscoveryAudit:
         """
         Adjudicates pre-registered predictions against genuinely withheld observational data.
@@ -1064,6 +1065,7 @@ class PreRegisteredBlindDiscoveryProtocol:
         chronology = self.custodian.verify_access_chronology(commitment.target_id)
         access_chronology_ok = chronology.is_valid and committed_before_unblinded
         hash_chain_ok = chronology.hash_chain_verified
+        sci_class = "FAILED_OR_DISQUALIFIED_PREDICTIVE_CLAIM"
 
         if not sig_verified:
             outcome = "REJECTED_UNAUTHORIZED_COMMITMENT"
@@ -1087,14 +1089,13 @@ class PreRegisteredBlindDiscoveryProtocol:
             outcome = "FALSIFIED_OR_MISCALIBRATED_PREDICTION"
             passed = False
         else:
-            outcome = "VALIDATED_PREDICTIVE_DISCOVERY"
+            if is_retrospective_benchmark:
+                outcome = "RETROSPECTIVE_OBSERVATIONAL_BENCHMARK_VERIFIED"
+                sci_class = "RETROSPECTIVE_OBSERVATIONAL_AGREEMENT_ON_HISTORICAL_RECORD"
+            else:
+                outcome = "VALIDATED_PREDICTIVE_DISCOVERY"
+                sci_class = "PROSPECTIVE_PREDICTIVE_AGREEMENT_ON_SUPPLIED_TEST_RECORD"
             passed = True
-
-        sci_class = (
-            "PROSPECTIVE_PREDICTIVE_AGREEMENT_ON_SUPPLIED_TEST_RECORD"
-            if passed
-            else "FAILED_OR_DISQUALIFIED_PREDICTIVE_CLAIM"
-        )
 
         return PreRegisteredDiscoveryAudit(
             target_id=commitment.target_id,
